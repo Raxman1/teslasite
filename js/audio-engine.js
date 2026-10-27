@@ -194,13 +194,13 @@ class AudioEngine {
       } catch (e) {}
     }
 
-    // High quality master dynamics compressor (exact teslasound.io parameters)
+    // Transparent safety dynamics compressor (wide open headroom, zero audible pumping/squashing)
     this.compressor = this.ctx.createDynamicsCompressor();
-    this.compressor.threshold.setValueAtTime(-12, this.ctx.currentTime);
-    this.compressor.knee.setValueAtTime(8, this.ctx.currentTime);
-    this.compressor.ratio.setValueAtTime(5, this.ctx.currentTime);
-    this.compressor.attack.setValueAtTime(0.003, this.ctx.currentTime);
-    this.compressor.release.setValueAtTime(0.2, this.ctx.currentTime);
+    this.compressor.threshold.setValueAtTime(-2, this.ctx.currentTime);
+    this.compressor.knee.setValueAtTime(12, this.ctx.currentTime);
+    this.compressor.ratio.setValueAtTime(2.0, this.ctx.currentTime);
+    this.compressor.attack.setValueAtTime(0.005, this.ctx.currentTime);
+    this.compressor.release.setValueAtTime(0.06, this.ctx.currentTime);
 
     // Master Gain (Post-compressor with authentic teslasound.io volume scaling)
     this.masterGain = this.ctx.createGain();
@@ -233,6 +233,9 @@ class AudioEngine {
     if (window.TurboSoundEngine && !this.turboEngine) {
       this.turboEngine = new window.TurboSoundEngine(this.ctx, () => this.intakeBus || this.submixBus || this.masterGain || this.ctx.destination);
       this.turboEngine.init();
+      if (!this.v6ProEnabled) {
+        this.turboEngine.setEnabled(false);
+      }
     }
 
     this.isReady = true;
@@ -242,9 +245,9 @@ class AudioEngine {
 
   buildTeslaSpatialAcoustics() {
     try {
-      // 1. Master Submix Bus feeding into Master Bass Filter & Compressor
+      // 1. Master Submix Bus feeding into Master Bass Filter & Compressor (active in v6.0 PRO mode only)
       this.submixBus = this.ctx.createGain();
-      this.submixBus.gain.setValueAtTime(1.0, this.ctx.currentTime);
+      this.submixBus.gain.setValueAtTime(this.v6ProEnabled ? 1.0 : 0.0, this.ctx.currentTime);
 
       // Master Sub-Bass Filter (60 Hz lowshelf) - allows sub rumble trimming only when slider < 100%
       // At 100% (default), gain is exactly 0.0 dB (100% transparent straight wire, zero filtering!)
@@ -330,11 +333,11 @@ class AudioEngine {
       this.dspSplitterBus = this.ctx.createGain();
       this.dspSplitterBus.gain.setValueAtTime(1.0, this.ctx.currentTime);
 
-      // Direct clean wire straight into masterBassFilter -> compressor -> masterGain -> clipper (100% teslasound.io path)
+      // Direct 100% uncompressed open wire straight into masterGain -> clipper (ZERO compression, ZERO EQ, ZERO delay!)
       this.dspDirectGain = this.ctx.createGain();
       this.dspDirectGain.gain.setValueAtTime(this.v6ProEnabled ? 0.0 : this.exhaustVolumeLevel, this.ctx.currentTime);
       this.dspSplitterBus.connect(this.dspDirectGain);
-      this.dspDirectGain.connect(this.masterBassFilter);
+      this.dspDirectGain.connect(this.masterGain);
 
       this.dspFrontGain = this.ctx.createGain();
       this.dspFrontGain.gain.setValueAtTime(this.v6ProEnabled ? 1.0 : 0.0, this.ctx.currentTime);
@@ -452,9 +455,9 @@ class AudioEngine {
 
     if (!this.v6ProEnabled) {
       // ==============================================================
-      // CLASSIC DIRECT MODE (100% TESLASOUND.IO OPEN WIRE)
-      // Direct straight wire into master compressor & safety clipper!
-      // Zero delay, zero comb filtering, zero frequency muffling!
+      // CLASSIC DIRECT MODE (100% RAW UNCOMPRESSED OPEN STREAM)
+      // Completely BYPASSES compressor, master bass filter, and EQ!
+      // Direct straight wire into master gain & analog safety clipper!
       // ==============================================================
       if (this.dspDirectGain) {
         this.dspDirectGain.gain.setTargetAtTime(effectiveExhaust, now, smooth);
@@ -467,6 +470,12 @@ class AudioEngine {
       }
       if (this.dspSubGain) {
         this.dspSubGain.gain.setTargetAtTime(0.0, now, smooth);
+      }
+      if (this.submixBus) {
+        this.submixBus.gain.setTargetAtTime(0.0, now, smooth);
+      }
+      if (this.turboEngine) {
+        this.turboEngine.setEnabled(false);
       }
       // Completely flat acoustic filters (0 dB = straight wire)
       if (this.frontPresenceFilter) {
@@ -494,6 +503,12 @@ class AudioEngine {
       // ==============================================================
       if (this.dspDirectGain) {
         this.dspDirectGain.gain.setTargetAtTime(0.0, now, smooth);
+      }
+      if (this.submixBus) {
+        this.submixBus.gain.setTargetAtTime(1.0, now, smooth);
+      }
+      if (this.turboEngine) {
+        this.turboEngine.setEnabled(true);
       }
       if (this.dspFrontGain) {
         const frontScale = (effectiveExhaust < 0.5) ? Math.max(0.0, effectiveExhaust * 2.0) : 1.0;

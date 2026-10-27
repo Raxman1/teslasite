@@ -21,10 +21,10 @@ class DSPAudioEngine {
     this.isPlaying = false;
     this.engineGen = 0;
 
-    // Adjustable tuning parameters (as on teslasound.io)
-    this.character = 0.85; // 0.15 (quiet stock) .. 1.0 (aggressive open straight pipes)
-    this.crackle = 1.0;    // 0.0 .. 1.5 (afterfire pops & bangs)
-    this.whineLevel = 0.6; // 0.0 .. 2.0 (turbo/supercharger whine volume)
+    // Adjustable tuning parameters (100% authentic teslasound.io defaults)
+    this.character = 0.75; // 0.15 (quiet stock) .. 1.0 (aggressive open straight pipes)
+    this.crackle = 0.75;   // 0.0 .. 1.5 (afterfire pops & bangs)
+    this.whineLevel = 1.0; // 0.0 .. 2.0 (turbo/supercharger whine volume)
     this.whinePitch = 1.0; // 0.5 .. 1.8 (whine pitch multiplier)
     this.idleRpmOffset = 0;// -150 .. +350 RPM (idle lope)
     this.limiterMode = 'hard'; // 'hard' (2-step aggressive) | 'soft' (smooth bounce)
@@ -153,20 +153,11 @@ class DSPAudioEngine {
         ]);
 
         const node = new AudioWorkletNode(this.ctx, 'engine-processor', {
-          numberOfInputs: 1,
+          numberOfInputs: 0,
           numberOfOutputs: 1,
           outputChannelCount: [2],
           processorOptions: { config: engineCfg, seed: seed }
         });
-
-        // WebKit AudioWorklet wake-up dummy connection
-        try {
-          const dummy = this.ctx.createBufferSource();
-          dummy.buffer = this.ctx.createBuffer(1, 1, this.ctx.sampleRate);
-          dummy.loop = true;
-          dummy.connect(node);
-          dummy.start(0);
-        } catch (e) {}
 
         return {
           node: node,

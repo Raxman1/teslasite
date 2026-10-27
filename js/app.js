@@ -404,6 +404,7 @@ document.addEventListener('DOMContentLoaded', () => {
   if (v6ToggleBtn) {
     v6ToggleBtn.addEventListener('click', () => {
       setV6ProState(!isV6ProEnabled);
+      showShiftNotification(isV6ProEnabled ? '⚡ v6.0 PRO: 3D Сцена активна' : '🔓 100% Открытый звук (БЕЗ компрессии)');
     });
   }
 
@@ -651,9 +652,9 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
-  // Initialize UI values & apply saved v6.0 PRO state (no audio changes at init)
+  // Initialize UI values & apply saved v6.0 PRO state
   syncAcousticUIToAudio();
-  setV6ProState(isV6ProEnabled, false);
+  setV6ProState(isV6ProEnabled, true);
 
   // Universal Turbocharger Sound Elements (Dual Controls Synchronized)
   const turboToggleBtn = document.getElementById('turboToggleBtn');
