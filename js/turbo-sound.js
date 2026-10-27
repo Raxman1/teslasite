@@ -1,6 +1,6 @@
 /**
- * Turbocharger & Wastegate Flutter Sound Synthesizer
- * High-fidelity procedural turbine spool, air intake hiss & blow-off valve (stututu)
+ * Ultra-Realistic Turbocharger & Wastegate Sound Synthesizer
+ * Organic Aerodynamic Resonance Modeling + Studio Blow-Off Valve (BOV)
  * Works universally across both DSP Synthesis and HD Sample modes.
  */
 class TurboSoundEngine {
@@ -16,24 +16,31 @@ class TurboSoundEngine {
     this.spool = 0.0;
     this.lastThrottle = 0.0;
     this.lastBovTime = 0.0;
+    this.bovBuffer = null;
 
-    // Audio Nodes
+    // Master Audio Chain
     this.masterGain = null;
-    this.whistleOsc = null;
-    this.whistleHarmonic = null;
-    this.whistleLFO = null;
-    this.lfoGain = null;
-    this.whistleGain = null;
-    this.harmonicGain = null;
-
-    this.noiseNode = null;
-    this.airFilter = null;
-    this.airResonance = null;
-    this.airGain = null;
     this.noiseBuffer = null;
+    this.noiseSource = null;
+
+    // Aerodynamic Whistle Filters (Air Cavitation Resonance)
+    this.whistleBandpass1 = null;
+    this.whistleBandpass2 = null;
+    this.whistleGain1 = null;
+    this.whistleGain2 = null;
+
+    // Air Induction Rush Filter
+    this.intakeHissFilter = null;
+    this.intakeHissGain = null;
+
+    // Metallic Rotor Chime (Subtle Blade Ringing)
+    this.metallicOsc = null;
+    this.metallicGain = null;
+    this.rotorLFO = null;
+    this.rotorLFOGain = null;
   }
 
-  init() {
+  async init() {
     if (this.isInitialized || !this.ctx) return;
 
     try {
@@ -44,83 +51,120 @@ class TurboSoundEngine {
       this.masterGain.gain.setValueAtTime(this.enabled ? (this.volume / 100.0) : 0, this.ctx.currentTime);
       this.masterGain.connect(dest);
 
-      // 1. Generate 2-second looped noise buffer for intake & spool rush
-      const bufferLength = Math.max(1024, Math.floor(this.ctx.sampleRate * 2));
+      // 1. Generate High-Resolution Airflow Turbulence Stream
+      // Using broadband pink/air noise rather than computer sine oscillators
+      const bufferLength = Math.max(2048, Math.floor(this.ctx.sampleRate * 2.5));
       this.noiseBuffer = this.ctx.createBuffer(1, bufferLength, this.ctx.sampleRate);
       const data = this.noiseBuffer.getChannelData(0);
-      let lastOut = 0.0;
+      let b0 = 0, b1 = 0, b2 = 0;
       for (let i = 0; i < bufferLength; i++) {
-        // Pink-ish noise filter for smooth, organic airflow
         const white = Math.random() * 2 - 1;
-        lastOut = (lastOut + 0.03 * white) / 1.03;
-        data[i] = lastOut * 3.5;
+        // 3-pole pinking filter for smooth, organic airflow acoustics
+        b0 = 0.99765 * b0 + white * 0.0990460;
+        b1 = 0.96300 * b1 + white * 0.2965164;
+        b2 = 0.57000 * b2 + white * 1.0526913;
+        data[i] = (b0 + b1 + b2 + white * 0.1848) * 0.45;
       }
 
-      this.noiseNode = this.ctx.createBufferSource();
-      this.noiseNode.buffer = this.noiseBuffer;
-      this.noiseNode.loop = true;
+      this.noiseSource = this.ctx.createBufferSource();
+      this.noiseSource.buffer = this.noiseBuffer;
+      this.noiseSource.loop = true;
 
-      // Bandpass filter tracking spool frequency
-      this.airFilter = this.ctx.createBiquadFilter();
-      this.airFilter.type = 'bandpass';
-      this.airFilter.frequency.setValueAtTime(1600, this.ctx.currentTime);
-      this.airFilter.Q.setValueAtTime(2.6, this.ctx.currentTime);
+      // 2. Primary Resonant Aerodynamic Turbine Filter (Q = 17)
+      // Generates genuine compressed air whistle through the compressor housing
+      this.whistleBandpass1 = this.ctx.createBiquadFilter();
+      this.whistleBandpass1.type = 'bandpass';
+      this.whistleBandpass1.Q.setValueAtTime(17.0, this.ctx.currentTime);
+      this.whistleBandpass1.frequency.setValueAtTime(2100, this.ctx.currentTime);
 
-      this.airResonance = this.ctx.createBiquadFilter();
-      this.airResonance.type = 'peaking';
-      this.airResonance.frequency.setValueAtTime(2800, this.ctx.currentTime);
-      this.airResonance.Q.setValueAtTime(3.0, this.ctx.currentTime);
-      this.airResonance.gain.setValueAtTime(5.0, this.ctx.currentTime);
+      this.whistleGain1 = this.ctx.createGain();
+      this.whistleGain1.gain.setValueAtTime(0, this.ctx.currentTime);
 
-      this.airGain = this.ctx.createGain();
-      this.airGain.gain.setValueAtTime(0, this.ctx.currentTime);
+      // 3. Second Turbine Cavity Resonance (Harmonic Blade Shear, Q = 13)
+      this.whistleBandpass2 = this.ctx.createBiquadFilter();
+      this.whistleBandpass2.type = 'bandpass';
+      this.whistleBandpass2.Q.setValueAtTime(13.0, this.ctx.currentTime);
+      this.whistleBandpass2.frequency.setValueAtTime(4100, this.ctx.currentTime);
 
-      this.noiseNode.connect(this.airFilter);
-      this.airFilter.connect(this.airResonance);
-      this.airResonance.connect(this.airGain);
-      this.airGain.connect(this.masterGain);
-      this.noiseNode.start();
+      this.whistleGain2 = this.ctx.createGain();
+      this.whistleGain2.gain.setValueAtTime(0, this.ctx.currentTime);
 
-      // 2. High-Frequency Impeller Whistle Oscillators
-      this.whistleOsc = this.ctx.createOscillator();
-      this.whistleOsc.type = 'sine';
-      this.whistleOsc.frequency.setValueAtTime(1200, this.ctx.currentTime);
+      // 4. Air Induction Rush (Pressurized Air Suction through Intercooler)
+      this.intakeHissFilter = this.ctx.createBiquadFilter();
+      this.intakeHissFilter.type = 'bandpass';
+      this.intakeHissFilter.Q.setValueAtTime(2.2, this.ctx.currentTime);
+      this.intakeHissFilter.frequency.setValueAtTime(2800, this.ctx.currentTime);
 
-      this.whistleHarmonic = this.ctx.createOscillator();
-      this.whistleHarmonic.type = 'sine';
-      this.whistleHarmonic.frequency.setValueAtTime(2400, this.ctx.currentTime);
+      this.intakeHissGain = this.ctx.createGain();
+      this.intakeHissGain.gain.setValueAtTime(0, this.ctx.currentTime);
 
-      // Aerodynamic turbulence LFO vibrato (approx 9 Hz)
-      this.whistleLFO = this.ctx.createOscillator();
-      this.whistleLFO.type = 'sine';
-      this.whistleLFO.frequency.setValueAtTime(9.5, this.ctx.currentTime);
+      // Connect Noise Generator through the filter banks
+      this.noiseSource.connect(this.whistleBandpass1);
+      this.whistleBandpass1.connect(this.whistleGain1);
+      this.whistleGain1.connect(this.masterGain);
 
-      this.lfoGain = this.ctx.createGain();
-      this.lfoGain.gain.setValueAtTime(14.0, this.ctx.currentTime);
+      this.noiseSource.connect(this.whistleBandpass2);
+      this.whistleBandpass2.connect(this.whistleGain2);
+      this.whistleGain2.connect(this.masterGain);
 
-      this.whistleLFO.connect(this.lfoGain);
-      this.lfoGain.connect(this.whistleOsc.frequency);
-      this.lfoGain.connect(this.whistleHarmonic.frequency);
+      this.noiseSource.connect(this.intakeHissFilter);
+      this.intakeHissFilter.connect(this.intakeHissGain);
+      this.intakeHissGain.connect(this.masterGain);
 
-      this.whistleGain = this.ctx.createGain();
-      this.whistleGain.gain.setValueAtTime(0, this.ctx.currentTime);
+      this.noiseSource.start();
 
-      this.harmonicGain = this.ctx.createGain();
-      this.harmonicGain.gain.setValueAtTime(0.24, this.ctx.currentTime);
+      // 5. Metallic Rotor Chime (Subtle Titanium Blade Passing Ring at High Boost)
+      this.metallicOsc = this.ctx.createOscillator();
+      this.metallicOsc.type = 'triangle';
+      this.metallicOsc.frequency.setValueAtTime(2100, this.ctx.currentTime);
 
-      this.whistleOsc.connect(this.whistleGain);
-      this.whistleHarmonic.connect(this.harmonicGain);
-      this.harmonicGain.connect(this.whistleGain);
-      this.whistleGain.connect(this.masterGain);
+      this.rotorLFO = this.ctx.createOscillator();
+      this.rotorLFO.frequency.setValueAtTime(9.2, this.ctx.currentTime);
 
-      this.whistleOsc.start();
-      this.whistleHarmonic.start();
-      this.whistleLFO.start();
+      this.rotorLFOGain = this.ctx.createGain();
+      this.rotorLFOGain.gain.setValueAtTime(14.0, this.ctx.currentTime);
+
+      this.rotorLFO.connect(this.rotorLFOGain);
+      this.rotorLFOGain.connect(this.metallicOsc.frequency);
+
+      this.metallicGain = this.ctx.createGain();
+      this.metallicGain.gain.setValueAtTime(0, this.ctx.currentTime);
+
+      this.metallicOsc.connect(this.metallicGain);
+      this.metallicGain.connect(this.masterGain);
+
+      this.metallicOsc.start();
+      this.rotorLFO.start();
+
+      // Load studio-recorded blow-off sample
+      this.loadStudioBov();
 
       this.isInitialized = true;
     } catch (e) {
       console.warn('TurboSoundEngine init warning:', e);
     }
+  }
+
+  async loadStudioBov() {
+    try {
+      if (this.bovBuffer || !this.ctx) return;
+      let b64 = null;
+      if (window.CAR_PRESETS) {
+        if (window.CAR_PRESETS.amg_m177 && window.CAR_PRESETS.amg_m177.sounds && window.CAR_PRESETS.amg_m177.sounds.bov) {
+          b64 = window.CAR_PRESETS.amg_m177.sounds.bov;
+        } else if (window.CAR_PRESETS.supra_2jz && window.CAR_PRESETS.supra_2jz.sounds && window.CAR_PRESETS.supra_2jz.sounds.bov) {
+          b64 = window.CAR_PRESETS.supra_2jz.sounds.bov;
+        }
+      }
+      if (b64) {
+        const binaryString = window.atob(b64);
+        const bytes = new Uint8Array(binaryString.length);
+        for (let i = 0; i < binaryString.length; i++) {
+          bytes[i] = binaryString.charCodeAt(i);
+        }
+        this.bovBuffer = await this.ctx.decodeAudioData(bytes.buffer);
+      }
+    } catch (e) {}
   }
 
   setEnabled(val) {
@@ -144,35 +188,52 @@ class TurboSoundEngine {
   }
 
   /**
-   * Synthesize atmospheric blow-off venting & wastegate flutter (stututu)
+   * Authentic Blow-Off Valve (Venting Pressurized Air / Compressor Flutter)
    */
   triggerBlowOff(spool) {
-    if (!this.enabled || !this.bovEnabled || this.volume <= 0 || !this.ctx || !this.noiseBuffer) return;
+    if (!this.enabled || !this.bovEnabled || this.volume <= 0 || !this.ctx) return;
     const now = this.ctx.currentTime;
     if (now - this.lastBovTime < 0.38) return; // cooldown
     this.lastBovTime = now;
 
+    const bovVol = Math.min(1.0, (spool * 1.15) * (this.volume / 100.0) * 0.9);
+
+    // 1. Play real studio-recorded BOV sample if available
+    if (this.bovBuffer) {
+      try {
+        const src = this.ctx.createBufferSource();
+        src.buffer = this.bovBuffer;
+        // Natural slight pitch variation (+/- 4%)
+        src.playbackRate.setValueAtTime(0.96 + Math.random() * 0.08, now);
+
+        const gain = this.ctx.createGain();
+        gain.gain.setValueAtTime(bovVol, now);
+
+        src.connect(gain);
+        gain.connect(this.masterGain);
+        src.start(now);
+        return;
+      } catch (e) {}
+    }
+
+    // 2. High-fidelity procedural flutter fallback
     try {
       const bovGain = this.ctx.createGain();
       const bovFilter = this.ctx.createBiquadFilter();
       bovFilter.type = 'bandpass';
-      bovFilter.frequency.setValueAtTime(3400, now);
-      bovFilter.frequency.exponentialRampToValueAtTime(950, now + 0.36);
-      bovFilter.Q.setValueAtTime(3.2, now);
+      bovFilter.frequency.setValueAtTime(3200, now);
+      bovFilter.frequency.exponentialRampToValueAtTime(850, now + 0.35);
+      bovFilter.Q.setValueAtTime(3.5, now);
 
       const bovNoise = this.ctx.createBufferSource();
       bovNoise.buffer = this.noiseBuffer;
       bovNoise.loop = true;
 
-      // Peak amplitude proportional to boost spool and user volume
-      const maxBov = Math.min(0.55, spool * (this.volume / 100.0) * 0.48);
-
-      // Stututu rhythmic pressure release flutter pulses
       const pulseIntervals = [0.0, 0.065, 0.13, 0.195, 0.26, 0.325];
       pulseIntervals.forEach((tOffset, idx) => {
         const pStart = now + tOffset;
         const decay = Math.pow(0.68, idx);
-        bovGain.gain.setValueAtTime(maxBov * decay, pStart);
+        bovGain.gain.setValueAtTime(bovVol * decay, pStart);
         bovGain.gain.exponentialRampToValueAtTime(0.0001, pStart + 0.055);
       });
 
@@ -206,51 +267,79 @@ class TurboSoundEngine {
 
     if (!this.enabled || !isEngineRunning || this.volume <= 0) {
       this.spool = 0;
-      if (this.whistleGain) this.whistleGain.gain.setTargetAtTime(0, this.ctx.currentTime, 0.05);
-      if (this.airGain) this.airGain.gain.setTargetAtTime(0, this.ctx.currentTime, 0.05);
+      if (this.whistleGain1) this.whistleGain1.gain.setTargetAtTime(0, this.ctx.currentTime, 0.05);
+      if (this.whistleGain2) this.whistleGain2.gain.setTargetAtTime(0, this.ctx.currentTime, 0.05);
+      if (this.intakeHissGain) this.intakeHissGain.gain.setTargetAtTime(0, this.ctx.currentTime, 0.05);
+      if (this.metallicGain) this.metallicGain.gain.setTargetAtTime(0, this.ctx.currentTime, 0.05);
       this.lastThrottle = safeThrottle;
       return;
     }
 
-    // Boost target: rises with RPM & throttle
-    const rpmNorm = Math.min(1.0, Math.max(0, (safeRpm - 700) / (safeRedline - 700)));
-    const targetSpool = safeThrottle > 0.04
-      ? Math.min(1.0, Math.pow(rpmNorm, 0.65) * (0.28 + 0.72 * safeThrottle))
-      : 0.0;
+    // REAL TURBO BOOST PHYSICS:
+    // A turbo requires both exhaust velocity (RPM > 1800) AND throttle load (> 15%) to build boost!
+    // At idle or gentle cruising, boost is near 0 bar (completely silent).
+    const minSpoolRpm = 1800;
+    const fullSpoolRpm = Math.min(6200, safeRedline * 0.88);
 
-    // Spool inertia (realistic turbo lag)
-    if (targetSpool > this.spool) {
-      this.spool += (targetSpool - this.spool) * Math.min(1.0, dt * 5.2);
-    } else {
-      this.spool += (targetSpool - this.spool) * Math.min(1.0, dt * 4.2);
+    let targetBoost = 0.0;
+    if (safeRpm > minSpoolRpm && safeThrottle > 0.15) {
+      const rpmFactor = Math.min(1.0, Math.max(0, (safeRpm - minSpoolRpm) / (fullSpoolRpm - minSpoolRpm)));
+      // Throttle non-linear ramp: builds significantly under hard throttle
+      const throttleFactor = Math.pow((safeThrottle - 0.15) / 0.85, 1.25);
+      targetBoost = Math.min(1.0, Math.pow(rpmFactor, 0.70) * throttleFactor);
     }
 
-    // Check for Blow-off / Wastegate trigger (fast throttle lift from boost)
-    if ((this.lastThrottle - safeThrottle > 0.22) && this.spool > 0.18) {
+    // Realistic Turbo Lag / Spool Inertia:
+    if (targetBoost > this.spool) {
+      // Spools up over ~0.25 - 0.35s as exhaust spins the turbine
+      this.spool += (targetBoost - this.spool) * Math.min(1.0, dt * 4.0);
+    } else {
+      // Rapid boost drop when throttle closes
+      this.spool += (targetBoost - this.spool) * Math.min(1.0, dt * 7.5);
+    }
+
+    // Check for Blow-off / Wastegate trigger (throttle lift while under boost)
+    if ((this.lastThrottle - safeThrottle > 0.22) && this.spool > 0.22) {
       this.triggerBlowOff(this.spool);
     }
     this.lastThrottle = safeThrottle;
 
-    // Whistle frequency range: ~1,200 Hz up to ~3,950 Hz
-    const targetFreq = 1200 + this.spool * 2750;
-    this.whistleOsc.frequency.setTargetAtTime(targetFreq, this.ctx.currentTime, 0.04);
-    this.whistleHarmonic.frequency.setTargetAtTime(targetFreq * 2.01, this.ctx.currentTime, 0.04);
+    // Organic Aerodynamic Frequencies:
+    // Turbine spool tone sweeps smoothly from 1,800 Hz up to 4,200 Hz
+    const primaryFreq = 1800 + this.spool * 2400;
+    const harmonicFreq = primaryFreq * 1.92;
 
-    // Air rush bandpass filter frequency
-    this.airFilter.frequency.setTargetAtTime(1550 + this.spool * 2400, this.ctx.currentTime, 0.04);
+    this.whistleBandpass1.frequency.setTargetAtTime(primaryFreq, this.ctx.currentTime, 0.04);
+    this.whistleBandpass2.frequency.setTargetAtTime(harmonicFreq, this.ctx.currentTime, 0.04);
+    this.intakeHissFilter.frequency.setTargetAtTime(2200 + this.spool * 1800, this.ctx.currentTime, 0.04);
 
-    // Audio Gain envelopes
-    const whistleAmp = Math.pow(this.spool, 1.35) * 0.32;
-    const airAmp = Math.pow(this.spool, 1.2) * (0.25 + 0.75 * safeThrottle) * 0.28;
+    if (this.metallicOsc) {
+      this.metallicOsc.frequency.setTargetAtTime(primaryFreq, this.ctx.currentTime, 0.04);
+    }
 
-    this.whistleGain.gain.setTargetAtTime(whistleAmp, this.ctx.currentTime, 0.04);
-    this.airGain.gain.setTargetAtTime(airAmp, this.ctx.currentTime, 0.04);
+    // Amplitudes:
+    // Aerodynamic Whistle: natural curve with spool
+    const whistleAmp1 = Math.pow(this.spool, 1.4) * 0.42;
+    const whistleAmp2 = Math.pow(this.spool, 1.6) * 0.22;
+    // Air rush through intake pipe
+    const airHissAmp = Math.pow(this.spool, 1.2) * (0.2 + 0.8 * safeThrottle) * 0.32;
+    // Metallic rotor blade chime (subtle bite, never synthetic)
+    const metallicAmp = Math.pow(this.spool, 1.8) * 0.065;
+
+    this.whistleGain1.gain.setTargetAtTime(whistleAmp1, this.ctx.currentTime, 0.04);
+    this.whistleGain2.gain.setTargetAtTime(whistleAmp2, this.ctx.currentTime, 0.04);
+    this.intakeHissGain.gain.setTargetAtTime(airHissAmp, this.ctx.currentTime, 0.04);
+    if (this.metallicGain) {
+      this.metallicGain.gain.setTargetAtTime(metallicAmp, this.ctx.currentTime, 0.04);
+    }
   }
 
   stop() {
     this.spool = 0;
-    if (this.whistleGain && this.ctx) this.whistleGain.gain.setValueAtTime(0, this.ctx.currentTime);
-    if (this.airGain && this.ctx) this.airGain.gain.setValueAtTime(0, this.ctx.currentTime);
+    if (this.whistleGain1 && this.ctx) this.whistleGain1.gain.setValueAtTime(0, this.ctx.currentTime);
+    if (this.whistleGain2 && this.ctx) this.whistleGain2.gain.setValueAtTime(0, this.ctx.currentTime);
+    if (this.intakeHissGain && this.ctx) this.intakeHissGain.gain.setValueAtTime(0, this.ctx.currentTime);
+    if (this.metallicGain && this.ctx) this.metallicGain.gain.setValueAtTime(0, this.ctx.currentTime);
   }
 }
 
