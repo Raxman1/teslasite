@@ -255,6 +255,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const classicAcousticView = document.getElementById('classicAcousticView');
   const proAcousticView = document.getElementById('proAcousticView');
   const classicStageBtns = document.querySelectorAll('.classic-stage-btn');
+  const stageBtns = document.querySelectorAll('#proAcousticView .stage-btn');
   const classicBassSlider = document.getElementById('classicBassSlider');
   const classicBassLevelText = document.getElementById('classicBassLevelText');
 
@@ -338,7 +339,6 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
-  const stageBtns = document.querySelectorAll('#proAcousticView .stage-btn');
   const teslaTrimSelect = document.getElementById('teslaTrimSelect');
   const teslaTrimBadge = document.getElementById('teslaTrimBadge');
   const teslaTrimDesc = document.getElementById('teslaTrimDesc');

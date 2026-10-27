@@ -1144,10 +1144,6 @@ class AudioEngine {
       this.targetThrottle = throttle;
     }
   }
-}
-
-window.AudioEngine = AudioEngine;
-
 
   applyPresetSoundstage(id) {
     if (!id) return;
@@ -1165,3 +1161,6 @@ window.AudioEngine = AudioEngine;
       this.setTeslaSoundstage('tesla_3d');
     }
   }
+}
+
+window.AudioEngine = AudioEngine;
