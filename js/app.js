@@ -293,6 +293,11 @@ document.addEventListener('DOMContentLoaded', () => {
   const launchBtn = document.getElementById('launchBtn');
   const holdThrottleBtn = document.getElementById('holdThrottleBtn');
   let isThrottleHold = false;
+  let isLaunchControl = false;
+  let isBlipping = false;
+  let blipTimeout = null;
+  let launchTimer1 = null;
+  let launchTimer2 = null;
   let brakePressure = 0;
 
   // Mode Buttons
@@ -485,17 +490,50 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   }
 
+  // Global helper to stop/cancel any active automated pedal sequence
+  function stopAllActionModes() {
+    if (isThrottleHold) {
+      isThrottleHold = false;
+      audio.isThrottleHold = false;
+      if (holdThrottleBtn) {
+        holdThrottleBtn.classList.remove('active');
+        holdThrottleBtn.innerHTML = '🔒 Круиз';
+      }
+    }
+
+    if (isLaunchControl) {
+      isLaunchControl = false;
+      if (launchTimer1) { clearTimeout(launchTimer1); launchTimer1 = null; }
+      if (launchTimer2) { clearTimeout(launchTimer2); launchTimer2 = null; }
+      if (launchBtn) {
+        launchBtn.classList.remove('active');
+        launchBtn.innerHTML = '🚀 Launch';
+      }
+    }
+
+    if (isBlipping) {
+      isBlipping = false;
+      if (blipTimeout) { clearTimeout(blipTimeout); blipTimeout = null; }
+      if (blipBtn) {
+        blipBtn.classList.remove('active');
+        blipBtn.innerHTML = '💥 Перегазовка';
+      }
+    }
+
+    setPedalPressure(0);
+  }
+
   function setBrakePressure(val) {
     ensureAudioActive();
     brakePressure = Math.max(0, Math.min(1, val));
     audio.brakePressure = brakePressure;
     audio.isBrakePressed = brakePressure > 0.05;
 
-    // Disengage cruise/hold on brake tap
-    if (brakePressure > 0.1 && isThrottleHold) {
-      isThrottleHold = false;
-      audio.isThrottleHold = false;
-      if (holdThrottleBtn) holdThrottleBtn.classList.remove('active');
+    // Pressing brake immediately disengages Cruise, Launch Control, and Blip
+    if (brakePressure > 0.08) {
+      if (isThrottleHold || isLaunchControl || isBlipping) {
+        stopAllActionModes();
+      }
     }
 
     const pct = Math.round(brakePressure * 100);
@@ -543,7 +581,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const releaseGas = () => {
       if (isPedalPressed) {
         isPedalPressed = false;
-        if (!isThrottleHold) {
+        if (!isThrottleHold && !isLaunchControl && !isBlipping) {
           setPedalPressure(0);
         }
       }
@@ -587,50 +625,85 @@ document.addEventListener('DOMContentLoaded', () => {
     brakeFrame.addEventListener('pointercancel', releaseBrake);
   }
 
-  // Throttle Hold / Cruise Toggle Button
+  // Throttle Hold / Cruise Toggle Button (Cancellable)
   if (holdThrottleBtn) {
     holdThrottleBtn.addEventListener('click', () => {
-      isThrottleHold = !isThrottleHold;
-      audio.isThrottleHold = isThrottleHold;
-      holdThrottleBtn.classList.toggle('active', isThrottleHold);
-      if (isThrottleHold && pedalThrottle < 0.2) {
-        setPedalPressure(0.5); // Engage cruising throttle at 50%
+      if (isThrottleHold) {
+        // Toggle OFF
+        stopAllActionModes();
+      } else {
+        // Toggle ON
+        stopAllActionModes();
+        ensureAudioActive();
+        isThrottleHold = true;
+        audio.isThrottleHold = true;
+        holdThrottleBtn.classList.add('active');
+        holdThrottleBtn.innerHTML = '⏹ Стоп';
+        setPedalPressure(0.48); // engage comfortable 48% cruising throttle
       }
     });
   }
 
-  // Quick Action Buttons
+  // Quick Action Buttons (Cancellable)
   if (blipBtn) {
     blipBtn.addEventListener('click', () => {
+      if (isBlipping) {
+        // Stop blip
+        stopAllActionModes();
+        return;
+      }
+
+      stopAllActionModes();
       ensureAudioActive();
-      setPedalPressure(0.85);
-      setTimeout(() => {
-        if (!isThrottleHold) setPedalPressure(0);
-      }, 280);
+      isBlipping = true;
+      blipBtn.classList.add('active');
+      blipBtn.innerHTML = '⏹ Стоп';
+
+      setPedalPressure(0.9);
+
+      blipTimeout = setTimeout(() => {
+        if (isBlipping) {
+          isBlipping = false;
+          blipBtn.classList.remove('active');
+          blipBtn.innerHTML = '💥 Перегазовка';
+          setPedalPressure(0);
+        }
+      }, 360);
     });
   }
 
   if (launchBtn) {
     launchBtn.addEventListener('click', () => {
-      ensureAudioActive();
-      if (isLaunchControl) return;
+      if (isLaunchControl) {
+        // Cancel/Abort launch immediately
+        stopAllActionModes();
+        return;
+      }
 
+      stopAllActionModes();
+      ensureAudioActive();
       isLaunchControl = true;
-      launchBtn.textContent = 'HOLDING RPM...';
+      launchBtn.classList.add('active');
+      launchBtn.innerHTML = '⏹ Стоп';
+
       audio.gear = 1;
       audio.gearMode = 'A';
       gearBtns.forEach(b => b.classList.toggle('active', b.dataset.mode === 'A'));
 
       // Hold launch RPM
       setPedalPressure(0.55);
-      setTimeout(() => {
-        launchBtn.textContent = 'LAUNCH! 🚀';
+
+      launchTimer1 = setTimeout(() => {
+        if (!isLaunchControl) return;
+        launchBtn.innerHTML = '🔥 GO!';
         setPedalPressure(1.0);
         if (audio.triggerRandomPop) audio.triggerRandomPop(1.0);
-        setTimeout(() => {
-          launchBtn.textContent = '🚀 Launch';
-          isLaunchControl = false;
-        }, 2000);
+
+        launchTimer2 = setTimeout(() => {
+          if (isLaunchControl) {
+            stopAllActionModes();
+          }
+        }, 2200);
       }, 1800);
     });
   }
@@ -653,6 +726,7 @@ document.addEventListener('DOMContentLoaded', () => {
     } else if (e.code === 'KeyS' || e.code === 'ArrowDown') {
       e.preventDefault();
       ensureAudioActive();
+      stopAllActionModes();
       if (!keyBrakeInterval) {
         setBrakePressure(Math.max(brakePressure, 0.3));
         keyBrakeInterval = setInterval(() => {

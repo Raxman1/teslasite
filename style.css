@@ -708,6 +708,38 @@ main {
   margin-top: 14px;
 }
 
+.pedal-actions .btn {
+  padding: 8px 4px;
+  font-size: 11px;
+  font-weight: 700;
+  text-align: center;
+  justify-content: center;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid var(--border-glass);
+  color: var(--text-main);
+  cursor: pointer;
+  transition: all 0.15s ease;
+  user-select: none;
+  -webkit-appearance: none;
+}
+.pedal-actions .btn:hover {
+  background: rgba(255, 255, 255, 0.12);
+  border-color: rgba(255, 255, 255, 0.25);
+}
+.pedal-actions .btn.active {
+  background: rgba(255, 59, 48, 0.22) !important;
+  border-color: #ff3b30 !important;
+  color: #ff6b6b !important;
+  box-shadow: 0 0 12px rgba(255, 59, 48, 0.5) !important;
+  animation: pulseStop 1.2s infinite alternate;
+}
+
+@keyframes pulseStop {
+  from { box-shadow: 0 0 6px rgba(255, 59, 48, 0.3); }
+  to { box-shadow: 0 0 14px rgba(255, 59, 48, 0.7); }
+}
+
 /* Universal Tesla Dark Sliders (Overrides all browser defaults) */
 input[type="range"],
 .tesla-slider {
