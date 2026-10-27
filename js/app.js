@@ -304,21 +304,30 @@ document.addEventListener('DOMContentLoaded', () => {
   const tabBtns = document.querySelectorAll('.tab-btn');
   const gearBtns = document.querySelectorAll('.gear-mode-btn');
 
-  // Set Canvas resolution
+  // Set Canvas resolution - safe version (no ctx.scale compound)
+  let _canvasCssW = 380, _canvasCssH = 380;
   function resizeCanvas() {
-    const rect = canvas.getBoundingClientRect();
-    const dpr = window.devicePixelRatio || 1;
-    const w = (rect && rect.width > 50) ? rect.width : (canvas.clientWidth > 50 ? canvas.clientWidth : 380);
-    const h = (rect && rect.height > 50) ? rect.height : (canvas.clientHeight > 50 ? canvas.clientHeight : 380);
-    canvas.width = Math.round(w * dpr);
-    canvas.height = Math.round(h * dpr);
-    ctx.setTransform(1, 0, 0, 1, 0, 0);
-    ctx.scale(dpr, dpr);
+    try {
+      const dpr = window.devicePixelRatio || 1;
+      const rect = canvas.getBoundingClientRect();
+      const cssW = (rect && rect.width > 80) ? rect.width
+                 : (canvas.offsetWidth > 80 ? canvas.offsetWidth : 380);
+      const cssH = (rect && rect.height > 80) ? rect.height
+                 : (canvas.offsetHeight > 80 ? canvas.offsetHeight : 380);
+      const newW = Math.round(cssW * dpr);
+      const newH = Math.round(cssH * dpr);
+      _canvasCssW = cssW;
+      _canvasCssH = cssH;
+      canvas.width  = newW;
+      canvas.height = newH;
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0); // reset + scale in one call, no compounding
+    } catch (e) {
+      console.warn('resizeCanvas error:', e);
+    }
   }
   window.addEventListener('resize', resizeCanvas);
   resizeCanvas();
-  setTimeout(resizeCanvas, 60);
-  setTimeout(resizeCanvas, 300);
+  setTimeout(resizeCanvas, 100);
   window.scrollTo(0, 0);
 
   // 0. PRESET SELECTOR
@@ -895,23 +904,15 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // 10. CANVAS TACHOMETER GAUGE RENDERER (60 FPS)
   function drawGauge(rpm) {
-    const dpr = window.devicePixelRatio || 1;
-    let w = canvas.width / dpr;
-    let h = canvas.height / dpr;
-
-    if (w < 80 || h < 80) {
-      resizeCanvas();
-      w = canvas.width / dpr;
-      h = canvas.height / dpr;
-      if (w < 80 || h < 80) return;
-    }
+    // CSS-pixel dimensions for drawing (ctx transform already set by resizeCanvas)
+    const w = _canvasCssW > 80 ? _canvasCssW : (canvas.offsetWidth > 80 ? canvas.offsetWidth : 380);
+    const h = _canvasCssH > 80 ? _canvasCssH : (canvas.offsetHeight > 80 ? canvas.offsetHeight : 380);
 
     const cx = w / 2;
     const cy = h / 2;
     const radius = Math.max(30, Math.min(cx, cy) - 18);
 
     const rawMaxRpm = audio.maxRpm || 10000;
-    // Round maxRpm to nearest 1000 (minimum 7000) for clean dial numbers (e.g. 0 to 8, 9, 10)
     const maxRpm = Math.max(7000, Math.ceil(rawMaxRpm / 1000) * 1000);
     const redlineRpm = audio.redlineRpm || 8400;
 
@@ -948,14 +949,9 @@ document.addEventListener('DOMContentLoaded', () => {
       const inner = isMajor ? radius - 24 : isMedium ? radius - 16 : radius - 10;
       const outer = radius - 6;
 
-      const x1 = cx + Math.cos(angle) * inner;
-      const y1 = cy + Math.sin(angle) * inner;
-      const x2 = cx + Math.cos(angle) * outer;
-      const y2 = cy + Math.sin(angle) * outer;
-
       ctx.beginPath();
-      ctx.moveTo(x1, y1);
-      ctx.lineTo(x2, y2);
+      ctx.moveTo(cx + Math.cos(angle) * inner, cy + Math.sin(angle) * inner);
+      ctx.lineTo(cx + Math.cos(angle) * outer, cy + Math.sin(angle) * outer);
       ctx.lineWidth = isMajor ? 3 : isMedium ? 2 : 1;
       ctx.strokeStyle = tickRpm >= redlineRpm ? '#ff2222' : isMajor ? '#ff9900' : 'rgba(255, 255, 255, 0.4)';
       ctx.stroke();
@@ -964,7 +960,6 @@ document.addEventListener('DOMContentLoaded', () => {
         const textRadius = radius - 40;
         const tx = cx + Math.cos(angle) * textRadius;
         const ty = cy + Math.sin(angle) * textRadius + 5;
-
         ctx.font = 'bold 16px -apple-system, sans-serif';
         ctx.fillStyle = tickRpm >= redlineRpm ? '#ff4444' : '#ff9900';
         ctx.textAlign = 'center';
@@ -979,7 +974,6 @@ document.addEventListener('DOMContentLoaded', () => {
     ctx.save();
     ctx.shadowColor = needleRpm >= redlineRpm ? '#ff2222' : '#ff9900';
     ctx.shadowBlur = 14;
-
     ctx.beginPath();
     ctx.moveTo(cx - Math.cos(needleAngle + Math.PI / 2) * 4, cy - Math.sin(needleAngle + Math.PI / 2) * 4);
     ctx.lineTo(cx + Math.cos(needleAngle) * (radius - 12), cy + Math.sin(needleAngle) * (radius - 12));

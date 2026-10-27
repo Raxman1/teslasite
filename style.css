@@ -33,17 +33,14 @@ body {
 
 /* Header & Status Bar */
 header {
-  position: sticky;
-  top: 0;
   display: flex;
   justify-content: space-between;
   align-items: center;
   padding: 10px 24px;
-  background: rgba(10, 12, 16, 0.95);
+  background: rgba(10, 12, 16, 0.97);
   border-bottom: 1px solid var(--border-glass);
-  backdrop-filter: blur(14px);
-  -webkit-backdrop-filter: blur(14px);
   z-index: 1000;
+  flex-shrink: 0;
 }
 
 .brand {
