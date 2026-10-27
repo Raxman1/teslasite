@@ -146,7 +146,7 @@ class AudioEngine {
 
     // Initialize Procedural DSP engine sharing this.ctx and feeding into submixBus
     if (window.DSPAudioEngine && !this.dspEngine) {
-      this.dspEngine = new window.DSPAudioEngine(this.ctx, this.submixBus);
+      this.dspEngine = new window.DSPAudioEngine(this.ctx, () => this.submixBus || this.masterGain || this.ctx.destination);
     }
 
     // Load initial preset
@@ -313,6 +313,11 @@ class AudioEngine {
 
   async setPreset(presetId) {
     console.log('Switching preset to:', presetId);
+    this.ensureContext();
+    if (!this.isReady) {
+      await this.init();
+    }
+
     const wasPlaying = this.isPlaying;
     if (wasPlaying) {
       this.stop();
@@ -322,7 +327,7 @@ class AudioEngine {
       this.soundMode = 'dsp';
       const carId = presetId.replace(/^dsp:/, '');
       if (!this.dspEngine && this.ctx) {
-        this.dspEngine = new window.DSPAudioEngine(this.ctx, this.submixBus);
+        this.dspEngine = new window.DSPAudioEngine(this.ctx, () => this.submixBus || this.masterGain || this.ctx.destination);
       }
       if (this.dspEngine) {
         this.dspEngine.setCar(carId);
@@ -355,7 +360,7 @@ class AudioEngine {
 
     if (this.soundMode === 'dsp') {
       if (!this.dspEngine && this.ctx) {
-        this.dspEngine = new window.DSPAudioEngine(this.ctx, this.submixBus);
+        this.dspEngine = new window.DSPAudioEngine(this.ctx, () => this.submixBus || this.masterGain || this.ctx.destination);
       }
       if (this.dspEngine) {
         await this.dspEngine.start();

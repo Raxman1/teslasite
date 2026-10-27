@@ -3,9 +3,9 @@
  * Powered by EngineDSP and Vehicle simulation
  */
 class DSPAudioEngine {
-  constructor(audioContext, destinationBus) {
+  constructor(audioContext, destinationOrGetter) {
     this.ctx = audioContext;
-    this.destinationBus = destinationBus;
+    this.destinationOrGetter = destinationOrGetter;
     this.car = null;
     this.vehicle = null;
     this.node = null;
@@ -72,7 +72,19 @@ class DSPAudioEngine {
     const fader = this.ctx.createGain();
     fader.gain.setValueAtTime(1.0, this.ctx.currentTime);
     synth.node.connect(fader);
-    fader.connect(this.destinationBus);
+
+    // Resolve destination node safely
+    let targetDest = null;
+    if (typeof this.destinationOrGetter === 'function') {
+      try { targetDest = this.destinationOrGetter(); } catch (e) {}
+    } else {
+      targetDest = this.destinationOrGetter;
+    }
+    if (!targetDest || !(targetDest instanceof AudioNode)) {
+      targetDest = this.ctx.destination;
+    }
+
+    fader.connect(targetDest);
 
     this.node = synth.node;
     this.fader = fader;
