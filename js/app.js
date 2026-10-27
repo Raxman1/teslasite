@@ -277,6 +277,64 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
+  // Universal Turbocharger Sound Elements
+  const turboToggleBtn = document.getElementById('turboToggleBtn');
+  const turboToggleText = document.getElementById('turboToggleText');
+  const turboStateBadge = document.getElementById('turboStateBadge');
+  const turboVolumeSlider = document.getElementById('turboVolumeSlider');
+  const turboVolumeValText = document.getElementById('turboVolumeValText');
+  const turboBovCheck = document.getElementById('turboBovCheck');
+
+  let isTurboWhineActive = true;
+
+  function updateTurboWhineUI(enabled, vol) {
+    isTurboWhineActive = enabled;
+    if (turboStateBadge) {
+      turboStateBadge.textContent = enabled ? 'ВКЛ' : 'ВЫКЛ';
+      turboStateBadge.classList.toggle('active', enabled);
+    }
+    if (turboToggleBtn) {
+      turboToggleBtn.classList.toggle('active', enabled);
+      if (turboToggleText) turboToggleText.textContent = enabled ? 'ВКЛ' : 'ВЫКЛ';
+    }
+    if (turboVolumeValText) {
+      turboVolumeValText.textContent = enabled ? `${vol}%` : 'ВЫКЛ';
+    }
+  }
+
+  if (turboToggleBtn) {
+    turboToggleBtn.addEventListener('click', () => {
+      ensureAudioActive();
+      const newState = !isTurboWhineActive;
+      const vol = turboVolumeSlider ? parseInt(turboVolumeSlider.value, 10) : 100;
+      updateTurboWhineUI(newState, vol);
+      audio.setTurboWhine(newState);
+      if (newState && vol === 0 && turboVolumeSlider) {
+        turboVolumeSlider.value = 100;
+        updateTurboWhineUI(true, 100);
+        audio.setTurboVolume(100);
+      }
+    });
+  }
+
+  if (turboVolumeSlider) {
+    turboVolumeSlider.addEventListener('input', (e) => {
+      ensureAudioActive();
+      const val = parseInt(e.target.value, 10);
+      const enabled = val > 0;
+      updateTurboWhineUI(enabled, val);
+      audio.setTurboVolume(val);
+      audio.setTurboWhine(enabled);
+    });
+  }
+
+  if (turboBovCheck) {
+    turboBovCheck.addEventListener('change', (e) => {
+      ensureAudioActive();
+      audio.setTurboBlowOff(e.target.checked);
+    });
+  }
+
   // Gauge Elements
   const canvas = document.getElementById('gaugeCanvas');
   const ctx = canvas.getContext('2d');

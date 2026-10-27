@@ -865,8 +865,8 @@ window.MOTORSOUND_CARS = [
         // Raspy turbo intake roar, only under load (it follows the throttle).
         intake: 0.22,
         intakeHz: 750,
-        // No turbo whistle: a tone that climbs with every gear could sound like a siren.
-        whine: 0,
+        // Turbo whistle enabled
+        whine: 0.035,
         whineRatio: 6.5,
         crackle: 0.7,
         popGain: 0.4,

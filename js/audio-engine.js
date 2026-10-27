@@ -101,6 +101,7 @@ class AudioEngine {
     // Dual sound engine mode: 'dsp' (Procedural TeslaSound Engine) vs 'samples' (Assetto Corsa)
     this.soundMode = 'dsp';
     this.dspEngine = null;
+    this.turboEngine = null;
 
     // Immediately prepare context so preset buffers decode even before first touch
     this.ensureContext();
@@ -150,6 +151,12 @@ class AudioEngine {
     // Initialize Procedural DSP engine sharing this.ctx and feeding into submixBus
     if (window.DSPAudioEngine && !this.dspEngine) {
       this.dspEngine = new window.DSPAudioEngine(this.ctx, () => this.submixBus || this.masterGain || this.ctx.destination);
+    }
+
+    // Initialize Universal Turbo Sound Synthesizer feeding into intakeBus or submixBus
+    if (window.TurboSoundEngine && !this.turboEngine) {
+      this.turboEngine = new window.TurboSoundEngine(this.ctx, () => this.intakeBus || this.submixBus || this.masterGain || this.ctx.destination);
+      this.turboEngine.init();
     }
 
     // Load initial preset
@@ -441,6 +448,9 @@ class AudioEngine {
   }
 
   stop() {
+    if (this.turboEngine) {
+      this.turboEngine.stop();
+    }
     if (!this.isPlaying) return;
     if (this.soundMode === 'dsp') {
       if (this.dspEngine) {
@@ -455,6 +465,18 @@ class AudioEngine {
     this.sources = {};
     this.gains = {};
     this.isPlaying = false;
+  }
+
+  setTurboWhine(enabled) {
+    if (this.turboEngine) this.turboEngine.setEnabled(enabled);
+  }
+
+  setTurboVolume(vol) {
+    if (this.turboEngine) this.turboEngine.setVolume(vol);
+  }
+
+  setTurboBlowOff(enabled) {
+    if (this.turboEngine) this.turboEngine.setBovEnabled(enabled);
   }
 
   setVolume(val) {
@@ -569,6 +591,11 @@ class AudioEngine {
       this.maxRpm = this.dspEngine.maxRpm;
       this.throttle = this.dspEngine.throttle;
       this.isRevLimiting = this.dspEngine.isRevLimiting;
+
+      // Update universal turbocharger for DSP mode
+      if (this.turboEngine) {
+        this.turboEngine.update(dt, this.rpm, this.redlineRpm, this.throttle, this.isPlaying);
+      }
       return;
     }
 
@@ -635,6 +662,11 @@ class AudioEngine {
       }
     }
     this.wasOnThrottle = this.throttle > 0.25;
+
+    // Update universal turbocharger for Samples mode
+    if (this.turboEngine) {
+      this.turboEngine.update(dt, this.rpm, this.redlineRpm, this.throttle, this.isPlaying);
+    }
 
     this.updateAudioParameters();
   }

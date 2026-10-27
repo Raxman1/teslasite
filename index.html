@@ -7,7 +7,7 @@
   <meta http-equiv="Pragma" content="no-cache">
   <meta http-equiv="Expires" content="0">
   <title>Tesla V10 Sound Simulator | Carrera GT</title>
-  <link rel="stylesheet" href="style.css?v=4.2">
+  <link rel="stylesheet" href="style.css?v=4.3">
   <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🏎️</text></svg>">
 </head>
 <body>
@@ -130,6 +130,34 @@
             <span id="bassLevelText" style="font-size: 11px; font-weight: 700; color: var(--accent-amber);">100%</span>
           </div>
           <input id="bassSlider" class="tesla-slider" type="range" min="0" max="200" value="100">
+
+          <!-- Universal Turbocharger & Whine Control Panel (Works for ALL cars in DSP & Samples HD) -->
+          <div id="turboControlBox" class="turbo-control-container">
+            <div class="turbo-header">
+              <div class="turbo-title-row">
+                <span class="turbo-title">🌀 Свист турбин / Turbo Whine</span>
+                <span id="turboStateBadge" class="turbo-badge active">ВКЛ</span>
+              </div>
+              <button id="turboToggleBtn" class="btn-turbo-toggle active" type="button" title="Включить / Выключить свист турбин">
+                <span id="turboToggleText">ВКЛ</span>
+              </button>
+            </div>
+
+            <!-- Turbo Whine Volume Slider -->
+            <div class="slider-row" style="margin-top: 6px;">
+              <span class="slider-label">Громкость свиста турбин</span>
+              <span id="turboVolumeValText" class="slider-value">100%</span>
+            </div>
+            <input id="turboVolumeSlider" class="tesla-slider" type="range" min="0" max="150" value="100">
+
+            <!-- Blow-off & Wastegate Flutter Checkbox -->
+            <div class="turbo-suboptions">
+              <label class="turbo-suboption-label">
+                <input id="turboBovCheck" type="checkbox" checked>
+                <span>💥 Сброс давления Blow-Off (Stututu)</span>
+              </label>
+            </div>
+          </div>
 
           <!-- DSP Tuning & Sound Generation Controls -->
           <div id="dspTuningBox" class="dsp-tuning-container">
@@ -359,15 +387,16 @@
   <!-- Scripts -->
   <script src="js/peerjs.min.js"></script>
   <script src="js/qrcode.min.js"></script>
-  <script src="js/sound-data.js?v=4.2"></script>
+  <script src="js/sound-data.js?v=4.3"></script>
   <!-- Procedural DSP Engine (from teslasound.io) -->
-  <script src="js/dsp/cars.js?v=4.2"></script>
-  <script src="js/dsp/engine-dsp.js?v=4.2"></script>
-  <script src="js/dsp/vehicle.js?v=4.2"></script>
-  <script src="js/dsp-audio.js?v=4.2"></script>
-  <script src="js/audio-engine.js?v=4.2"></script>
-  <script src="js/telemetry.js?v=4.2"></script>
-  <script src="js/p2p.js?v=4.2"></script>
-  <script src="js/app.js?v=4.2"></script>
+  <script src="js/dsp/cars.js?v=4.3"></script>
+  <script src="js/dsp/engine-dsp.js?v=4.3"></script>
+  <script src="js/dsp/vehicle.js?v=4.3"></script>
+  <script src="js/dsp-audio.js?v=4.3"></script>
+  <script src="js/turbo-sound.js?v=4.3"></script>
+  <script src="js/audio-engine.js?v=4.3"></script>
+  <script src="js/telemetry.js?v=4.3"></script>
+  <script src="js/p2p.js?v=4.3"></script>
+  <script src="js/app.js?v=4.3"></script>
 </body>
 </html>
