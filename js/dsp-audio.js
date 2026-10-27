@@ -71,7 +71,12 @@ class DSPAudioEngine {
 
     const fader = this.ctx.createGain();
     fader.gain.setValueAtTime(1.0, this.ctx.currentTime);
-    synth.node.connect(fader);
+
+    try {
+      synth.node.connect(fader);
+    } catch (e) {
+      console.warn('[DSPAudioEngine] synth.node.connect warning:', e);
+    }
 
     // Resolve destination node safely
     let targetDest = null;
@@ -80,11 +85,21 @@ class DSPAudioEngine {
     } else {
       targetDest = this.destinationOrGetter;
     }
-    if (!targetDest || !(targetDest instanceof AudioNode)) {
-      targetDest = this.ctx.destination;
-    }
 
-    fader.connect(targetDest);
+    try {
+      if (targetDest && typeof targetDest.connect === 'function') {
+        fader.connect(targetDest);
+      } else {
+        fader.connect(this.ctx.destination);
+      }
+    } catch (err) {
+      console.warn('[DSPAudioEngine] Destination connect warning, falling back to ctx.destination:', err);
+      try {
+        fader.connect(this.ctx.destination);
+      } catch (err2) {
+        console.error('[DSPAudioEngine] Direct destination fallback error:', err2);
+      }
+    }
 
     this.node = synth.node;
     this.fader = fader;

@@ -160,44 +160,48 @@ class AudioEngine {
   }
 
   buildTeslaSpatialAcoustics() {
-    // Intermediate submix bus feeding into master compressor
-    this.submixBus = this.ctx.createGain();
-    this.submixBus.gain.setValueAtTime(1.0, this.ctx.currentTime);
-    this.submixBus.connect(this.compressor);
+    try {
+      // Intermediate submix bus feeding into master compressor
+      this.submixBus = this.ctx.createGain();
+      this.submixBus.gain.setValueAtTime(1.0, this.ctx.currentTime);
+      if (this.compressor) this.submixBus.connect(this.compressor);
 
-    // Create dedicated cabin routing buses
-    this.exhaustBus = this.ctx.createGain();
-    this.exhaustBus.gain.setValueAtTime(1.0, this.ctx.currentTime);
-    this.exhaustBus.connect(this.submixBus);
+      // Create dedicated cabin routing buses
+      this.exhaustBus = this.ctx.createGain();
+      this.exhaustBus.gain.setValueAtTime(1.0, this.ctx.currentTime);
+      this.exhaustBus.connect(this.submixBus);
 
-    this.intakeBus = this.ctx.createGain();
-    this.intakeBus.gain.setValueAtTime(0.9, this.ctx.currentTime);
-    this.intakeBus.connect(this.submixBus);
+      this.intakeBus = this.ctx.createGain();
+      this.intakeBus.gain.setValueAtTime(0.9, this.ctx.currentTime);
+      this.intakeBus.connect(this.submixBus);
 
-    this.transBus = this.ctx.createGain();
-    this.transBus.gain.setValueAtTime(0.8, this.ctx.currentTime);
-    this.transBus.connect(this.submixBus);
+      this.transBus = this.ctx.createGain();
+      this.transBus.gain.setValueAtTime(0.8, this.ctx.currentTime);
+      this.transBus.connect(this.submixBus);
 
-    // Tesla Model 3 / Y Subwoofer Bass Shaker
-    this.subwooferFilter = this.ctx.createBiquadFilter();
-    this.subwooferFilter.type = 'lowpass';
-    this.subwooferFilter.frequency.setValueAtTime(80, this.ctx.currentTime);
-    this.subwooferFilter.Q.setValueAtTime(1.8, this.ctx.currentTime);
+      // Tesla Model 3 / Y Subwoofer Bass Shaker
+      this.subwooferFilter = this.ctx.createBiquadFilter();
+      this.subwooferFilter.type = 'lowpass';
+      this.subwooferFilter.frequency.setValueAtTime(80, this.ctx.currentTime);
+      this.subwooferFilter.Q.setValueAtTime(1.8, this.ctx.currentTime);
 
-    this.subwooferBooster = this.ctx.createBiquadFilter();
-    this.subwooferBooster.type = 'peaking';
-    this.subwooferBooster.frequency.setValueAtTime(45, this.ctx.currentTime);
-    this.subwooferBooster.gain.setValueAtTime(6.0, this.ctx.currentTime);
-    this.subwooferBooster.Q.setValueAtTime(1.2, this.ctx.currentTime);
+      this.subwooferBooster = this.ctx.createBiquadFilter();
+      this.subwooferBooster.type = 'peaking';
+      this.subwooferBooster.frequency.setValueAtTime(45, this.ctx.currentTime);
+      this.subwooferBooster.gain.setValueAtTime(6.0, this.ctx.currentTime);
+      this.subwooferBooster.Q.setValueAtTime(1.2, this.ctx.currentTime);
 
-    this.subwooferGain = this.ctx.createGain();
-    this.subwooferGain.gain.setValueAtTime(this.bassShakeLevel, this.ctx.currentTime);
+      this.subwooferGain = this.ctx.createGain();
+      this.subwooferGain.gain.setValueAtTime(this.bassShakeLevel, this.ctx.currentTime);
 
-    this.subBus = this.ctx.createGain();
-    this.subBus.connect(this.subwooferFilter);
-    this.subwooferFilter.connect(this.subwooferBooster);
-    this.subwooferBooster.connect(this.subwooferGain);
-    this.subwooferGain.connect(this.submixBus);
+      this.subBus = this.ctx.createGain();
+      this.subBus.connect(this.subwooferFilter);
+      this.subwooferFilter.connect(this.subwooferBooster);
+      this.subwooferBooster.connect(this.subwooferGain);
+      this.subwooferGain.connect(this.submixBus);
+    } catch (err) {
+      console.warn('buildTeslaSpatialAcoustics warning:', err);
+    }
 
     // Optional 3D panners with safe fallback
     try {
