@@ -72,6 +72,9 @@ class AudioEngine {
     this.targetRpm = 920;
     this.throttle = 0;
     this.targetThrottle = 0;
+    this.brakePressure = 0;
+    this.isBrakePressed = false;
+    this.isThrottleHold = false;
     this.speed = 0;
     this.gear = 1;
     this.gearMode = 'A';
@@ -244,6 +247,17 @@ class AudioEngine {
         this.exhaustBus.gain.setTargetAtTime(1.0, now, 0.05);
         this.intakeBus.gain.setTargetAtTime(1.0, now, 0.05);
       }
+    }
+  }
+
+  setSubwooferBoost(level) {
+    this.bassShakeLevel = Math.max(0, Math.min(3.0, level));
+    if (this.subwooferGain && this.ctx) {
+      this.subwooferGain.gain.setTargetAtTime(this.bassShakeLevel * 1.2, this.ctx.currentTime, 0.05);
+    }
+    if (this.subwooferBooster && this.ctx) {
+      const boostDb = (this.bassShakeLevel - 1.0) * 8.0;
+      this.subwooferBooster.gain.setTargetAtTime(boostDb, this.ctx.currentTime, 0.05);
     }
   }
 
@@ -527,11 +541,13 @@ class AudioEngine {
 
   updatePhysics(dt, controlMode = 'pedal') {
     if (this.soundMode === 'dsp' && this.dspEngine) {
-      const isBrake = this.isBrakePressed || false;
+      const isBrake = (this.brakePressure > 0.02) || this.isBrakePressed || false;
       this.dspEngine.updatePhysics(dt, controlMode, {
         throttle: this.targetThrottle,
         gearMode: this.gearMode,
         isBrake: isBrake,
+        brake: this.brakePressure,
+        hold: this.isThrottleHold,
         speed: this.speed,
         accel: this.accel || 0
       });
@@ -551,6 +567,7 @@ class AudioEngine {
     this.throttle += (this.targetThrottle - this.throttle) * Math.min(1.0, dt * throttleSpeed);
 
     if (controlMode === 'pedal') {
+      const brakeForce = this.brakePressure > 0.02 ? this.brakePressure : (this.isBrakePressed ? 1.0 : 0.0);
       if (this.gearMode === 'N') {
         if (this.throttle > 0.02) {
           this.targetRpm = this.idleRpm + this.throttle * (this.redlineRpm * 1.02 - this.idleRpm);
@@ -559,17 +576,17 @@ class AudioEngine {
           this.targetRpm = this.idleRpm;
           this.rpm += (this.targetRpm - this.rpm) * Math.min(1.0, dt * 7.0);
         }
-        this.speed = Math.max(0, this.speed - dt * 20.0);
+        this.speed = Math.max(0, this.speed - dt * (20.0 + brakeForce * 60.0));
       } else {
         const maxGearSpeed = this.gearMaxSpeeds[this.gear] || 80;
         const minGearSpeed = (this.gearMaxSpeeds[this.gear - 1] || 0) * 0.6;
 
-        if (this.throttle > 0.05) {
+        if (this.throttle > 0.05 && brakeForce < 0.2) {
           const torqueFactor = Math.sin((this.rpm / this.redlineRpm) * Math.PI) * 0.5 + 0.6;
           const accel = (60.0 / this.gear) * this.throttle * torqueFactor;
           this.speed += accel * dt;
         } else {
-          const drag = 8.0 + (this.speed / 100.0) * 12.0;
+          const drag = 8.0 + (this.speed / 100.0) * 12.0 + brakeForce * 75.0;
           this.speed = Math.max(0, this.speed - drag * dt);
         }
 

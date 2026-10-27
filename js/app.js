@@ -50,6 +50,19 @@ document.addEventListener('DOMContentLoaded', () => {
   const characterValText = document.getElementById('characterValText');
   const crackleSlider = document.getElementById('crackleSlider');
   const crackleValText = document.getElementById('crackleValText');
+  const whineLevelSlider = document.getElementById('whineLevelSlider');
+  const whineLevelValText = document.getElementById('whineLevelValText');
+  const whinePitchSlider = document.getElementById('whinePitchSlider');
+  const whinePitchValText = document.getElementById('whinePitchValText');
+  const subBassSlider = document.getElementById('subBassSlider');
+  const subBassValText = document.getElementById('subBassValText');
+  const idleOffsetSlider = document.getElementById('idleOffsetSlider');
+  const idleOffsetValText = document.getElementById('idleOffsetValText');
+  const limiterHardBtn = document.getElementById('limiterHardBtn');
+  const limiterSoftBtn = document.getElementById('limiterSoftBtn');
+  const respLinearBtn = document.getElementById('respLinearBtn');
+  const respSportBtn = document.getElementById('respSportBtn');
+  const respRaceBtn = document.getElementById('respRaceBtn');
 
   // Preset Selector Elements
   const presetSelect = document.getElementById('presetSelect');
@@ -152,6 +165,72 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
+  if (whineLevelSlider) {
+    whineLevelSlider.addEventListener('input', (e) => {
+      const val = parseInt(e.target.value, 10);
+      if (whineLevelValText) whineLevelValText.textContent = `${val}%`;
+      if (audio.dspEngine) audio.dspEngine.whineLevel = val / 100.0;
+    });
+  }
+
+  if (whinePitchSlider) {
+    whinePitchSlider.addEventListener('input', (e) => {
+      const val = parseInt(e.target.value, 10);
+      if (whinePitchValText) whinePitchValText.textContent = `${val}%`;
+      if (audio.dspEngine) audio.dspEngine.whinePitch = val / 100.0;
+    });
+  }
+
+  if (subBassSlider) {
+    subBassSlider.addEventListener('input', (e) => {
+      const val = parseInt(e.target.value, 10);
+      const db = Math.round((val - 100) / 12);
+      if (subBassValText) subBassValText.textContent = `${db >= 0 ? '+' : ''}${db} dB`;
+      audio.setSubwooferBoost(val / 100.0);
+    });
+  }
+
+  if (idleOffsetSlider) {
+    idleOffsetSlider.addEventListener('input', (e) => {
+      const val = parseInt(e.target.value, 10);
+      if (idleOffsetValText) idleOffsetValText.textContent = `${val >= 0 ? '+' : ''}${val} RPM`;
+      if (audio.dspEngine) {
+        audio.dspEngine.idleRpmOffset = val;
+        audio.dspEngine.applyTuningParams();
+      }
+    });
+  }
+
+  if (limiterHardBtn && limiterSoftBtn) {
+    limiterHardBtn.addEventListener('click', () => {
+      limiterHardBtn.classList.add('active');
+      limiterSoftBtn.classList.remove('active');
+      if (audio.dspEngine) {
+        audio.dspEngine.limiterMode = 'hard';
+        audio.dspEngine.applyTuningParams();
+      }
+    });
+    limiterSoftBtn.addEventListener('click', () => {
+      limiterSoftBtn.classList.add('active');
+      limiterHardBtn.classList.remove('active');
+      if (audio.dspEngine) {
+        audio.dspEngine.limiterMode = 'soft';
+        audio.dspEngine.applyTuningParams();
+      }
+    });
+  }
+
+  if (respLinearBtn && respSportBtn && respRaceBtn) {
+    const setResp = (mode, activeBtn) => {
+      [respLinearBtn, respSportBtn, respRaceBtn].forEach(b => b.classList.remove('active'));
+      activeBtn.classList.add('active');
+      if (audio.dspEngine) audio.dspEngine.throttleResponse = mode;
+    };
+    respLinearBtn.addEventListener('click', () => setResp('linear', respLinearBtn));
+    respSportBtn.addEventListener('click', () => setResp('sport', respSportBtn));
+    respRaceBtn.addEventListener('click', () => setResp('race', respRaceBtn));
+  }
+
   // Populate default mode (DSP)
   populatePresetDropdown('dsp');
 
@@ -199,13 +278,22 @@ document.addEventListener('DOMContentLoaded', () => {
   const hudCoords = document.getElementById('hudCoords');
   const gDot = document.getElementById('gDot');
 
-  // Pedal Elements
+  // Dual Pedal Elements (Brake & Gas)
   const pedalFrame = document.getElementById('pedalFrame');
+  const pedalPlate = document.getElementById('pedalPlate');
   const pedalPercent = document.getElementById('pedalPercent');
   const pedalFill = document.getElementById('pedalFill');
+
+  const brakeFrame = document.getElementById('brakeFrame');
+  const brakePlate = document.getElementById('brakePlate');
+  const brakePercent = document.getElementById('brakePercent');
+  const brakeFill = document.getElementById('brakeFill');
+
   const blipBtn = document.getElementById('blipBtn');
   const launchBtn = document.getElementById('launchBtn');
-  const brakeBtn = document.getElementById('brakeBtn');
+  const holdThrottleBtn = document.getElementById('holdThrottleBtn');
+  let isThrottleHold = false;
+  let brakePressure = 0;
 
   // Mode Buttons
   const tabBtns = document.querySelectorAll('.tab-btn');
@@ -327,111 +415,203 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   });
 
-  // 5. INTERACTIVE TEST GAS PEDAL (Touch, Pointer & Drag support)
+  // 5. INTERACTIVE DUAL SPORTS PEDALS (Continuous Pressure & 3D Tilt Dragging)
   function setPedalPressure(val) {
     ensureAudioActive();
     pedalThrottle = Math.max(0, Math.min(1, val));
     audio.targetThrottle = pedalThrottle;
+    audio.isThrottleHold = isThrottleHold;
 
     const pct = Math.round(pedalThrottle * 100);
-    pedalPercent.textContent = `${pct}%`;
-    pedalFill.style.width = `${pct}%`;
+    if (pedalPercent) pedalPercent.textContent = `${pct}%`;
+    if (pedalFill) pedalFill.style.width = `${pct}%`;
 
-    if (pedalThrottle > 0.05) {
-      pedalFrame.classList.add('active');
-    } else {
-      pedalFrame.classList.remove('active');
+    if (pedalPlate) {
+      const angle = 15 + pedalThrottle * 18;
+      const transY = pedalThrottle * 14;
+      const transZ = 10 - pedalThrottle * 25;
+      pedalPlate.style.transform = `rotateX(${angle}deg) translateY(${transY}px) translateZ(${transZ}px)`;
+      pedalPlate.style.boxShadow = `0 ${Math.max(4, 12 - pedalThrottle * 8)}px 20px rgba(0,0,0,0.8), 0 0 ${pedalThrottle * 25}px rgba(255, 153, 0, 0.7)`;
+    }
+    if (pedalFrame) {
+      pedalFrame.classList.toggle('active', pedalThrottle > 0.05);
     }
   }
 
-  function handlePedalPointer(e) {
+  function setBrakePressure(val) {
+    ensureAudioActive();
+    brakePressure = Math.max(0, Math.min(1, val));
+    audio.brakePressure = brakePressure;
+    audio.isBrakePressed = brakePressure > 0.05;
+
+    // Disengage cruise/hold on brake tap
+    if (brakePressure > 0.1 && isThrottleHold) {
+      isThrottleHold = false;
+      audio.isThrottleHold = false;
+      if (holdThrottleBtn) holdThrottleBtn.classList.remove('active');
+    }
+
+    const pct = Math.round(brakePressure * 100);
+    if (brakePercent) brakePercent.textContent = `${pct}%`;
+    if (brakeFill) brakeFill.style.width = `${pct}%`;
+
+    if (brakePlate) {
+      const angle = 15 + brakePressure * 16;
+      const transY = brakePressure * 12;
+      const transZ = 10 - brakePressure * 22;
+      brakePlate.style.transform = `rotateX(${angle}deg) translateY(${transY}px) translateZ(${transZ}px)`;
+      brakePlate.style.boxShadow = `0 ${Math.max(4, 12 - brakePressure * 8)}px 20px rgba(0,0,0,0.8), 0 0 ${brakePressure * 25}px rgba(255, 59, 48, 0.8)`;
+    }
+    if (brakeFrame) {
+      brakeFrame.classList.toggle('active', brakePressure > 0.05);
+    }
+  }
+
+  // Pointer drag for Gas Pedal
+  function handleGasPointer(e) {
+    if (!pedalFrame) return;
     const rect = pedalFrame.getBoundingClientRect();
     const clientY = e.clientY || (e.touches && e.touches[0].clientY);
-    if (!clientY) return;
+    if (clientY === undefined) return;
 
-    // Bottom of pedal is 100% press, top is 0%
+    // Bottom is 100%, top is 0%
     const relativeY = clientY - rect.top;
     const progress = Math.max(0, Math.min(1, relativeY / rect.height));
-    // Non-linear realistic pedal curve
-    setPedalPressure(Math.pow(progress, 0.9));
+    setPedalPressure(Math.pow(progress, 0.92));
   }
 
-  pedalFrame.addEventListener('pointerdown', (e) => {
-    isPedalPressed = true;
-    pedalFrame.setPointerCapture(e.pointerId);
-    handlePedalPointer(e);
-  });
+  if (pedalFrame) {
+    pedalFrame.addEventListener('pointerdown', (e) => {
+      isPedalPressed = true;
+      try { pedalFrame.setPointerCapture(e.pointerId); } catch (err) {}
+      handleGasPointer(e);
+    });
 
-  pedalFrame.addEventListener('pointermove', (e) => {
-    if (isPedalPressed) {
-      handlePedalPointer(e);
-    }
-  });
+    pedalFrame.addEventListener('pointermove', (e) => {
+      if (isPedalPressed) {
+        handleGasPointer(e);
+      }
+    });
 
-  const releasePedal = () => {
-    if (isPedalPressed) {
-      isPedalPressed = false;
-      setPedalPressure(0);
-    }
-  };
+    const releaseGas = () => {
+      if (isPedalPressed) {
+        isPedalPressed = false;
+        if (!isThrottleHold) {
+          setPedalPressure(0);
+        }
+      }
+    };
+    pedalFrame.addEventListener('pointerup', releaseGas);
+    pedalFrame.addEventListener('pointercancel', releaseGas);
+  }
 
-  pedalFrame.addEventListener('pointerup', releasePedal);
-  pedalFrame.addEventListener('pointercancel', releasePedal);
+  // Pointer drag for Brake Pedal
+  function handleBrakePointer(e) {
+    if (!brakeFrame) return;
+    const rect = brakeFrame.getBoundingClientRect();
+    const clientY = e.clientY || (e.touches && e.touches[0].clientY);
+    if (clientY === undefined) return;
+
+    const relativeY = clientY - rect.top;
+    const progress = Math.max(0, Math.min(1, relativeY / rect.height));
+    setBrakePressure(Math.pow(progress, 0.95));
+  }
+
+  if (brakeFrame) {
+    brakeFrame.addEventListener('pointerdown', (e) => {
+      isBrakePressed = true;
+      try { brakeFrame.setPointerCapture(e.pointerId); } catch (err) {}
+      handleBrakePointer(e);
+    });
+
+    brakeFrame.addEventListener('pointermove', (e) => {
+      if (isBrakePressed) {
+        handleBrakePointer(e);
+      }
+    });
+
+    const releaseBrake = () => {
+      if (isBrakePressed) {
+        isBrakePressed = false;
+        setBrakePressure(0);
+      }
+    };
+    brakeFrame.addEventListener('pointerup', releaseBrake);
+    brakeFrame.addEventListener('pointercancel', releaseBrake);
+  }
+
+  // Throttle Hold / Cruise Toggle Button
+  if (holdThrottleBtn) {
+    holdThrottleBtn.addEventListener('click', () => {
+      isThrottleHold = !isThrottleHold;
+      audio.isThrottleHold = isThrottleHold;
+      holdThrottleBtn.classList.toggle('active', isThrottleHold);
+      if (isThrottleHold && pedalThrottle < 0.2) {
+        setPedalPressure(0.5); // Engage cruising throttle at 50%
+      }
+    });
+  }
 
   // Quick Action Buttons
-  blipBtn.addEventListener('click', () => {
-    if (!audio.isPlaying) audio.start();
-    setPedalPressure(0.85);
-    setTimeout(() => setPedalPressure(0), 280);
-  });
-
-  launchBtn.addEventListener('click', () => {
-    if (!audio.isPlaying) audio.start();
-    if (isLaunchControl) return;
-
-    isLaunchControl = true;
-    launchBtn.textContent = 'HOLDING 4800 RPM...';
-    audio.gear = 1;
-    audio.gearMode = 'A';
-    gearBtns.forEach(b => b.classList.toggle('active', b.dataset.mode === 'A'));
-
-    // Hold launch RPM for 1.8 seconds, then dump clutch
-    audio.targetThrottle = 0.55;
-    setTimeout(() => {
-      launchBtn.textContent = 'DUMP CLUTCH! 🚀';
-      setPedalPressure(1.0);
-      audio.triggerRandomPop(1.0);
+  if (blipBtn) {
+    blipBtn.addEventListener('click', () => {
+      ensureAudioActive();
+      setPedalPressure(0.85);
       setTimeout(() => {
-        launchBtn.textContent = '🚀 Launch Control';
-        isLaunchControl = false;
-      }, 2000);
-    }, 1800);
-  });
+        if (!isThrottleHold) setPedalPressure(0);
+      }, 280);
+    });
+  }
 
-  brakeBtn.addEventListener('pointerdown', () => {
-    audio.isBrakePressed = true;
-    setPedalPressure(0);
-    audio.speed = Math.max(0, audio.speed - 45);
-    if (audio.speed < 20 && audio.gear > 1) {
-      audio.shiftDown();
-    }
-  });
+  if (launchBtn) {
+    launchBtn.addEventListener('click', () => {
+      ensureAudioActive();
+      if (isLaunchControl) return;
 
-  window.addEventListener('pointerup', () => {
-    audio.isBrakePressed = false;
-  });
+      isLaunchControl = true;
+      launchBtn.textContent = 'HOLDING RPM...';
+      audio.gear = 1;
+      audio.gearMode = 'A';
+      gearBtns.forEach(b => b.classList.toggle('active', b.dataset.mode === 'A'));
 
-  // 6. KEYBOARD HOTKEYS
+      // Hold launch RPM
+      setPedalPressure(0.55);
+      setTimeout(() => {
+        launchBtn.textContent = 'LAUNCH! 🚀';
+        setPedalPressure(1.0);
+        if (audio.triggerRandomPop) audio.triggerRandomPop(1.0);
+        setTimeout(() => {
+          launchBtn.textContent = '🚀 Launch';
+          isLaunchControl = false;
+        }, 2000);
+      }, 1800);
+    });
+  }
+
+  // 6. KEYBOARD HOTKEYS (Proportional Response)
+  let keyThrottleInterval = null;
+  let keyBrakeInterval = null;
+
   window.addEventListener('keydown', (e) => {
     if (e.target.tagName === 'INPUT') return;
     if (e.code === 'Space' || e.code === 'KeyW' || e.code === 'ArrowUp') {
       e.preventDefault();
-      setPedalPressure(1.0);
+      ensureAudioActive();
+      if (!keyThrottleInterval) {
+        setPedalPressure(Math.max(pedalThrottle, 0.25));
+        keyThrottleInterval = setInterval(() => {
+          setPedalPressure(Math.min(1.0, pedalThrottle + 0.12));
+        }, 35);
+      }
     } else if (e.code === 'KeyS' || e.code === 'ArrowDown') {
       e.preventDefault();
-      audio.isBrakePressed = true;
-      setPedalPressure(0);
-      audio.speed = Math.max(0, audio.speed - 30);
+      ensureAudioActive();
+      if (!keyBrakeInterval) {
+        setBrakePressure(Math.max(brakePressure, 0.3));
+        keyBrakeInterval = setInterval(() => {
+          setBrakePressure(Math.min(1.0, brakePressure + 0.15));
+        }, 35);
+      }
     } else if (e.code === 'KeyE') {
       audio.shiftUp();
     } else if (e.code === 'KeyQ') {
@@ -441,9 +621,17 @@ document.addEventListener('DOMContentLoaded', () => {
 
   window.addEventListener('keyup', (e) => {
     if (e.code === 'Space' || e.code === 'KeyW' || e.code === 'ArrowUp') {
-      setPedalPressure(0);
+      if (keyThrottleInterval) {
+        clearInterval(keyThrottleInterval);
+        keyThrottleInterval = null;
+      }
+      if (!isThrottleHold) setPedalPressure(0);
     } else if (e.code === 'KeyS' || e.code === 'ArrowDown') {
-      audio.isBrakePressed = false;
+      if (keyBrakeInterval) {
+        clearInterval(keyBrakeInterval);
+        keyBrakeInterval = null;
+      }
+      setBrakePressure(0);
     }
   });
 

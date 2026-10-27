@@ -17,9 +17,13 @@ class DSPAudioEngine {
     this.engineGen = 0;
 
     // Adjustable tuning parameters (as on teslasound.io)
-    this.character = 0.85; // 0.2 (quiet stock) .. 1.0 (aggressive open pipes)
+    this.character = 0.85; // 0.15 (quiet stock) .. 1.0 (aggressive open straight pipes)
     this.crackle = 1.0;    // 0.0 .. 1.5 (afterfire pops & bangs)
-    this.whineLevel = 1.0;
+    this.whineLevel = 1.0; // 0.0 .. 2.0 (turbo/supercharger whine volume)
+    this.whinePitch = 1.0; // 0.5 .. 1.8 (whine pitch multiplier)
+    this.idleRpmOffset = 0;// -150 .. +350 RPM (idle lope)
+    this.limiterMode = 'hard'; // 'hard' (2-step aggressive) | 'soft' (smooth bounce)
+    this.throttleResponse = 'sport'; // 'linear' | 'sport' | 'race'
 
     // Default car: Mercedes CLS 63 AMG «Банан»
     this.setCar('cls63-amg');
@@ -31,12 +35,21 @@ class DSPAudioEngine {
     if (!found) return;
 
     this.car = found;
+    this.baseIdleRpm = (found.engine && found.engine.idleRpm) ? found.engine.idleRpm : 800;
     this.vehicle = new window.Vehicle(found);
+    this.applyTuningParams();
     console.log('[DSPAudioEngine] Selected car:', found.name);
 
     if (this.isPlaying) {
       this.rebuildNode();
     }
+  }
+
+  applyTuningParams() {
+    if (!this.vehicle || !this.vehicle.e) return;
+    const baseIdle = this.baseIdleRpm || (this.car && this.car.engine ? this.car.engine.idleRpm : 800);
+    this.vehicle.e.idleRpm = Math.max(450, baseIdle + this.idleRpmOffset);
+    this.vehicle.e.softLimiter = (this.limiterMode === 'soft');
   }
 
   async rebuildNode() {
@@ -204,18 +217,29 @@ class DSPAudioEngine {
         accel: inputState.accel || 0
       };
     } else {
-      // Manual / Virtual Gas Pedal mode
+      // Manual / Virtual Gas & Brake Pedal mode
       const isNeutral = inputState.gearMode === 'N';
-      const thr = Math.max(0, Math.min(1, inputState.throttle || 0));
+      const rawThr = Math.max(0, Math.min(1, inputState.throttle || 0));
+      
+      // Throttle response curve
+      let thr = rawThr;
+      if (this.throttleResponse === 'sport') {
+        thr = Math.pow(rawThr, 0.82);
+      } else if (this.throttleResponse === 'race') {
+        thr = Math.pow(rawThr, 0.65);
+      }
+
+      const brk = Math.max(0, Math.min(1, inputState.brake !== undefined ? inputState.brake : (inputState.isBrake ? 1 : 0)));
       input = {
         source: 'demo',
         gas: isNeutral ? 0 : thr,
-        brake: inputState.isBrake ? 1 : 0,
+        brake: brk,
         rev: isNeutral ? thr : 0,
-        hold: false
+        hold: !!inputState.hold
       };
     }
 
+    this.applyTuningParams();
     this.vehicle.update(dt, input);
 
     // Send calculated combustion parameters to DSP synthesizer
@@ -228,7 +252,7 @@ class DSPAudioEngine {
         cut: this.vehicle.cut,
         character: this.character,
         crackle: this.crackle,
-        whinePitch: 1.0,
+        whinePitch: this.whinePitch,
         whineLevel: this.whineLevel,
         speed: this.vehicle.speed,
         rev: this.vehicle.revPedal

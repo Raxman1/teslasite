@@ -128,22 +128,62 @@
           </div>
           <input id="bassSlider" type="range" min="0" max="200" value="100" style="width: 100%; margin-top: 4px; accent-color: var(--accent-amber); cursor: pointer;">
 
-          <!-- DSP Tuning Controls (Character & Crackle as on teslasound.io) -->
-          <div id="dspTuningBox" style="margin-top: 12px; border-top: 1px solid var(--border-glass); padding-top: 10px;">
-            <div style="font-size: 11px; font-weight: 700; color: var(--accent-amber); margin-bottom: 6px; text-transform: uppercase;">
-              ⚡ Настройки синтеза DSP
+          <!-- DSP Tuning & Sound Generation Controls -->
+          <div id="dspTuningBox" class="dsp-tuning-container">
+            <div class="dsp-tuning-header">
+              ⚡ Настройки синтеза и звука DSP
             </div>
-            <div style="display: flex; justify-content: space-between; align-items: center;">
-              <span style="font-size: 11px; color: var(--text-muted);">Характер (Сток → Прямоток):</span>
-              <span id="characterValText" style="font-size: 11px; font-weight: 700; color: var(--accent-amber);">85%</span>
-            </div>
-            <input id="characterSlider" type="range" min="20" max="100" value="85" style="width: 100%; margin: 2px 0 8px 0; accent-color: var(--accent-amber); cursor: pointer;">
 
-            <div style="display: flex; justify-content: space-between; align-items: center;">
-              <span style="font-size: 11px; color: var(--text-muted);">Отстрелы (Crackle & Pops):</span>
-              <span id="crackleValText" style="font-size: 11px; font-weight: 700; color: var(--accent-amber);">100%</span>
+            <div class="slider-row">
+              <span class="slider-label">🔊 Прямоток / Характер (Flow):</span>
+              <span id="characterValText" class="slider-value">85%</span>
             </div>
-            <input id="crackleSlider" type="range" min="0" max="150" value="100" style="width: 100%; margin: 2px 0 0 0; accent-color: var(--accent-amber); cursor: pointer;">
+            <input id="characterSlider" class="slider-input" type="range" min="15" max="100" value="85">
+
+            <div class="slider-row">
+              <span class="slider-label">💥 Отстрелы (Crackle & Pops):</span>
+              <span id="crackleValText" class="slider-value">100%</span>
+            </div>
+            <input id="crackleSlider" class="slider-input" type="range" min="0" max="150" value="100">
+
+            <div class="slider-row">
+              <span class="slider-label">🌪️ Свист турбин / Чарджера:</span>
+              <span id="whineLevelValText" class="slider-value">100%</span>
+            </div>
+            <input id="whineLevelSlider" class="slider-input" type="range" min="0" max="200" value="100">
+
+            <div class="slider-row">
+              <span class="slider-label">🎼 Тональность наддува (Pitch):</span>
+              <span id="whinePitchValText" class="slider-value">100%</span>
+            </div>
+            <input id="whinePitchSlider" class="slider-input" type="range" min="50" max="180" value="100">
+
+            <div class="slider-row">
+              <span class="slider-label">🔊 Сабвуфер Tesla (Bass Shaker):</span>
+              <span id="subBassValText" class="slider-value">+6 dB</span>
+            </div>
+            <input id="subBassSlider" class="slider-input" type="range" min="0" max="250" value="120">
+
+            <div class="slider-row">
+              <span class="slider-label">⚡ Холостой ход (Злые валы / Cam Lope):</span>
+              <span id="idleOffsetValText" class="slider-value">0 RPM</span>
+            </div>
+            <input id="idleOffsetSlider" class="slider-input" type="range" min="-150" max="350" step="25" value="0">
+
+            <!-- Rev Limiter Mode -->
+            <div style="font-size: 10px; color: var(--text-muted); margin-top: 8px; margin-bottom: 3px;">Режим отсечки:</div>
+            <div style="display: flex; gap: 6px;">
+              <button id="limiterHardBtn" class="btn-tuning-toggle active">🔥 Хард-кат 2-Step</button>
+              <button id="limiterSoftBtn" class="btn-tuning-toggle">⚡ Мягкая отсечка</button>
+            </div>
+
+            <!-- Throttle Response Curve -->
+            <div style="font-size: 10px; color: var(--text-muted); margin-top: 8px; margin-bottom: 3px;">Отклик на педаль газа:</div>
+            <div style="display: flex; gap: 6px;">
+              <button id="respLinearBtn" class="btn-tuning-toggle">Плавный</button>
+              <button id="respSportBtn" class="btn-tuning-toggle active">Спорт</button>
+              <button id="respRaceBtn" class="btn-tuning-toggle">Экстрим ⚡</button>
+            </div>
           </div>
         </div>
       </div>
@@ -161,17 +201,29 @@
         </div>
       </div>
 
-      <!-- RIGHT: Interactive Gas Pedal & Simulator Controls -->
+      <!-- RIGHT: Interactive Dual Pedals (Brake & Gas) & Simulator Controls -->
       <div class="card pedal-section">
-        <div class="hud-title" style="width: 100%;">
-          <span>Интерактивная педаль газа</span>
-          <span id="pedalPercent" style="color: var(--accent-amber); font-weight: 800;">0%</span>
+        <div class="hud-title" style="width: 100%; display: flex; justify-content: space-between; align-items: center;">
+          <span style="font-size: 11px; font-weight: 700; color: #ff3b30;">🛑 ТОРМОЗ: <b id="brakePercent">0%</b></span>
+          <span style="font-size: 11px; font-weight: 700; color: var(--accent-amber);">⚡ ГАЗ: <b id="pedalPercent">0%</b></span>
         </div>
 
-        <!-- 3D Aluminum Sports Pedal Frame -->
+        <!-- 3D Dual Aluminum Sports Pedals -->
         <div class="pedal-wrapper">
-          <div id="pedalFrame" class="pedal-frame" title="Нажмите и удерживайте или тяните вниз">
-            <div class="pedal-plate">
+          <!-- 1. Brake Pedal (Left) -->
+          <div id="brakeFrame" class="pedal-frame pedal-brake-frame" title="Нажмите и удерживайте или тяните вниз для торможения">
+            <div id="brakePlate" class="pedal-brake-plate">
+              <div class="rubber-brake-bar"></div>
+              <div class="rubber-brake-bar"></div>
+              <div class="brake-logo">STOP</div>
+              <div class="rubber-brake-bar"></div>
+              <div class="rubber-brake-bar"></div>
+            </div>
+          </div>
+
+          <!-- 2. Gas Pedal (Right) -->
+          <div id="pedalFrame" class="pedal-frame pedal-gas-frame" title="Нажмите и удерживайте или тяните вниз для газа">
+            <div id="pedalPlate" class="pedal-plate">
               <div class="rubber-stud-row">
                 <div class="rubber-stud"></div>
                 <div class="rubber-stud"></div>
@@ -180,7 +232,7 @@
                 <div class="rubber-stud"></div>
                 <div class="rubber-stud"></div>
               </div>
-              <div class="pedal-logo">CARRERA GT</div>
+              <div class="pedal-logo">GAS</div>
               <div class="rubber-stud-row">
                 <div class="rubber-stud"></div>
                 <div class="rubber-stud"></div>
@@ -193,21 +245,26 @@
           </div>
         </div>
 
-        <!-- Pedal Gauge Progress Bar -->
-        <div class="pedal-stats">
-          <span style="font-size: 11px; color: var(--text-muted);">0%</span>
-          <div class="pedal-gauge-bar">
-            <div id="pedalFill" class="pedal-gauge-fill"></div>
+        <!-- Dual Pedal Gauge Progress Bars -->
+        <div class="pedal-dual-stats">
+          <div>
+            <div class="pedal-gauge-bar">
+              <div id="brakeFill" class="brake-gauge-fill"></div>
+            </div>
           </div>
-          <span style="font-size: 11px; color: var(--accent-red);">100%</span>
+          <div>
+            <div class="pedal-gauge-bar">
+              <div id="pedalFill" class="pedal-gauge-fill"></div>
+            </div>
+          </div>
         </div>
 
         <!-- Quick Action Buttons -->
         <div class="pedal-actions">
           <button id="blipBtn" class="btn">💥 Перегазовка</button>
-          <button id="launchBtn" class="btn">🚀 Launch Control</button>
+          <button id="launchBtn" class="btn">🚀 Launch</button>
+          <button id="holdThrottleBtn" class="btn" title="Зафиксировать текущую силу газа">🔒 Круиз</button>
         </div>
-        <button id="brakeBtn" class="btn btn-danger" style="width: 100%; margin-top: 8px;">🛑 Тормоз</button>
 
         <!-- Gearbox Mode Selector -->
         <div class="gear-selector">
@@ -267,15 +324,15 @@
   <!-- Scripts -->
   <script src="js/peerjs.min.js"></script>
   <script src="js/qrcode.min.js"></script>
-  <script src="js/sound-data.js?v=3.1"></script>
+  <script src="js/sound-data.js?v=3.2"></script>
   <!-- Procedural DSP Engine (from teslasound.io) -->
-  <script src="js/dsp/cars.js?v=3.1"></script>
-  <script src="js/dsp/engine-dsp.js?v=3.1"></script>
-  <script src="js/dsp/vehicle.js?v=3.1"></script>
-  <script src="js/dsp-audio.js?v=3.1"></script>
-  <script src="js/audio-engine.js?v=3.1"></script>
-  <script src="js/telemetry.js?v=3.1"></script>
-  <script src="js/p2p.js?v=3.1"></script>
-  <script src="js/app.js?v=3.1"></script>
+  <script src="js/dsp/cars.js?v=3.2"></script>
+  <script src="js/dsp/engine-dsp.js?v=3.2"></script>
+  <script src="js/dsp/vehicle.js?v=3.2"></script>
+  <script src="js/dsp-audio.js?v=3.2"></script>
+  <script src="js/audio-engine.js?v=3.2"></script>
+  <script src="js/telemetry.js?v=3.2"></script>
+  <script src="js/p2p.js?v=3.2"></script>
+  <script src="js/app.js?v=3.2"></script>
 </body>
 </html>
