@@ -37,6 +37,33 @@ document.addEventListener('DOMContentLoaded', () => {
   const brandTitle = document.getElementById('brandTitle');
   const pedalLogo = document.querySelector('.pedal-logo');
 
+  // Tesla Audio Optimization Elements
+  const stageBtns = document.querySelectorAll('.stage-btn');
+  const bassSlider = document.getElementById('bassSlider');
+  const bassLevelText = document.getElementById('bassLevelText');
+
+  if (stageBtns) {
+    stageBtns.forEach(btn => {
+      btn.addEventListener('click', () => {
+        stageBtns.forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        const mode = btn.dataset.stage;
+        audio.setTeslaSoundstage(mode);
+      });
+    });
+  }
+
+  if (bassSlider) {
+    bassSlider.addEventListener('input', (e) => {
+      const val = parseInt(e.target.value, 10);
+      bassLevelText.textContent = `${val}%`;
+      audio.bassShakeLevel = val / 100.0;
+      if (audio.subwooferGain && audio.ctx) {
+        audio.subwooferGain.gain.setTargetAtTime(audio.bassShakeLevel * 1.2, audio.ctx.currentTime, 0.05);
+      }
+    });
+  }
+
   // Gauge Elements
   const canvas = document.getElementById('gaugeCanvas');
   const ctx = canvas.getContext('2d');

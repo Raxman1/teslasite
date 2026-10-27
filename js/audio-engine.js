@@ -1,6 +1,6 @@
 /**
  * Multi-Preset Supercar Sound & Physics Engine (Web Audio API)
- * Seamlessly switches between Carrera GT, Supra 2JZ, AMG GT-R, BMW Z4 GT3, Dragster
+ * Optimized for Tesla Model 3 / Model Y Multichannel & 3D Spatial Audio Architecture
  */
 
 function base64ToArrayBuffer(base64) {
@@ -23,16 +23,33 @@ class AudioEngine {
     this.currentPresetId = 'carrera_gt';
     this.currentPreset = null;
 
-    // Decoded audio buffers cache per preset: { presetId: { soundKey: AudioBuffer } }
+    // Decoded audio buffers cache per preset
     this.presetBuffers = {};
 
     // Active looping nodes & gains
     this.sources = {};
     this.gains = {};
 
-    // Master nodes
+    // Master nodes & Tesla Spatial Audio Network
     this.masterGain = null;
     this.compressor = null;
+    
+    // Spatial Panners for Tesla Cabin Acoustics
+    this.exhaustPanner = null;      // Placed behind driver (rear shelf / trunk)
+    this.intakePanner = null;       // Placed in front (windshield / dashboard)
+    this.transmissionPanner = null; // Placed at center tunnel
+    this.exhaustPopLeft = null;     // Dual exhaust left pipe
+    this.exhaustPopRight = null;    // Dual exhaust right pipe
+
+    // Tesla Model 3 / Y Subwoofer Bass Shaker
+    this.subwooferFilter = null;
+    this.subwooferGain = null;
+    this.bassShakeLevel = 1.0; // 0.0 to 2.0
+
+    // Tesla Soundstage Configuration
+    this.soundstageMode = 'tesla_mid'; // 'tesla_mid' | 'tesla_front' | 'tesla_3d'
+    this.frontRearFader = 0.2;         // -1.0 (all front) to +1.0 (all rear exhaust)
+    this.stereoWidth = 1.35;           // Haas stereo widening factor
 
     // Engine parameters
     this.rpm = 920;
@@ -48,7 +65,7 @@ class AudioEngine {
     this.lastPopTime = 0;
     this.wasOnThrottle = false;
 
-    // Defaults (overwritten by preset)
+    // Engine specs defaults
     this.idleRpm = 920;
     this.redlineRpm = 8400;
     this.maxRpm = 10000;
@@ -75,6 +92,15 @@ class AudioEngine {
       await this.ctx.resume();
     }
 
+    // Auto-configure multichannel support for Tesla MCU
+    const maxChannels = this.ctx.destination.maxChannelCount || 2;
+    if (maxChannels >= 4) {
+      this.ctx.destination.channelCount = Math.min(6, maxChannels);
+      this.ctx.destination.channelCountMode = 'explicit';
+      console.log(`Tesla Multichannel Audio detected: ${this.ctx.destination.channelCount} channels.`);
+    }
+
+    // High quality master dynamics compressor
     this.compressor = this.ctx.createDynamicsCompressor();
     this.compressor.threshold.setValueAtTime(-14, this.ctx.currentTime);
     this.compressor.knee.setValueAtTime(6, this.ctx.currentTime);
@@ -88,12 +114,123 @@ class AudioEngine {
     this.masterGain.connect(this.compressor);
     this.compressor.connect(this.ctx.destination);
 
+    // Build 3D Tesla Cabin Spatial Network
+    this.buildTeslaSpatialAcoustics();
+
     // Load initial preset
     await this.loadPresetBuffers(this.currentPresetId);
 
     this.isReady = true;
-    console.log('AudioEngine initialized with preset:', this.currentPresetId);
+    console.log('Tesla AudioEngine ready. Preset:', this.currentPresetId);
     return true;
+  }
+
+  // Tesla Model 3 / Y Spatial Nodes Architecture
+  buildTeslaSpatialAcoustics() {
+    const listener = this.ctx.listener;
+    // Driver seat position in Tesla Model 3/Y (slightly left of center)
+    if (listener.positionX) {
+      listener.positionX.setValueAtTime(-0.25, this.ctx.currentTime);
+      listener.positionY.setValueAtTime(0, this.ctx.currentTime);
+      listener.positionZ.setValueAtTime(0, this.ctx.currentTime);
+      listener.forwardX.setValueAtTime(0, this.ctx.currentTime);
+      listener.forwardY.setValueAtTime(0, this.ctx.currentTime);
+      listener.forwardZ.setValueAtTime(-1, this.ctx.currentTime);
+    } else {
+      listener.setOrientation(0, 0, -1, 0, 1, 0);
+    }
+
+    // 1. REAR EXHAUST PANNER (Behind driver, simulating sound coming from trunk / rear parcel shelf)
+    this.exhaustPanner = this.ctx.createPanner();
+    this.exhaustPanner.panningModel = 'HRTF';
+    this.exhaustPanner.distanceModel = 'inverse';
+    this.exhaustPanner.refDistance = 1;
+    this.exhaustPanner.maxDistance = 100;
+    this.exhaustPanner.rolloffFactor = 1;
+    this.exhaustPanner.coneInnerAngle = 360;
+    this.exhaustPanner.setPosition(0, -0.3, 1.4); // Z > 0 is behind in Web Audio
+
+    this.exhaustBus = this.ctx.createGain();
+    this.exhaustBus.connect(this.exhaustPanner);
+    this.exhaustPanner.connect(this.masterGain);
+
+    // 2. FRONT INTAKE & DASHBOARD PANNER (Directly on windshield / dashboard immersion speakers)
+    this.intakePanner = this.ctx.createPanner();
+    this.intakePanner.panningModel = 'HRTF';
+    this.intakePanner.distanceModel = 'inverse';
+    this.intakePanner.setPosition(0, 0.4, -1.2); // Z < 0 is in front (dashboard)
+
+    this.intakeBus = this.ctx.createGain();
+    this.intakeBus.connect(this.intakePanner);
+    this.intakePanner.connect(this.masterGain);
+
+    // 3. CENTER TRANSMISSION / GEARBOX TUNNEL PANNER
+    this.transmissionPanner = this.ctx.createPanner();
+    this.transmissionPanner.panningModel = 'HRTF';
+    this.transmissionPanner.setPosition(0.1, -0.4, -0.1); // Center console next to driver leg
+
+    this.transBus = this.ctx.createGain();
+    this.transBus.connect(this.transmissionPanner);
+    this.transmissionPanner.connect(this.masterGain);
+
+    // 4. DUAL EXHAUST PIPES (Left / Right backfire localization)
+    this.popLeftPanner = this.ctx.createPanner();
+    this.popLeftPanner.panningModel = 'HRTF';
+    this.popLeftPanner.setPosition(-0.55, -0.4, 2.0); // Rear Left exhaust pipe
+    this.popLeftPanner.connect(this.masterGain);
+
+    this.popRightPanner = this.ctx.createPanner();
+    this.popRightPanner.panningModel = 'HRTF';
+    this.popRightPanner.setPosition(0.55, -0.4, 2.0);  // Rear Right exhaust pipe
+    this.popRightPanner.connect(this.masterGain);
+
+    // 5. TESLA DEDICATED SUBWOOFER / BASS SHAKER (Door woofers + trunk sub)
+    this.subwooferFilter = this.ctx.createBiquadFilter();
+    this.subwooferFilter.type = 'lowpass';
+    this.subwooferFilter.frequency.setValueAtTime(80, this.ctx.currentTime); // 80 Hz low-pass crossover
+    this.subwooferFilter.Q.setValueAtTime(1.8, this.ctx.currentTime);
+
+    this.subwooferBooster = this.ctx.createBiquadFilter();
+    this.subwooferBooster.type = 'peaking';
+    this.subwooferBooster.frequency.setValueAtTime(45, this.ctx.currentTime); // 45 Hz deep physical thump
+    this.subwooferBooster.gain.setValueAtTime(5.5, this.ctx.currentTime);
+    this.subwooferBooster.Q.setValueAtTime(1.2, this.ctx.currentTime);
+
+    this.subwooferGain = this.ctx.createGain();
+    this.subwooferGain.gain.setValueAtTime(this.bassShakeLevel, this.ctx.currentTime);
+
+    this.subBus = this.ctx.createGain();
+    this.subBus.connect(this.subwooferFilter);
+    this.subwooferFilter.connect(this.subwooferBooster);
+    this.subwooferBooster.connect(this.subwooferGain);
+    this.subwooferGain.connect(this.masterGain);
+  }
+
+  // Adjust Tesla Soundstage Profile
+  setTeslaSoundstage(mode, fader = 0.2, bass = 1.0) {
+    this.soundstageMode = mode;
+    this.frontRearFader = fader;
+    this.bassShakeLevel = bass;
+
+    if (this.subwooferGain && this.ctx) {
+      this.subwooferGain.gain.setTargetAtTime(this.bassShakeLevel * 1.2, this.ctx.currentTime, 0.05);
+    }
+
+    if (this.exhaustPanner && this.intakePanner) {
+      if (mode === 'tesla_mid') {
+        // Carrera GT mid-engine: Engine roaring right behind the front seats
+        this.exhaustPanner.setPosition(0, -0.1, 1.1);
+        this.intakePanner.setPosition(0, 0.3, -1.0);
+      } else if (mode === 'tesla_front') {
+        // Front-engine (Supra/AMG): Engine intake forward on dash, exhaust in the trunk
+        this.exhaustPanner.setPosition(0, -0.4, 2.2);
+        this.intakePanner.setPosition(0, 0.5, -1.5);
+      } else {
+        // Ultra-wide 3D immersion
+        this.exhaustPanner.setPosition(0, -0.2, 1.6);
+        this.intakePanner.setPosition(0, 0.4, -1.3);
+      }
+    }
   }
 
   async loadPresetBuffers(presetId) {
@@ -140,6 +277,15 @@ class AudioEngine {
       this.rpm = this.idleRpm;
       this.targetRpm = this.idleRpm;
     }
+
+    // Auto-set spatial profile depending on car layout
+    if (presetId === 'carrera_gt') {
+      this.setTeslaSoundstage('tesla_mid', 0.35, 1.1);
+    } else if (presetId === 'supra_2jz' || presetId === 'amg_m177') {
+      this.setTeslaSoundstage('tesla_front', 0.15, 1.25);
+    } else {
+      this.setTeslaSoundstage('tesla_3d', 0.25, 1.4);
+    }
   }
 
   async setPreset(presetId) {
@@ -179,7 +325,24 @@ class AudioEngine {
       gain.gain.setValueAtTime(0.001, this.ctx.currentTime);
 
       src.connect(gain);
-      gain.connect(this.masterGain);
+
+      // Route loops across Tesla Cabin Buses
+      if (key === 'transmission') {
+        // Transmission whine routed to center tunnel panner
+        gain.connect(this.transBus);
+      } else if (key === 'vlow' || key === 'low') {
+        // Low roar routed to Rear Exhaust + Subwoofer Bass Shaker
+        gain.connect(this.exhaustBus);
+        gain.connect(this.subBus);
+      } else if (key === 'blower') {
+        // Supercharger blower routed to front dashboard
+        gain.connect(this.intakeBus);
+      } else {
+        // High RPM screaming layers routed to rear exhaust + subtle dashboard intake reflection
+        gain.connect(this.exhaustBus);
+        gain.connect(this.subBus);
+      }
+
       src.start(0);
 
       this.sources[key] = src;
@@ -190,7 +353,7 @@ class AudioEngine {
     this.rpm = this.idleRpm;
     this.targetRpm = this.idleRpm;
     this.updateAudioParameters();
-    console.log(`AudioEngine running: ${this.currentPresetId}, state: ${this.ctx.state}`);
+    console.log(`Tesla V10 Audio running: ${this.currentPresetId}`);
   }
 
   stop() {
@@ -210,7 +373,8 @@ class AudioEngine {
     }
   }
 
-  playOneShot(name, volume = 0.8, pitchVar = 0.05) {
+  // Play one-shot with 3D Spatial separation (Left/Right exhaust or Dash intake)
+  playOneShot(name, volume = 0.8, pitchVar = 0.05, position = 'rear') {
     if (!this.ctx || !this.isPlaying) return;
     const buffers = this.presetBuffers[this.currentPresetId] || {};
     if (!buffers[name]) return;
@@ -225,25 +389,38 @@ class AudioEngine {
     gain.gain.setValueAtTime(volume * this.volume, this.ctx.currentTime);
 
     src.connect(gain);
-    gain.connect(this.masterGain);
+
+    if (name === 'bov') {
+      // Turbo Blow-Off Valve shoots right onto the windshield / dashboard speakers!
+      gain.connect(this.intakeBus);
+    } else if (name.startsWith('pop')) {
+      // Randomly alternate between Left and Right exhaust tips for realistic stereo crackle
+      const panner = Math.random() > 0.5 ? this.popLeftPanner : this.popRightPanner;
+      gain.connect(panner);
+      // Give a deep sub-bass thump to the Tesla trunk subwoofer on backfires
+      gain.connect(this.subBus);
+    } else {
+      gain.connect(this.exhaustBus);
+    }
+
     src.start(0);
   }
 
-  triggerRandomPop(volume = 0.75) {
+  triggerRandomPop(volume = 0.85) {
     const pops = ['pop1', 'pop2', 'pop3', 'pop4'];
     const buffers = this.presetBuffers[this.currentPresetId] || {};
     const available = pops.filter(p => !!buffers[p]);
     if (available.length === 0) return;
 
     const chosen = available[Math.floor(Math.random() * available.length)];
-    this.playOneShot(chosen, volume * this.popsAggressiveness, 0.08);
+    this.playOneShot(chosen, volume * this.popsAggressiveness, 0.08, 'rear');
   }
 
   shiftUp() {
     if (this.gear < 6) {
       this.gear++;
-      this.playOneShot('gearup', 0.9);
-      this.triggerRandomPop(0.95);
+      this.playOneShot('gearup', 0.9, 0.04, 'rear');
+      this.triggerRandomPop(1.0);
       this.rpm = Math.max(this.idleRpm * 1.5, this.rpm * 0.68);
     }
   }
@@ -251,9 +428,9 @@ class AudioEngine {
   shiftDown() {
     if (this.gear > 1) {
       this.gear--;
-      this.playOneShot('geardn', 0.85);
+      this.playOneShot('geardn', 0.85, 0.04, 'center');
       this.rpm = Math.min(this.redlineRpm * 0.95, this.rpm * 1.35);
-      this.triggerRandomPop(0.7);
+      this.triggerRandomPop(0.75);
     }
   }
 
@@ -312,19 +489,18 @@ class AudioEngine {
       if (now - this.lastLimiterPulse > 0.065) {
         this.lastLimiterPulse = now;
         this.rpm = this.redlineRpm * 0.975 + Math.random() * 80;
-        this.triggerRandomPop(0.85);
+        this.triggerRandomPop(0.9);
       }
     } else {
       this.isRevLimiting = false;
     }
 
-    // Turbo blow-off valve (BOV) & overrun pops on lift-off
+    // BOV & Overrun crackles
     if (this.wasOnThrottle && this.throttle < 0.05 && this.rpm > this.idleRpm * 2.5) {
       if (now - this.lastPopTime > 0.22) {
         this.lastPopTime = now;
-        // Play BOV flutter if available
-        this.playOneShot('bov', 0.9);
-        this.triggerRandomPop(0.75);
+        this.playOneShot('bov', 0.95);
+        this.triggerRandomPop(0.8);
       }
     }
     this.wasOnThrottle = this.throttle > 0.25;
@@ -348,7 +524,6 @@ class AudioEngine {
       }
     }
 
-    // Dynamic band ranges based on car redline
     const rL = this.redlineRpm;
     const g_vlow = this.calcGain(rpm, 0, this.idleRpm * 0.8, this.idleRpm * 1.3, rL * 0.3);
     const g_low = this.calcGain(rpm, this.idleRpm * 1.1, rL * 0.25, rL * 0.35, rL * 0.55);
@@ -413,10 +588,10 @@ class AudioEngine {
 
     if (targetGear !== this.gear && this.speed > 5) {
       if (targetGear > this.gear) {
-        this.playOneShot('gearup', 0.85);
+        this.playOneShot('gearup', 0.85, 0.04, 'rear');
         this.triggerRandomPop(0.9);
       } else {
-        this.playOneShot('geardn', 0.8);
+        this.playOneShot('geardn', 0.8, 0.04, 'center');
         this.triggerRandomPop(0.7);
       }
       this.gear = targetGear;

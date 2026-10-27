@@ -97,6 +97,30 @@
             <div id="gDot" class="g-dot"></div>
           </div>
         </div>
+
+        <!-- Tesla Model 3 / Y Spatial Audio Optimization Panel -->
+        <div class="tesla-audio-panel" style="margin-top: 18px; border-top: 1px solid var(--border-glass); padding-top: 14px;">
+          <div class="hud-title">
+            <span>⚡ Акустика Tesla Model 3/Y</span>
+            <span style="color: var(--accent-amber); font-size: 11px;">14 колонок + Саб</span>
+          </div>
+          
+          <div style="font-size: 11px; color: var(--text-muted); margin-bottom: 8px;">
+            Распределение звука по салону:
+          </div>
+
+          <div class="tesla-soundstage-selector">
+            <button class="stage-btn active" data-stage="tesla_mid" title="Мотор и выхлоп звучат строго сзади за сиденьями">🏎️ Задний выхлоп</button>
+            <button class="stage-btn" data-stage="tesla_front" title="Впуск и турбина на лобовом стекле, выхлоп в багажнике">🏁 Впуск/Выхлоп</button>
+            <button class="stage-btn" data-stage="tesla_3d" title="Полный 3D охват всех динамиков салона">🎧 3D Окружение</button>
+          </div>
+
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 12px;">
+            <span style="font-size: 11px; color: var(--text-muted);">Вибрация сабвуфера:</span>
+            <span id="bassLevelText" style="font-size: 12px; font-weight: 700; color: var(--accent-amber);">100%</span>
+          </div>
+          <input id="bassSlider" type="range" min="0" max="200" value="100" style="width: 100%; margin-top: 4px; accent-color: var(--accent-amber); cursor: pointer;">
+        </div>
       </div>
 
       <!-- CENTER: Carrera GT Tachometer & Gear Display -->
