@@ -144,6 +144,14 @@ class P2PBridge {
         }
         return;
       }
+
+      // Received shift profile (Sport / Comfort) change from paired device
+      if (data.type === 'shift_profile') {
+        if (typeof this.onShiftProfileReceived === 'function') {
+          this.onShiftProfileReceived(data.profile);
+        }
+        return;
+      }
     });
 
     this.connection.on('close', () => {
@@ -182,6 +190,16 @@ class P2PBridge {
       this.connection.send({
         type: 'rpm_multiplier',
         multiplier: multiplier
+      });
+    }
+  }
+
+  // Send shift profile between paired Tesla and phone
+  sendShiftProfile(profile) {
+    if (this.isConnected && this.connection && this.connection.open) {
+      this.connection.send({
+        type: 'shift_profile',
+        profile: profile
       });
     }
   }

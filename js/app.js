@@ -83,6 +83,50 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
+  // Shift Profile: Comfort (D / Пониженные обороты) vs Sport (S / Повышенные обороты)
+  const shiftProfileBtn = document.getElementById('shiftProfileBtn');
+  let currentShiftProfile = 'comfort'; // 'comfort' | 'sport'
+  try {
+    const savedProf = localStorage.getItem('tesla_shift_profile');
+    if (savedProf === 'sport' || savedProf === 'comfort') {
+      currentShiftProfile = savedProf;
+    }
+  } catch (e) {}
+
+  function updateShiftProfileUI(profile, sendP2p = true) {
+    currentShiftProfile = (profile === 'sport') ? 'sport' : 'comfort';
+    try {
+      localStorage.setItem('tesla_shift_profile', currentShiftProfile);
+    } catch (e) {}
+
+    if (audio) {
+      audio.setShiftProfile(currentShiftProfile);
+    }
+
+    if (shiftProfileBtn) {
+      const isSport = (currentShiftProfile === 'sport');
+      shiftProfileBtn.classList.toggle('sport', isSport);
+      shiftProfileBtn.textContent = isSport ? '🔥 Обороты: СПОРТ (S)' : '⚙️ Обороты: Обычный (D)';
+    }
+
+    if (sendP2p && p2p && p2p.sendShiftProfile) {
+      p2p.sendShiftProfile(currentShiftProfile);
+    }
+  }
+
+  if (shiftProfileBtn) {
+    shiftProfileBtn.addEventListener('click', () => {
+      const next = (currentShiftProfile === 'comfort') ? 'sport' : 'comfort';
+      updateShiftProfileUI(next, true);
+    });
+  }
+
+  window.syncShiftProfileFromP2p = (prof) => {
+    updateShiftProfileUI(prof, false);
+  };
+
+  updateShiftProfileUI(currentShiftProfile, false);
+
   // Mode Switcher & DSP Tuning Elements
   const modeDspBtn = document.getElementById('modeDspBtn');
   const modeSamplesBtn = document.getElementById('modeSamplesBtn');
@@ -138,14 +182,6 @@ document.addEventListener('DOMContentLoaded', () => {
     { id: 'dsp:haunted-hearse', name: 'Haunted Hearse', badge: 'Ghost Choir' }
   ];
 
-  const SAMPLE_PRESETS = [
-    { id: 'sample:carrera_gt', name: 'Porsche Carrera GT', badge: '5.7L V10' },
-    { id: 'sample:supra_2jz', name: 'Toyota Supra 2JZ', badge: 'Turbo I6 800HP' },
-    { id: 'sample:amg_m177', name: 'Mercedes-AMG GT-R', badge: 'Biturbo V8' },
-    { id: 'sample:bmw_z4_gt3', name: 'BMW Z4 GT3', badge: 'Race V8' },
-    { id: 'sample:dragster', name: 'Top Fuel Dragster', badge: 'Blown Nitro 10,000HP' }
-  ];
-
   function getShortBrandLogo(fullName) {
     if (!fullName) return 'SPORT';
     const n = fullName.toUpperCase();
@@ -173,45 +209,24 @@ document.addEventListener('DOMContentLoaded', () => {
     if (dashBrandBadge) dashBrandBadge.textContent = badge;
   }
 
-  function populatePresetDropdown(mode) {
+  function populatePresetDropdown() {
     if (!presetSelect) return;
     presetSelect.innerHTML = '';
-    const list = mode === 'dsp' ? DSP_PRESETS : SAMPLE_PRESETS;
-    list.forEach(item => {
+    DSP_PRESETS.forEach(item => {
       const opt = document.createElement('option');
       opt.value = item.id;
       opt.textContent = `${item.name} (${item.badge})`;
       presetSelect.appendChild(opt);
     });
-    const first = list[0];
+    const first = DSP_PRESETS[0];
     presetSelect.value = first.id;
     updateBrandDisplay(first.name, first.badge);
     if (dspTuningBox) {
-      dspTuningBox.style.display = mode === 'dsp' ? 'block' : 'none';
+      dspTuningBox.style.display = 'block';
     }
     if (audio) {
       audio.setPreset(first.id).catch(() => {});
     }
-  }
-
-  if (modeDspBtn && modeSamplesBtn) {
-    modeDspBtn.addEventListener('click', async () => {
-      if (currentEngineMode === 'dsp') return;
-      currentEngineMode = 'dsp';
-      modeDspBtn.classList.add('active');
-      modeSamplesBtn.classList.remove('active');
-      populatePresetDropdown('dsp');
-      await audio.setPreset(presetSelect.value);
-    });
-
-    modeSamplesBtn.addEventListener('click', async () => {
-      if (currentEngineMode === 'samples') return;
-      currentEngineMode = 'samples';
-      modeSamplesBtn.classList.add('active');
-      modeDspBtn.classList.remove('active');
-      populatePresetDropdown('samples');
-      await audio.setPreset(presetSelect.value);
-    });
   }
 
   if (characterSlider) {
@@ -813,11 +828,10 @@ document.addEventListener('DOMContentLoaded', () => {
   const modalTabSamples = document.getElementById('modalTabSamples');
   const carCardsGrid = document.getElementById('carCardsGrid');
 
-  function renderCarCards(mode) {
+  function renderCarCards() {
     if (!carCardsGrid) return;
     carCardsGrid.innerHTML = '';
-    const list = mode === 'dsp' ? DSP_PRESETS : SAMPLE_PRESETS;
-    list.forEach(item => {
+    DSP_PRESETS.forEach(item => {
       const card = document.createElement('div');
       card.className = 'car-card-item';
       if (item.id === audio.currentPresetId || (presetSelect && presetSelect.value === item.id)) {
@@ -852,14 +866,9 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
-  function openCarModal(mode) {
+  function openCarModal() {
     if (!carSelectModal) return;
-    const activeMode = mode || currentEngineMode;
-    if (modalTabDsp && modalTabSamples) {
-      modalTabDsp.classList.toggle('active', activeMode === 'dsp');
-      modalTabSamples.classList.toggle('active', activeMode === 'samples');
-    }
-    renderCarCards(activeMode);
+    renderCarCards();
     carSelectModal.classList.add('open');
     carSelectModal.classList.add('active');
     carSelectModal.style.display = 'flex';
@@ -874,38 +883,16 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   if (carSelectModalBtn) {
-    addTouchInstantListener(carSelectModalBtn, () => openCarModal(currentEngineMode));
+    addTouchInstantListener(carSelectModalBtn, openCarModal);
   }
   if (dashboardCarPickerBtn) {
-    addTouchInstantListener(dashboardCarPickerBtn, () => openCarModal(currentEngineMode));
+    addTouchInstantListener(dashboardCarPickerBtn, openCarModal);
   }
   if (closeCarModalBtn) addTouchInstantListener(closeCarModalBtn, closeCarModal);
   if (closeCarModalBtnBottom) addTouchInstantListener(closeCarModalBtnBottom, closeCarModal);
   if (carSelectModal) {
     carSelectModal.addEventListener('click', (e) => {
       if (e.target === carSelectModal) closeCarModal();
-    });
-  }
-
-  if (modalTabDsp && modalTabSamples) {
-    modalTabDsp.addEventListener('click', () => {
-      modalTabDsp.classList.add('active');
-      modalTabSamples.classList.remove('active');
-      if (modeDspBtn) modeDspBtn.classList.add('active');
-      if (modeSamplesBtn) modeSamplesBtn.classList.remove('active');
-      currentEngineMode = 'dsp';
-      populatePresetDropdown('dsp');
-      renderCarCards('dsp');
-    });
-
-    modalTabSamples.addEventListener('click', () => {
-      modalTabSamples.classList.add('active');
-      modalTabDsp.classList.remove('active');
-      if (modeSamplesBtn) modeSamplesBtn.classList.add('active');
-      if (modeDspBtn) modeDspBtn.classList.remove('active');
-      currentEngineMode = 'samples';
-      populatePresetDropdown('samples');
-      renderCarCards('samples');
     });
   }
 
@@ -1547,6 +1534,9 @@ document.addEventListener('DOMContentLoaded', () => {
     currentRpmMultiplier = mult;
     updateRpmMultiplierUI();
   };
+  p2p.onShiftProfileReceived = (profile) => {
+    updateShiftProfileUI(profile, false);
+  };
 
   function handleTelemetryError(err) {
     if (hudAccuracy) hudAccuracy.textContent = '–';
@@ -1713,17 +1703,35 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // Needle
-    const needleRpm = Math.max(0, Math.min(maxRpm, rpm));
+    let needleRpm = Math.max(0, Math.min(maxRpm, rpm));
+    const isCutting = audio.isRevLimiting || (rpm >= redlineRpm * 0.985 && (audio.throttle > 0.85 || audio.targetThrottle > 0.85));
+
+    // Violent tachometer needle jerk & bounce on the redline rev limiter ("отсечка в красное дергает стрелку")
+    if (isCutting) {
+      // High-frequency mechanical jerk bouncing between the limiter stop pin and -480 RPM
+      const t = performance.now() * 0.055; // ~55 Hz violent vibration
+      const bounce = Math.sin(t * 1.75) * Math.cos(t * 3.2);
+      const jerk = (bounce > 0 ? bounce * 140 : bounce * 480);
+      needleRpm = Math.max(redlineRpm - 550, Math.min(maxRpm, redlineRpm + jerk));
+    }
+
     const needleAngle = startAngle + (needleRpm / maxRpm) * totalAngle;
 
     ctx.save();
-    ctx.shadowColor = needleRpm >= redlineRpm ? '#ff2222' : '#ff9900';
-    ctx.shadowBlur = 14;
+    if (isCutting) {
+      // Blinding red flashing glow on the needle during rev limiter cut!
+      const flash = (performance.now() % 100 < 50);
+      ctx.shadowColor = flash ? '#ff0000' : '#ff4400';
+      ctx.shadowBlur = 28 + Math.random() * 12;
+    } else {
+      ctx.shadowColor = needleRpm >= redlineRpm ? '#ff2222' : '#ff9900';
+      ctx.shadowBlur = 14;
+    }
     ctx.beginPath();
     ctx.moveTo(cx - Math.cos(needleAngle + Math.PI / 2) * 4, cy - Math.sin(needleAngle + Math.PI / 2) * 4);
     ctx.lineTo(cx + Math.cos(needleAngle) * (radius - 12), cy + Math.sin(needleAngle) * (radius - 12));
     ctx.lineTo(cx + Math.cos(needleAngle + Math.PI / 2) * 4, cy + Math.sin(needleAngle + Math.PI / 2) * 4);
-    ctx.fillStyle = needleRpm >= redlineRpm ? '#ff2222' : '#ff9900';
+    ctx.fillStyle = isCutting ? '#ff1111' : (needleRpm >= redlineRpm ? '#ff2222' : '#ff9900');
     ctx.fill();
     ctx.restore();
 
@@ -1987,22 +1995,8 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   // Intercept physical hardware media keys from Tesla steering wheel
-  // NOTE: Volume Up/Down (vertical roll) is NOT intercepted so you can always adjust Tesla volume normally!
-  // Left steering wheel vertical scroll in Tesla Chromium
-  let lastWheelScrollShift = 0;
-  window.addEventListener('wheel', (e) => {
-    const now = performance.now();
-    if (now - lastWheelScrollShift < 220) return; // Debounce wheel clicks
-    if (Math.abs(e.deltaY) > 20) {
-      lastWheelScrollShift = now;
-      if (e.deltaY < 0) {
-        handleSteeringWheelShiftUp();
-      } else {
-        handleSteeringWheelShiftDown();
-      }
-    }
-  }, { passive: true });
-
+  // Steering wheel scroll is completely free for normal Tesla volume and web scroll!
+  // Tilt wheel Left/Right or Media keys shift gears:
   window.addEventListener('keydown', (e) => {
     // Left wheel TILT RIGHT (Next Track) -> Shift UP
     if (e.key === 'MediaTrackNext' || e.code === 'MediaTrackNext' || e.keyCode === 176 || e.key === 'TrackNext') {
@@ -2027,6 +2021,17 @@ document.addEventListener('DOMContentLoaded', () => {
     // Update Digital Displays
     const currentRpm = Math.round(audio.rpm);
     rpmNumeric.textContent = `${currentRpm} RPM`;
+
+    const isLimiterActive = audio.isRevLimiting || (currentRpm >= (audio.redlineRpm || 8000) * 0.985 && (audio.throttle > 0.85 || audio.targetThrottle > 0.85));
+    if (isLimiterActive) {
+      rpmNumeric.style.color = '#ff2222';
+      rpmNumeric.style.textShadow = '0 0 16px rgba(255, 34, 34, 0.9)';
+      rpmNumeric.style.transform = `scale(1.08) rotate(${(Math.random() * 3 - 1.5).toFixed(1)}deg)`;
+    } else {
+      rpmNumeric.style.color = '';
+      rpmNumeric.style.textShadow = '';
+      rpmNumeric.style.transform = '';
+    }
 
     let gearText = 'N';
     if (audio.gearMode === 'N' || audio.gear === 0) {

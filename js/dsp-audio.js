@@ -29,6 +29,7 @@ class DSPAudioEngine {
     this.idleRpmOffset = 0;// -150 .. +350 RPM (idle lope)
     this.limiterMode = 'hard'; // 'hard' (2-step aggressive) | 'soft' (smooth bounce)
     this.throttleResponse = 'sport'; // 'linear' | 'sport' | 'race'
+    this.shiftProfile = 'comfort'; // 'comfort' (обычные / пониженные) | 'sport' (спорт / повышенные)
 
     // Default car: Mercedes CLS 63 AMG «Банан»
     this.setCar('cls63-amg');
@@ -44,6 +45,9 @@ class DSPAudioEngine {
     this.vehicle = new window.Vehicle(found);
     if (this.rpmMultiplier) {
       this.vehicle.rpmMultiplier = this.rpmMultiplier;
+    }
+    if (this.shiftProfile) {
+      this.vehicle.shiftProfile = this.shiftProfile;
     }
     this.applyTuningParams();
     console.log('[DSPAudioEngine] Selected car:', found.name);
@@ -336,6 +340,13 @@ class DSPAudioEngine {
     this.rpmMultiplier = mult;
     if (this.vehicle) {
       this.vehicle.rpmMultiplier = mult;
+    }
+  }
+
+  setShiftProfile(profile) {
+    this.shiftProfile = profile;
+    if (this.vehicle) {
+      this.vehicle.shiftProfile = profile;
     }
   }
 

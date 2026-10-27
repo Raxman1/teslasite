@@ -35,6 +35,7 @@
     this.electric = car.engine.type === 'electric';
     this.intensity = 0.5;
     this.rpmMultiplier = 1.0;
+    this.shiftProfile = 'comfort'; // 'comfort' (обычные / пониженные обороты) | 'sport' (спорт / повышенные обороты)
     this.reset();
     this.running = false;
   }
@@ -210,9 +211,22 @@
     if (this.shift) return;
     var e = this.e, n = this.p.ratios.length, thr = this.throttle, I = this.intensity;
     var mult = this.rpmMultiplier || 1.0;
+    var isSport = (this.shiftProfile === 'sport');
     var rpm = this.gearRpm(this.gear);
-    var baseUp = lerp(e.cruiseUpshiftRpm || 1900 + 700 * I, e.upshiftRpm || e.redlineRpm - 250, Math.pow(thr, 1.3));
-    var upRpm = mult > 1.0 ? Math.min(e.redlineRpm - 200, baseUp * (1.0 + (mult - 1.0) * 0.35)) : baseUp;
+
+    // Upshift RPM calculation:
+    // Comfort (D / Пониженные): переключает рано (1800-2400 RPM при спокойной езде)
+    // Sport (S / Повышенные): держит передачу до 4200-6500+ RPM для динамики и рёва!
+    var baseUp;
+    if (isSport) {
+      var sportFloor = Math.max(4200, e.redlineRpm * 0.62);
+      baseUp = lerp(sportFloor, e.upshiftRpm || e.redlineRpm - 150, Math.pow(thr, 0.85));
+    } else {
+      var comfortFloor = e.cruiseUpshiftRpm || (1800 + 500 * I);
+      baseUp = lerp(comfortFloor, e.upshiftRpm || e.redlineRpm - 350, Math.pow(thr, 1.35));
+    }
+
+    var upRpm = mult > 1.0 ? Math.min(e.redlineRpm - 150, baseUp * (1.0 + (mult - 1.0) * 0.35)) : baseUp;
     // Normally a shift is followed by a short pause (longer by hand). A
     // hard-capped engine may skip it for an upshift, so the revs can never
     // run into the limiter.
@@ -226,13 +240,26 @@
     }
     if (this.gear === 1) return;
 
-    // Kickdown: drop as many gears as keep the engine below ~65% of redline.
-    if (thr > 0.75 && rpm < e.redlineRpm * 0.55) {
-      var g = this.gear;
-      while (g > 1 && this.gearRpm(g - 1) < e.redlineRpm * 0.65) g--;
-      if (g < this.gear) {
-        this._startShift(g);
-        return;
+    // Kickdown / downshift:
+    if (isSport) {
+      // In Sport: aggressive kickdown at lower throttle, keeps RPM high
+      if (thr > 0.45 && rpm < e.redlineRpm * 0.65) {
+        var g = this.gear;
+        while (g > 1 && this.gearRpm(g - 1) < e.redlineRpm * 0.8) g--;
+        if (g < this.gear) {
+          this._startShift(g);
+          return;
+        }
+      }
+    } else {
+      // Kickdown in Comfort: drop gears only at >75% throttle
+      if (thr > 0.75 && rpm < e.redlineRpm * 0.55) {
+        var g = this.gear;
+        while (g > 1 && this.gearRpm(g - 1) < e.redlineRpm * 0.65) g--;
+        if (g < this.gear) {
+          this._startShift(g);
+          return;
+        }
       }
     }
 
@@ -241,12 +268,25 @@
     var floor = e.downshiftRpm || 0;
     var lower = this.gearRpm(this.gear - 1);
     var coasting = thr < 0.05 && this.accel < -0.3;
-    if (coasting) {
-      var coastRpm = Math.max(lerp(1300, 2100, I) + 400 * braking, floor);
-      if (rpm < coastRpm && lower < e.redlineRpm * 0.7) this._startShift(this.gear - 1);
+
+    if (isSport) {
+      // In Sport: downshifts early when slowing down to keep revs high and provoke exhaust crackles
+      if (coasting) {
+        var coastRpm = Math.max(3000 + 600 * braking, floor, e.redlineRpm * 0.45);
+        if (rpm < coastRpm && lower < e.redlineRpm * 0.85) this._startShift(this.gear - 1);
+      } else {
+        var downRpm = Math.max(3200 + 800 * thr, floor, e.redlineRpm * 0.48);
+        if (rpm < downRpm && lower < upRpm - 200) this._startShift(this.gear - 1);
+      }
     } else {
-      var downRpm = Math.max(lerp(1050, 3000 + 600 * I, thr), floor);
-      if (rpm < downRpm && lower < upRpm - 250) this._startShift(this.gear - 1);
+      // In Comfort: downshifts late, smoothly keeping RPM low
+      if (coasting) {
+        var coastRpm = Math.max(lerp(1200, 1800, I) + 300 * braking, floor);
+        if (rpm < coastRpm && lower < e.redlineRpm * 0.65) this._startShift(this.gear - 1);
+      } else {
+        var downRpm = Math.max(lerp(1000, 2200 + 400 * I, thr), floor);
+        if (rpm < downRpm && lower < upRpm - 250) this._startShift(this.gear - 1);
+      }
     }
   };
 

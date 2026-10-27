@@ -2017,6 +2017,42 @@ kbd {
   font-weight: 900;
 }
 
+.btn-shift-profile {
+  height: 28px;
+  padding: 0 10px;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(0, 229, 255, 0.45);
+  border-radius: 14px;
+  color: #80d8ff;
+  font-size: 11px;
+  font-weight: 800;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  white-space: nowrap;
+  touch-action: manipulation;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  user-select: none;
+  -webkit-tap-highlight-color: transparent;
+}
+.btn-shift-profile:hover {
+  background: rgba(0, 229, 255, 0.2);
+  color: #fff;
+  border-color: #00e5ff;
+}
+.btn-shift-profile:active {
+  transform: scale(0.94);
+}
+.btn-shift-profile.sport {
+  background: linear-gradient(135deg, #ff1744, #d50000);
+  border-color: #ff5252;
+  color: #fff;
+  box-shadow: 0 0 14px rgba(255, 23, 68, 0.7);
+  font-weight: 900;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.8);
+}
+
 .btn-rpm-mult {
   background: rgba(255, 153, 0, 0.12);
   border: 1px solid rgba(255, 153, 0, 0.4);

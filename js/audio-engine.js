@@ -48,7 +48,7 @@ class AudioEngine {
     this.isPlaying = false;
 
     // Active preset ID
-    this.currentPresetId = 'carrera_gt';
+    this.currentPresetId = 'cls63-amg';
     this.currentPreset = null;
 
     // Decoded audio buffers cache per preset
@@ -123,6 +123,7 @@ class AudioEngine {
     this.gear = 1;
     this.gearMode = 'A';
     this.rpmMultiplier = 1.0;
+    this.shiftProfile = 'comfort'; // 'comfort' (обычные / пониженные) | 'sport' (спорт / повышенные)
     this.isRevLimiting = false;
     this.lastLimiterPulse = 0;
 
@@ -230,11 +231,6 @@ class AudioEngine {
     if (window.TurboSoundEngine && !this.turboEngine) {
       this.turboEngine = new window.TurboSoundEngine(this.ctx, () => this.intakeBus || this.submixBus || this.masterGain || this.ctx.destination);
       this.turboEngine.init();
-    }
-
-    // Load initial preset
-    if (this.soundMode === 'samples') {
-      await this.loadPresetBuffers(this.currentPresetId);
     }
 
     this.isReady = true;
@@ -762,25 +758,19 @@ class AudioEngine {
       this.stop();
     }
 
-    if (presetId.startsWith('dsp:') || (window.MOTORSOUND_CARS && window.MOTORSOUND_CARS.some(c => c.id === presetId))) {
-      this.soundMode = 'dsp';
-      const carId = presetId.replace(/^dsp:/, '');
-      if (!this.dspEngine && this.ctx) {
-        this.dspEngine = new window.DSPAudioEngine(this.ctx, () => this.dspSplitterBus || this.submixBus || this.masterGain || this.ctx.destination);
-      }
-      if (this.dspEngine) {
-        this.dspEngine.setCar(carId);
-        this.currentPresetId = presetId;
-        this.idleRpm = this.dspEngine.idleRpm;
-        this.redlineRpm = this.dspEngine.redlineRpm;
-        this.maxRpm = this.dspEngine.maxRpm;
-      }
-      this.applyPresetSoundstage(carId);
-    } else {
-      this.soundMode = 'samples';
-      const sampleId = presetId.replace(/^sample:/, '');
-      await this.loadPresetBuffers(sampleId);
+    this.soundMode = 'dsp';
+    const carId = presetId.replace(/^dsp:/, '').replace(/^sample:/, '');
+    if (!this.dspEngine && this.ctx) {
+      this.dspEngine = new window.DSPAudioEngine(this.ctx, () => this.dspSplitterBus || this.submixBus || this.masterGain || this.ctx.destination);
     }
+    if (this.dspEngine) {
+      this.dspEngine.setCar(carId);
+      this.currentPresetId = presetId;
+      this.idleRpm = this.dspEngine.idleRpm;
+      this.redlineRpm = this.dspEngine.redlineRpm;
+      this.maxRpm = this.dspEngine.maxRpm;
+    }
+    this.applyPresetSoundstage(carId);
 
     if (wasPlaying) {
       await this.start();
@@ -950,6 +940,13 @@ class AudioEngine {
     this.rpmMultiplier = Math.max(0.5, Math.min(5.0, parseFloat(mult) || 1.0));
     if (this.dspEngine) {
       this.dspEngine.setRpmMultiplier(this.rpmMultiplier);
+    }
+  }
+
+  setShiftProfile(profile) {
+    this.shiftProfile = (profile === 'sport') ? 'sport' : 'comfort';
+    if (this.dspEngine) {
+      this.dspEngine.setShiftProfile(this.shiftProfile);
     }
   }
 
