@@ -1,7 +1,10 @@
 # Ignore raw dumps and heavy mod archives
 extracted/
 extracted_wav/
+extracted_mods/
+raw_presets/
 *.zip
+*.rar
 *.wav
 *.mp3
 !sounds/*.mp3

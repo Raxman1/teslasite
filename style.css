@@ -65,6 +65,26 @@ header {
   letter-spacing: 0.5px;
 }
 
+.preset-dropdown {
+  background: rgba(20, 24, 34, 0.9);
+  color: var(--text-main);
+  border: 1px solid var(--accent-amber);
+  border-radius: 8px;
+  padding: 6px 12px;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  outline: none;
+  transition: all 0.2s;
+  box-shadow: 0 0 10px rgba(255, 153, 0, 0.25);
+  margin-left: 8px;
+}
+
+.preset-dropdown:hover, .preset-dropdown:focus {
+  border-color: #ffaa22;
+  box-shadow: 0 0 16px rgba(255, 153, 0, 0.5);
+}
+
 .header-actions {
   display: flex;
   align-items: center;

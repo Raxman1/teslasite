@@ -31,6 +31,12 @@ document.addEventListener('DOMContentLoaded', () => {
   const connectPhoneBtn = document.getElementById('connectPhoneBtn');
   const phoneCodeInput = document.getElementById('phoneCodeInput');
 
+  // Preset Selector Elements
+  const presetSelect = document.getElementById('presetSelect');
+  const brandBadge = document.getElementById('brandBadge');
+  const brandTitle = document.getElementById('brandTitle');
+  const pedalLogo = document.querySelector('.pedal-logo');
+
   // Gauge Elements
   const canvas = document.getElementById('gaugeCanvas');
   const ctx = canvas.getContext('2d');
@@ -69,6 +75,20 @@ document.addEventListener('DOMContentLoaded', () => {
   }
   window.addEventListener('resize', resizeCanvas);
   resizeCanvas();
+
+  // 0. PRESET SELECTOR
+  if (presetSelect) {
+    presetSelect.addEventListener('change', async (e) => {
+      const selectedId = e.target.value;
+      const presetInfo = window.CAR_PRESETS ? window.CAR_PRESETS[selectedId] : null;
+      if (presetInfo) {
+        brandBadge.textContent = presetInfo.badge;
+        brandTitle.textContent = presetInfo.name;
+        if (pedalLogo) pedalLogo.textContent = presetInfo.name.toUpperCase();
+      }
+      await audio.setPreset(selectedId);
+    });
+  }
 
   // 1. ENGINE START / STOP BUTTON & AUTO-UNLOCK
   async function unlockAndStartEngine() {
@@ -364,21 +384,22 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // 9. SHIFT LIGHTS CONTROLLER
   function updateShiftLights(rpm) {
-    // 0 to 6500: off
-    // 6500 to 7400: Green (first 4 leds)
-    // 7400 to 8100: Yellow (next 4 leds)
-    // 8100 to 8400+: Flashing Red (last 4 leds)
+    const rL = audio.redlineRpm || 8400;
+    const greenThresh = rL * 0.76;
+    const yellowThresh = rL * 0.88;
+    const redThresh = rL * 0.96;
+
     shiftLeds.forEach((led, idx) => {
       const isGreen = led.classList.contains('green');
       const isYellow = led.classList.contains('yellow');
       const isRed = led.classList.contains('red');
 
       if (isGreen) {
-        led.classList.toggle('active', rpm >= 6400 + idx * 250);
+        led.classList.toggle('active', rpm >= greenThresh + idx * ((yellowThresh - greenThresh) / 4));
       } else if (isYellow) {
-        led.classList.toggle('active', rpm >= 7400 + (idx - 4) * 200);
+        led.classList.toggle('active', rpm >= yellowThresh + (idx - 4) * ((redThresh - yellowThresh) / 4));
       } else if (isRed) {
-        led.classList.toggle('active', rpm >= 8100);
+        led.classList.toggle('active', rpm >= redThresh);
       }
     });
   }
@@ -391,9 +412,11 @@ document.addEventListener('DOMContentLoaded', () => {
     const cy = h / 2;
     const radius = Math.min(cx, cy) - 18;
 
+    const maxRpm = audio.maxRpm || 10000;
+    const redlineRpm = audio.redlineRpm || 8400;
+
     ctx.clearRect(0, 0, w, h);
 
-    // Angle range: 135 deg to 405 deg (270 degree sweep for 0 to 10,000 RPM)
     const startAngle = 0.75 * Math.PI;
     const endAngle = 2.25 * Math.PI;
     const totalAngle = endAngle - startAngle;
@@ -405,18 +428,19 @@ document.addEventListener('DOMContentLoaded', () => {
     ctx.lineWidth = 6;
     ctx.stroke();
 
-    // Redline Arc (8400 to 10000 RPM)
-    const redlineStart = startAngle + (8400 / 10000) * totalAngle;
+    // Redline Arc
+    const redlineStart = startAngle + (redlineRpm / maxRpm) * totalAngle;
     ctx.beginPath();
     ctx.arc(cx, cy, radius - 8, redlineStart, endAngle);
     ctx.strokeStyle = 'rgba(255, 34, 34, 0.8)';
     ctx.lineWidth = 8;
     ctx.stroke();
 
-    // Minor & Major Ticks and Carrera GT Amber numbers (0 to 10)
-    for (let i = 0; i <= 100; i++) {
+    // Minor & Major Ticks and numbers
+    const numTicks = maxRpm / 100;
+    for (let i = 0; i <= numTicks; i++) {
       const tickRpm = i * 100;
-      const angle = startAngle + (tickRpm / 10000) * totalAngle;
+      const angle = startAngle + (tickRpm / maxRpm) * totalAngle;
       const isMajor = i % 10 === 0;
       const isMedium = i % 5 === 0;
 
@@ -432,37 +456,34 @@ document.addEventListener('DOMContentLoaded', () => {
       ctx.moveTo(x1, y1);
       ctx.lineTo(x2, y2);
       ctx.lineWidth = isMajor ? 3 : isMedium ? 2 : 1;
-      ctx.strokeStyle = tickRpm >= 8400 ? '#ff2222' : isMajor ? '#ff9900' : 'rgba(255, 255, 255, 0.4)';
+      ctx.strokeStyle = tickRpm >= redlineRpm ? '#ff2222' : isMajor ? '#ff9900' : 'rgba(255, 255, 255, 0.4)';
       ctx.stroke();
 
-      // Major Number Labels
       if (isMajor) {
         const textRadius = radius - 40;
         const tx = cx + Math.cos(angle) * textRadius;
         const ty = cy + Math.sin(angle) * textRadius + 5;
 
         ctx.font = 'bold 16px -apple-system, sans-serif';
-        ctx.fillStyle = tickRpm >= 8400 ? '#ff4444' : '#ff9900';
+        ctx.fillStyle = tickRpm >= redlineRpm ? '#ff4444' : '#ff9900';
         ctx.textAlign = 'center';
         ctx.fillText(i / 10, tx, ty);
       }
     }
 
-    // Needle Calculation
-    const needleRpm = Math.max(0, Math.min(10000, rpm));
-    const needleAngle = startAngle + (needleRpm / 10000) * totalAngle;
+    // Needle
+    const needleRpm = Math.max(0, Math.min(maxRpm, rpm));
+    const needleAngle = startAngle + (needleRpm / maxRpm) * totalAngle;
 
-    // Needle Glow Shadow
     ctx.save();
-    ctx.shadowColor = needleRpm >= 8400 ? '#ff2222' : '#ff9900';
+    ctx.shadowColor = needleRpm >= redlineRpm ? '#ff2222' : '#ff9900';
     ctx.shadowBlur = 14;
 
-    // Glowing Needle
     ctx.beginPath();
     ctx.moveTo(cx - Math.cos(needleAngle + Math.PI / 2) * 4, cy - Math.sin(needleAngle + Math.PI / 2) * 4);
     ctx.lineTo(cx + Math.cos(needleAngle) * (radius - 12), cy + Math.sin(needleAngle) * (radius - 12));
     ctx.lineTo(cx + Math.cos(needleAngle + Math.PI / 2) * 4, cy + Math.sin(needleAngle + Math.PI / 2) * 4);
-    ctx.fillStyle = needleRpm >= 8400 ? '#ff2222' : '#ff9900';
+    ctx.fillStyle = needleRpm >= redlineRpm ? '#ff2222' : '#ff9900';
     ctx.fill();
     ctx.restore();
 

@@ -12,8 +12,15 @@
   <!-- Top Navigation & Controls Bar -->
   <header>
     <div class="brand">
-      <span class="brand-badge">5.7L V10</span>
-      <span class="brand-title">Carrera GT Sound for Tesla</span>
+      <span id="brandBadge" class="brand-badge">5.7L V10</span>
+      <span id="brandTitle" class="brand-title">Porsche Carrera GT</span>
+      <select id="presetSelect" class="preset-dropdown">
+        <option value="carrera_gt" selected>🏎️ Porsche Carrera GT (V10)</option>
+        <option value="supra_2jz">🔰 Toyota Supra 2JZ-GTE (Turbo I6)</option>
+        <option value="amg_m177">🚀 Mercedes-AMG GT-R (Biturbo V8)</option>
+        <option value="bmw_z4_gt3">🏁 BMW Z4 GT3 (Race V8)</option>
+        <option value="dragster">💥 Top Fuel Dragster (Blown Nitro)</option>
+      </select>
     </div>
     <div class="header-actions">
       <button id="p2pModalBtn" class="btn">📱 Связка с телефоном</button>
