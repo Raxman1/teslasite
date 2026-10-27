@@ -93,6 +93,7 @@ class AudioEngine {
     this.dspFrontGain = null;
     this.dspRearGain = null;
     this.dspSubGain = null;
+    this.dspDirectGain = null;
 
     // Engine parameters
     this.rpm = 920;
@@ -291,18 +292,24 @@ class AudioEngine {
       this.dspSplitterBus = this.ctx.createGain();
       this.dspSplitterBus.gain.setValueAtTime(1.0, this.ctx.currentTime);
 
+      // Direct clean wire straight into submixBus (EXACT 100% v5.0 sound path when v6.0 PRO is off)
+      this.dspDirectGain = this.ctx.createGain();
+      this.dspDirectGain.gain.setValueAtTime(this.v6ProEnabled ? 0.0 : 1.0, this.ctx.currentTime);
+      this.dspSplitterBus.connect(this.dspDirectGain);
+      this.dspDirectGain.connect(this.submixBus);
+
       this.dspFrontGain = this.ctx.createGain();
-      this.dspFrontGain.gain.setValueAtTime(this.v6ProEnabled ? 0.85 : 0.50, this.ctx.currentTime);
+      this.dspFrontGain.gain.setValueAtTime(this.v6ProEnabled ? 0.85 : 0.0, this.ctx.currentTime);
       this.dspSplitterBus.connect(this.dspFrontGain);
       this.dspFrontGain.connect(this.frontBus);
 
       this.dspRearGain = this.ctx.createGain();
-      this.dspRearGain.gain.setValueAtTime(this.v6ProEnabled ? 1.0 : 0.50, this.ctx.currentTime);
+      this.dspRearGain.gain.setValueAtTime(this.v6ProEnabled ? 1.0 : 0.0, this.ctx.currentTime);
       this.dspSplitterBus.connect(this.dspRearGain);
       this.dspRearGain.connect(this.rearBus);
 
       this.dspSubGain = this.ctx.createGain();
-      this.dspSubGain.gain.setValueAtTime(this.v6ProEnabled ? 0.9 : 0.9, this.ctx.currentTime);
+      this.dspSubGain.gain.setValueAtTime(this.v6ProEnabled ? 0.9 : 0.0, this.ctx.currentTime);
       this.dspSplitterBus.connect(this.dspSubGain);
       this.dspSubGain.connect(this.subBus);
 
@@ -384,27 +391,16 @@ class AudioEngine {
     const now = this.ctx.currentTime;
     const smooth = 0.04;
 
+    // Classic v5.0 soundstage: only controls sample intake/exhaust balance
     if (mode === 'tesla_mid') {
-      // 🏎️ Задний выхлоп: чистый акцент на задние динамики без эквалайзера
       if (this.exhaustBus) this.exhaustBus.gain.setTargetAtTime(1.15, now, smooth);
       if (this.intakeBus) this.intakeBus.gain.setTargetAtTime(0.70, now, smooth);
-      if (this.dspFrontGain) this.dspFrontGain.gain.setTargetAtTime(0.35, now, smooth);
-      if (this.dspRearGain) this.dspRearGain.gain.setTargetAtTime(0.65, now, smooth);
-      if (this.dspSubGain) this.dspSubGain.gain.setTargetAtTime(1.0, now, smooth);
     } else if (mode === 'tesla_front') {
-      // 🏁 Впуск/Выхлоп: чистый акцент на передние динамики (лобовое стекло)
       if (this.exhaustBus) this.exhaustBus.gain.setTargetAtTime(0.75, now, smooth);
       if (this.intakeBus) this.intakeBus.gain.setTargetAtTime(1.15, now, smooth);
-      if (this.dspFrontGain) this.dspFrontGain.gain.setTargetAtTime(0.65, now, smooth);
-      if (this.dspRearGain) this.dspRearGain.gain.setTargetAtTime(0.35, now, smooth);
-      if (this.dspSubGain) this.dspSubGain.gain.setTargetAtTime(1.0, now, smooth);
     } else {
-      // 🎧 3D Окружение: 50/50 ровный чистый стерео-баланс
       if (this.exhaustBus) this.exhaustBus.gain.setTargetAtTime(1.0, now, smooth);
       if (this.intakeBus) this.intakeBus.gain.setTargetAtTime(1.0, now, smooth);
-      if (this.dspFrontGain) this.dspFrontGain.gain.setTargetAtTime(0.50, now, smooth);
-      if (this.dspRearGain) this.dspRearGain.gain.setTargetAtTime(0.50, now, smooth);
-      if (this.dspSubGain) this.dspSubGain.gain.setTargetAtTime(0.9, now, smooth);
     }
   }
 
@@ -412,33 +408,46 @@ class AudioEngine {
     this.v6ProEnabled = !!enabled;
     if (!this.ctx) return;
     const now = this.ctx.currentTime;
-    const smooth = 0.04;
+    const smooth = 0.03;
 
     if (!this.v6ProEnabled) {
       // ==============================================================
-      // CLASSIC MODE ("как до было"):
-      // ПОЛНОСТЬЮ ОТКЛЮЧАЕМ ЭКВАЛАЙЗЕР И ЗАДЕРЖКИ!
+      // CLASSIC MODE: 100% ТОЧНЫЙ ЧИСТЫЙ ЗВУК v5.0 (ПРЯМОЙ ПРОВОД)
+      // Никаких делителей, фильтров, фазовых сдвигов и задержек!
       // ==============================================================
-      // 1. Отключаем peaking фильтр на капоте (0 dB = чистый провод без окраса)
+      // 1. Направляем процедурный движок напрямую в submixBus (ровно как в v5.0)
+      if (this.dspDirectGain) {
+        this.dspDirectGain.gain.setTargetAtTime(1.0, now, smooth);
+      }
+      if (this.dspFrontGain) {
+        this.dspFrontGain.gain.setTargetAtTime(0.0, now, smooth);
+      }
+      if (this.dspRearGain) {
+        this.dspRearGain.gain.setTargetAtTime(0.0, now, smooth);
+      }
+      if (this.dspSubGain) {
+        this.dspSubGain.gain.setTargetAtTime(0.0, now, smooth);
+      }
+      // 2. Отключаем peaking фильтр на капоте (0 dB = чистый провод)
       if (this.frontPresenceFilter) {
         this.frontPresenceFilter.gain.setTargetAtTime(0.0, now, smooth);
       }
-      // 2. Отключаем lowshelf фильтр на выхлопе (0 dB = чистый провод без окраса)
+      // 3. Отключаем lowshelf фильтр на выхлопе (0 dB = чистый провод)
       if (this.rearWarmthFilter) {
         this.rearWarmthFilter.gain.setTargetAtTime(0.0, now, smooth);
       }
-      // 3. Отключаем задержку выхлопа (0 мс = синфазный звук без искажений)
+      // 4. Отключаем задержку выхлопа (0 мс = синфазный звук)
       if (this.rearDelay) {
         this.rearDelay.delayTime.setTargetAtTime(0.0, now, smooth);
       }
-      // 4. Сбрасываем шины на ровные 1.0
+      // 5. Ровные шины впуска и выхлопа
       if (this.frontBus) {
         this.frontBus.gain.setTargetAtTime(1.0, now, smooth);
       }
       if (this.rearBus) {
         this.rearBus.gain.setTargetAtTime(1.0, now, smooth);
       }
-      // 5. Возвращаем оригинальный сабвуфер v5.0 (80 Гц / 45 Гц)
+      // 6. Исходный сабвуфер v5.0 (80 Гц / 45 Гц)
       if (this.subwooferFilter) {
         this.subwooferFilter.frequency.setTargetAtTime(80, now, smooth);
         this.subwooferFilter.Q.setTargetAtTime(1.8, now, smooth);
@@ -452,13 +461,23 @@ class AudioEngine {
       if (this.subwooferGain) {
         this.subwooferGain.gain.setTargetAtTime(this.bassShakeLevel * 1.2, now, smooth);
       }
-      // 6. Применяем классическое распределение звука (mid / front / 3d)
       this.applyClassicSoundstage(this.soundstageMode);
     } else {
       // ==============================================================
-      // PRO v6.0 MODE:
-      // Включение продвинутого пространственного процессора
+      // PRO v6.0 MODE: ПОЛНЫЙ ПРОЦЕССОР И РАССТАНОВКА ПО САЛОНУ
       // ==============================================================
+      if (this.dspDirectGain) {
+        this.dspDirectGain.gain.setTargetAtTime(0.0, now, smooth);
+      }
+      if (this.dspFrontGain) {
+        this.dspFrontGain.gain.setTargetAtTime(0.85, now, smooth);
+      }
+      if (this.dspRearGain) {
+        this.dspRearGain.gain.setTargetAtTime(1.0, now, smooth);
+      }
+      if (this.dspSubGain) {
+        this.dspSubGain.gain.setTargetAtTime(0.9, now, smooth);
+      }
       if (this.frontPresenceFilter) {
         this.frontPresenceFilter.gain.setTargetAtTime(3.2, now, smooth);
       }
@@ -473,15 +492,6 @@ class AudioEngine {
       }
       if (this.intakeBus) {
         this.intakeBus.gain.setTargetAtTime(1.0, now, smooth);
-      }
-      if (this.dspFrontGain) {
-        this.dspFrontGain.gain.setTargetAtTime(0.85, now, smooth);
-      }
-      if (this.dspRearGain) {
-        this.dspRearGain.gain.setTargetAtTime(1.0, now, smooth);
-      }
-      if (this.dspSubGain) {
-        this.dspSubGain.gain.setTargetAtTime(0.9, now, smooth);
       }
       this.setTeslaTrim(this.teslaTrim);
       this.updateSpatialGains();
