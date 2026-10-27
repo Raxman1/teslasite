@@ -1028,10 +1028,28 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   });
 
-  // 4. GEAR SELECTOR (N / D / M)
+  // Helper for 0-latency touch and click response on Tesla MCU touchscreen
+  function addTouchInstantListener(el, callback) {
+    if (!el) return;
+    let lastTrigger = 0;
+    const trigger = (e) => {
+      const now = performance.now();
+      if (now - lastTrigger < 160) return; // Debounce to prevent duplicate click/pointer fire
+      lastTrigger = now;
+      if (e.cancelable && e.type !== 'click') e.preventDefault();
+      callback(e);
+    };
+    el.addEventListener('pointerdown', trigger, { passive: false });
+    el.addEventListener('touchstart', trigger, { passive: false });
+    el.addEventListener('click', trigger);
+  }
+
+  // 4. GEAR SELECTOR (N / D / M) & PADDLE SHIFTERS
   const shiftUpBtn = document.getElementById('shiftUpBtn');
   const shiftDownBtn = document.getElementById('shiftDownBtn');
   const gearNumBtns = document.querySelectorAll('.gear-num-btn');
+  const rpmMultiplierBtn = document.getElementById('rpmMultiplierBtn');
+  const headerRpmMultBtn = document.getElementById('headerRpmMultBtn');
 
   function switchToManualAndShift(action) {
     ensureAudioActive();
@@ -1048,21 +1066,24 @@ document.addEventListener('DOMContentLoaded', () => {
     } else if (typeof action === 'number') {
       audio.setGear(action);
     }
-    showShiftNotification(`▲ ПЕРЕДАЧА ${audio.gear || 1}`);
+    const curG = (audio.dspEngine && audio.dspEngine.vehicle) ? audio.dspEngine.vehicle.gear : (audio.gear || 1);
+    audio.gear = curG;
+    showShiftNotification(`▲ M${curG}`);
+    updateMediaSessionInfo();
   }
 
-  if (shiftUpBtn) shiftUpBtn.addEventListener('click', () => switchToManualAndShift('up'));
-  if (shiftDownBtn) shiftDownBtn.addEventListener('click', () => switchToManualAndShift('down'));
+  if (shiftUpBtn) addTouchInstantListener(shiftUpBtn, () => switchToManualAndShift('up'));
+  if (shiftDownBtn) addTouchInstantListener(shiftDownBtn, () => switchToManualAndShift('down'));
 
   gearNumBtns.forEach(btn => {
-    btn.addEventListener('click', () => {
+    addTouchInstantListener(btn, () => {
       const g = parseInt(btn.dataset.gear, 10);
       switchToManualAndShift(g);
     });
   });
 
   gearBtns.forEach(btn => {
-    btn.addEventListener('click', () => {
+    addTouchInstantListener(btn, () => {
       gearBtns.forEach(b => b.classList.remove('active'));
       btn.classList.add('active');
       const mode = btn.dataset.mode;
@@ -1074,21 +1095,62 @@ document.addEventListener('DOMContentLoaded', () => {
           audio.dspEngine.vehicle.holdSpeed = 0;
         }
       } else if (mode === 'M') {
-        if (audio.gear === 0) audio.gear = 1;
         if (audio.dspEngine && audio.dspEngine.vehicle) {
           audio.dspEngine.vehicle.neutral = false;
           if (audio.dspEngine.vehicle.gear < 1) audio.dspEngine.vehicle.gear = 1;
+          audio.gear = audio.dspEngine.vehicle.gear;
+        } else if (audio.gear === 0) {
+          audio.gear = 1;
         }
       } else {
         // D (Auto)
-        if (audio.gear === 0) audio.gear = 1;
         if (audio.dspEngine && audio.dspEngine.vehicle) {
           audio.dspEngine.vehicle.neutral = false;
           if (audio.dspEngine.vehicle.gear < 1) audio.dspEngine.vehicle.gear = 1;
+          audio.gear = audio.dspEngine.vehicle.gear;
+        } else if (audio.gear === 0) {
+          audio.gear = 1;
         }
       }
+      showShiftNotification(`⚙ ${mode === 'N' ? 'N (Нейтраль)' : (mode === 'M' ? `M${audio.gear || 1}` : 'D (Автомат)')}`);
+      updateMediaSessionInfo();
     });
   });
+
+  // RPM Multiplier Controls (1x, 1.5x, 2x, 3x for dynamic revs at low speeds: e.g. 20 km/h = 4,000 RPM)
+  const RPM_MULTIPLIERS = [1.0, 1.5, 2.0, 3.0];
+  let currentRpmMultiplier = parseFloat(localStorage.getItem('tesla_rpm_multiplier')) || 1.0;
+  if (!RPM_MULTIPLIERS.includes(currentRpmMultiplier)) currentRpmMultiplier = 1.0;
+
+  function updateRpmMultiplierUI() {
+    const textLabel = currentRpmMultiplier === 1.0 ? 'x1' : (currentRpmMultiplier === 1.5 ? 'x1.5' : (currentRpmMultiplier === 2.0 ? 'x2' : 'x3'));
+    if (rpmMultiplierBtn) {
+      rpmMultiplierBtn.textContent = `⚡ Динамика: ${textLabel}`;
+      rpmMultiplierBtn.classList.toggle('boosted', currentRpmMultiplier > 1.0);
+    }
+    if (headerRpmMultBtn) {
+      headerRpmMultBtn.textContent = `⚡ ${textLabel}`;
+      headerRpmMultBtn.classList.toggle('boosted', currentRpmMultiplier > 1.0);
+    }
+    audio.setRpmMultiplier(currentRpmMultiplier);
+  }
+
+  function cycleRpmMultiplier() {
+    ensureAudioActive();
+    const curIdx = RPM_MULTIPLIERS.indexOf(currentRpmMultiplier);
+    const nextIdx = (curIdx + 1) % RPM_MULTIPLIERS.length;
+    currentRpmMultiplier = RPM_MULTIPLIERS[nextIdx];
+    localStorage.setItem('tesla_rpm_multiplier', currentRpmMultiplier);
+    updateRpmMultiplierUI();
+    const rpmDesc = currentRpmMultiplier === 1.0 
+      ? 'Стандарт (1x)' 
+      : (currentRpmMultiplier === 1.5 ? 'Sport (x1.5: 20 км/ч = 3,000 RPM)' : (currentRpmMultiplier === 2.0 ? 'Race (x2: 20 км/ч = 4,000 RPM)' : 'Beast (x3: 20 км/ч = 6,000 RPM)'));
+    showShiftNotification(`⚡ Обороты: ${rpmDesc}`);
+  }
+
+  if (rpmMultiplierBtn) addTouchInstantListener(rpmMultiplierBtn, cycleRpmMultiplier);
+  if (headerRpmMultBtn) addTouchInstantListener(headerRpmMultBtn, cycleRpmMultiplier);
+  updateRpmMultiplierUI();
 
   // 5. INTERACTIVE DUAL SPORTS PEDALS (Continuous Pressure & 3D Tilt Dragging)
   function setPedalPressure(val) {
@@ -1657,24 +1719,11 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   function handleSteeringWheelShiftUp() {
-    ensureAudioActive();
-    if (audio.gear === 0) {
-      audio.gear = 1;
-      audio.gearMode = 'M';
-    } else {
-      audio.gearMode = 'M';
-      gearBtns.forEach(b => b.classList.toggle('active', b.dataset.mode === 'M'));
-      audio.shiftUp();
-    }
-    showShiftNotification(`▲ ПЕРЕДАЧА ${audio.gear} (+)`);
+    switchToManualAndShift('up');
   }
 
   function handleSteeringWheelShiftDown() {
-    ensureAudioActive();
-    audio.gearMode = 'M';
-    gearBtns.forEach(b => b.classList.toggle('active', b.dataset.mode === 'M'));
-    audio.shiftDown();
-    showShiftNotification(`▼ ПЕРЕДАЧА ${audio.gear} (-)`);
+    switchToManualAndShift('down');
   }
 
   // Synchronize lock-screen / Bluetooth metadata with current car preset
@@ -1838,14 +1887,29 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // Intercept physical hardware media keys from Tesla steering wheel
   // NOTE: Volume Up/Down (vertical roll) is NOT intercepted so you can always adjust Tesla volume normally!
+  // Left steering wheel vertical scroll in Tesla Chromium
+  let lastWheelScrollShift = 0;
+  window.addEventListener('wheel', (e) => {
+    const now = performance.now();
+    if (now - lastWheelScrollShift < 220) return; // Debounce wheel clicks
+    if (Math.abs(e.deltaY) > 20) {
+      lastWheelScrollShift = now;
+      if (e.deltaY < 0) {
+        handleSteeringWheelShiftUp();
+      } else {
+        handleSteeringWheelShiftDown();
+      }
+    }
+  }, { passive: true });
+
   window.addEventListener('keydown', (e) => {
     // Left wheel TILT RIGHT (Next Track) -> Shift UP
-    if (e.key === 'MediaTrackNext' || e.code === 'MediaTrackNext' || e.keyCode === 176) {
+    if (e.key === 'MediaTrackNext' || e.code === 'MediaTrackNext' || e.keyCode === 176 || e.key === 'TrackNext') {
       e.preventDefault();
       handleSteeringWheelShiftUp();
     }
     // Left wheel TILT LEFT (Previous Track) -> Shift DOWN
-    else if (e.key === 'MediaTrackPrevious' || e.code === 'MediaTrackPrevious' || e.keyCode === 177) {
+    else if (e.key === 'MediaTrackPrevious' || e.code === 'MediaTrackPrevious' || e.keyCode === 177 || e.key === 'TrackPrevious') {
       e.preventDefault();
       handleSteeringWheelShiftDown();
     }

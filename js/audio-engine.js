@@ -108,6 +108,7 @@ class AudioEngine {
     this.speed = 0;
     this.gear = 1;
     this.gearMode = 'A';
+    this.rpmMultiplier = 1.0;
     this.isRevLimiting = false;
     this.lastLimiterPulse = 0;
 
@@ -927,7 +928,15 @@ class AudioEngine {
     this.playOneShot(chosen, volume * this.popsAggressiveness, 0.08, 'rear');
   }
 
+  setRpmMultiplier(mult) {
+    this.rpmMultiplier = Math.max(0.5, Math.min(5.0, parseFloat(mult) || 1.0));
+    if (this.dspEngine) {
+      this.dspEngine.setRpmMultiplier(this.rpmMultiplier);
+    }
+  }
+
   shiftUp() {
+    this.gearMode = 'M';
     if (this.soundMode === 'dsp' && this.dspEngine) {
       this.dspEngine.shiftUp();
       return;
@@ -941,6 +950,7 @@ class AudioEngine {
   }
 
   shiftDown() {
+    this.gearMode = 'M';
     if (this.soundMode === 'dsp' && this.dspEngine) {
       this.dspEngine.shiftDown();
       return;
@@ -1035,7 +1045,7 @@ class AudioEngine {
           }
         }
 
-        const calculatedRpm = (this.speed / maxGearSpeed) * this.redlineRpm;
+        const calculatedRpm = ((this.speed * (this.rpmMultiplier || 1.0)) / maxGearSpeed) * this.redlineRpm;
         this.rpm = Math.max(this.idleRpm, calculatedRpm);
       }
     }
@@ -1152,29 +1162,33 @@ class AudioEngine {
     if (this.soundMode === 'dsp') {
       return;
     }
-    for (let g = 1; g <= 6; g++) {
-      if (this.speed <= this.gearMaxSpeeds[g]) {
-        targetGear = g;
-        break;
+    // Only auto-shift if in Automatic mode ('A')
+    if (this.gearMode !== 'M') {
+      for (let g = 1; g <= 6; g++) {
+        if (this.speed <= this.gearMaxSpeeds[g]) {
+          targetGear = g;
+          break;
+        }
+        targetGear = 6;
       }
-      targetGear = 6;
-    }
 
-    if (targetGear !== this.gear && this.speed > 5) {
-      if (targetGear > this.gear) {
-        this.playOneShot('gearup', 0.85, 0.04, 'rear');
-        this.triggerRandomPop(0.9);
-      } else {
-        this.playOneShot('geardn', 0.8, 0.04, 'center');
-        this.triggerRandomPop(0.7);
+      if (targetGear !== this.gear && this.speed > 5) {
+        if (targetGear > this.gear) {
+          this.playOneShot('gearup', 0.85, 0.04, 'rear');
+          this.triggerRandomPop(0.9);
+        } else {
+          this.playOneShot('geardn', 0.8, 0.04, 'center');
+          this.triggerRandomPop(0.7);
+        }
+        this.gear = targetGear;
       }
-      this.gear = targetGear;
     }
 
     if (this.speed < 2) {
       this.targetRpm = this.idleRpm;
     } else {
-      const ratio = this.speed / this.gearMaxSpeeds[this.gear];
+      const maxGearSpeed = this.gearMaxSpeeds[this.gear] || 80;
+      const ratio = (this.speed * (this.rpmMultiplier || 1.0)) / maxGearSpeed;
       this.targetRpm = Math.max(this.idleRpm * 1.2, Math.min(this.redlineRpm * 1.02, ratio * this.redlineRpm));
     }
 

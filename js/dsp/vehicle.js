@@ -34,6 +34,7 @@
     // Electric motor: one fixed gear, no idle, no start-up, regen instead of overrun.
     this.electric = car.engine.type === 'electric';
     this.intensity = 0.5;
+    this.rpmMultiplier = 1.0;
     this.reset();
     this.running = false;
   }
@@ -82,7 +83,8 @@
 
   Vehicle.prototype.gearRpm = function (gear) {
     var p = this.p;
-    return this.speed / p.tireCircumferenceM * 60 * p.ratios[gear - 1] * p.finalDrive;
+    var mult = this.rpmMultiplier || 1.0;
+    return (this.speed * mult) / p.tireCircumferenceM * 60 * p.ratios[gear - 1] * p.finalDrive;
   };
 
   Vehicle.prototype.torqueAt = function (rpm) {
@@ -207,8 +209,10 @@
   Vehicle.prototype._autoShift = function (braking) {
     if (this.shift) return;
     var e = this.e, n = this.p.ratios.length, thr = this.throttle, I = this.intensity;
+    var mult = this.rpmMultiplier || 1.0;
     var rpm = this.gearRpm(this.gear);
-    var upRpm = lerp(e.cruiseUpshiftRpm || 1900 + 700 * I, e.upshiftRpm || e.redlineRpm - 250, Math.pow(thr, 1.3));
+    var baseUp = lerp(e.cruiseUpshiftRpm || 1900 + 700 * I, e.upshiftRpm || e.redlineRpm - 250, Math.pow(thr, 1.3));
+    var upRpm = mult > 1.0 ? Math.min(e.redlineRpm - 200, baseUp * (1.0 + (mult - 1.0) * 0.35)) : baseUp;
     // Normally a shift is followed by a short pause (longer by hand). A
     // hard-capped engine may skip it for an upshift, so the revs can never
     // run into the limiter.
@@ -367,7 +371,7 @@
       this.accel = input.accel;
       demand = this._estimateThrottle(this.speed, this.accel);
       braking = this.accel < -2.5 ? 1 : 0;
-      this.neutral = isN || (this.speed < 0.5);
+      this.neutral = isN;
     }
 
     // Manual shift lever sound

@@ -42,6 +42,9 @@ class DSPAudioEngine {
     this.car = found;
     this.baseIdleRpm = (found.engine && found.engine.idleRpm) ? found.engine.idleRpm : 800;
     this.vehicle = new window.Vehicle(found);
+    if (this.rpmMultiplier) {
+      this.vehicle.rpmMultiplier = this.rpmMultiplier;
+    }
     this.applyTuningParams();
     console.log('[DSPAudioEngine] Selected car:', found.name);
 
@@ -319,9 +322,20 @@ class DSPAudioEngine {
 
   shiftDown() {
     if (!this.vehicle) return;
-    if (this.vehicle.neutral) return;
+    if (this.vehicle.neutral) {
+      this.vehicle.neutral = false;
+      this.vehicle.gear = 1;
+      return;
+    }
     if (this.vehicle.gear > 1) {
       this.vehicle._startShift(this.vehicle.gear - 1);
+    }
+  }
+
+  setRpmMultiplier(mult) {
+    this.rpmMultiplier = mult;
+    if (this.vehicle) {
+      this.vehicle.rpmMultiplier = mult;
     }
   }
 
