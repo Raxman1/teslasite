@@ -108,10 +108,24 @@ class AudioEngine {
   }
 
   ensureContext() {
+    if ('audioSession' in navigator) {
+      try {
+        navigator.audioSession.type = 'playback';
+      } catch (e) {}
+    }
     if (!this.ctx) {
       const AudioContextClass = window.AudioContext || window.webkitAudioContext;
       if (AudioContextClass) {
         this.ctx = new AudioContextClass({ latencyHint: 'interactive' });
+      }
+      if (this.ctx) {
+        this.ctx.addEventListener('statechange', async () => {
+          if (this.isPlaying && (this.ctx.state === 'suspended' || this.ctx.state === 'interrupted')) {
+            try {
+              await this.ctx.resume();
+            } catch (e) {}
+          }
+        });
       }
     }
     return this.ctx;
@@ -121,7 +135,7 @@ class AudioEngine {
     this.ensureContext();
     if (this.ctx && this.isReady) return true;
 
-    if (this.ctx && this.ctx.state === 'suspended') {
+    if (this.ctx && (this.ctx.state === 'suspended' || this.ctx.state === 'interrupted')) {
       try {
         await Promise.race([
           this.ctx.resume(),
@@ -376,7 +390,7 @@ class AudioEngine {
   async start() {
     this.ensureContext();
     if (!this.isReady) await this.init();
-    if (this.ctx && this.ctx.state === 'suspended') {
+    if (this.ctx && (this.ctx.state === 'suspended' || this.ctx.state === 'interrupted')) {
       try {
         await Promise.race([
           this.ctx.resume(),

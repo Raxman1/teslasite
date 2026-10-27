@@ -6,6 +6,11 @@ class DSPAudioEngine {
   constructor(audioContext, destinationOrGetter) {
     this.ctx = audioContext;
     this.destinationOrGetter = destinationOrGetter;
+    if ('audioSession' in navigator) {
+      try {
+        navigator.audioSession.type = 'playback';
+      } catch (e) {}
+    }
     this.car = null;
     this.vehicle = null;
     this.node = null;
@@ -136,7 +141,7 @@ class DSPAudioEngine {
         }
         await Promise.race([
           this.workletPromise,
-          new Promise((_, reject) => setTimeout(() => reject(new Error('Worklet timeout')), 350))
+          new Promise((_, reject) => setTimeout(() => reject(new Error('Worklet timeout')), 2500))
         ]);
 
         const node = new AudioWorkletNode(this.ctx, 'engine-processor', {
@@ -188,7 +193,7 @@ class DSPAudioEngine {
   }
 
   async start() {
-    if (this.ctx.state === 'suspended') {
+    if (this.ctx.state === 'suspended' || this.ctx.state === 'interrupted') {
       try {
         await Promise.race([
           this.ctx.resume(),

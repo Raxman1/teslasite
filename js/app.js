@@ -367,7 +367,21 @@ document.addEventListener('DOMContentLoaded', () => {
   const hudAccuracy = document.getElementById('hudAccuracy');
   const hudRate = document.getElementById('hudRate');
   const hudCoords = document.getElementById('hudCoords');
+  const hudCoordsBox = document.getElementById('hudCoordsBox');
+  const gnssStatusBadge = document.getElementById('gnssStatusBadge');
   const gDot = document.getElementById('gDot');
+
+  if (hudCoordsBox) {
+    hudCoordsBox.addEventListener('click', () => {
+      ensureAudioActive();
+      const gpsTab = Array.from(tabBtns).find(b => b.dataset.tab === 'gps');
+      if (gpsTab) {
+        gpsTab.click();
+      } else {
+        telemetry.start();
+      }
+    });
+  }
 
   // Dual Pedal Elements (Brake & Gas)
   const pedalFrame = document.getElementById('pedalFrame');
@@ -448,10 +462,15 @@ document.addEventListener('DOMContentLoaded', () => {
   // iOS Safari & Tesla Audio Session Unlocker
   // Plays valid silent audio to force iOS out of "Ambient" into "Playback" (bypasses silent switch)
   function unlockSafariAndTeslaAudio() {
+    if ('audioSession' in navigator) {
+      try {
+        navigator.audioSession.type = 'playback';
+      } catch (e) {}
+    }
     try {
       const ctx = audio.ensureContext();
       if (ctx) {
-        if (ctx.state === 'suspended') {
+        if (ctx.state === 'suspended' || ctx.state === 'interrupted') {
           ctx.resume().catch(() => {});
         }
         // iOS Safari one-sample dummy buffer unlock
@@ -465,7 +484,10 @@ document.addEventListener('DOMContentLoaded', () => {
       }
       if (mediaSessionKeeper) {
         mediaSessionKeeper.volume = 0.05;
-        mediaSessionKeeper.play().catch(() => {});
+        const playPromise = mediaSessionKeeper.play();
+        if (playPromise !== undefined) {
+          playPromise.catch(err => console.warn('Keeper play warning:', err));
+        }
       }
     } catch (e) {}
   }
@@ -554,6 +576,16 @@ document.addEventListener('DOMContentLoaded', () => {
       activeTab = btn.dataset.tab;
 
       if (activeTab === 'gps') {
+        if (gnssStatusBadge && (!telemetry.lastPosition || !telemetry.lastPosition.coords)) {
+          gnssStatusBadge.textContent = 'Поиск спутников...';
+          gnssStatusBadge.style.color = 'var(--accent-amber)';
+        }
+        if (hudCoords && (!telemetry.lastPosition || !telemetry.lastPosition.coords)) {
+          hudCoords.textContent = '🛰️ Запрос GPS... Выйдите под открытое небо';
+        }
+        if (hudAccuracy && (!telemetry.lastPosition || !telemetry.lastPosition.coords)) {
+          hudAccuracy.textContent = 'Поиск...';
+        }
         telemetry.start();
       } else if (activeTab === 'p2p') {
         openP2PModal();
@@ -949,8 +981,17 @@ document.addEventListener('DOMContentLoaded', () => {
     hudGForce.textContent = `${data.gForce} G`;
     hudAccuracy.textContent = data.accuracy ? `±${data.accuracy} м` : '–';
     hudRate.textContent = data.hz > 0 ? `${data.hz} Гц` : 'GPS 1 Гц';
-    if (data.latitude) {
-      hudCoords.textContent = `${data.latitude.toFixed(4)}, ${data.longitude.toFixed(4)}`;
+    if (data.latitude && data.longitude) {
+      hudCoords.textContent = `${data.latitude.toFixed(5)}°, ${data.longitude.toFixed(5)}°`;
+      if (gnssStatusBadge) {
+        gnssStatusBadge.textContent = '✅ Спутники захвачены';
+        gnssStatusBadge.style.color = 'var(--accent-green)';
+      }
+    } else if (telemetry.isTracking) {
+      if (gnssStatusBadge) {
+        gnssStatusBadge.textContent = '🛰️ Поиск спутников...';
+        gnssStatusBadge.style.color = 'var(--accent-amber)';
+      }
     }
 
     // Move G-ball
@@ -977,12 +1018,16 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   function handleTelemetryError(err) {
-    if (hudAccuracy) hudAccuracy.textContent = 'Ожидание';
+    if (hudAccuracy) hudAccuracy.textContent = '–';
+    if (gnssStatusBadge) {
+      gnssStatusBadge.textContent = '❌ Сигнал потерян';
+      gnssStatusBadge.style.color = '#ef4444';
+    }
     if (hudCoords) {
       if (err.message && err.message.includes('запретил')) {
-        hudCoords.textContent = 'Геопозиция запрещена (Нажмите «Разрешить» в строке браузера)';
+        hudCoords.textContent = 'Геопозиция запрещена (Нажмите «Разрешить» в настройках Safari)';
       } else {
-        hudCoords.textContent = 'Поиск спутников GPS... Выезжайте из подземной парковки';
+        hudCoords.textContent = '🛰️ Нет сигнала GNSS (в здании / паркинге). Выйдите на улицу!';
       }
     }
     console.warn('Telemetry error:', err.message);
@@ -1298,6 +1343,11 @@ document.addEventListener('DOMContentLoaded', () => {
   let backgroundInterval = null;
   function startBackgroundRunner() {
     if (backgroundInterval) return;
+    if ('audioSession' in navigator) {
+      try {
+        navigator.audioSession.type = 'playback';
+      } catch (e) {}
+    }
     if (mediaSessionKeeper && audio && audio.isPlaying) {
       mediaSessionKeeper.play().catch(() => {});
     }
@@ -1311,7 +1361,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
       // Ensure Web Audio context remains running and un-suspended when phone is locked
       if (audio && audio.isPlaying) {
-        if (audio.ctx && audio.ctx.state === 'suspended') {
+        if (audio.ctx && (audio.ctx.state === 'suspended' || audio.ctx.state === 'interrupted')) {
           audio.ctx.resume().catch(() => {});
         }
         audio.updatePhysics(dt, activeTab);
@@ -1335,6 +1385,9 @@ document.addEventListener('DOMContentLoaded', () => {
       // Screen unlocked: resume smooth 60 FPS rAF loop and re-acquire screen wake lock
       stopBackgroundRunner();
       if (audio && audio.isPlaying) {
+        if (audio.ctx && (audio.ctx.state === 'suspended' || audio.ctx.state === 'interrupted')) {
+          audio.ctx.resume().catch(() => {});
+        }
         requestScreenWakeLock();
       }
     }
