@@ -142,13 +142,12 @@ class AudioEngine {
 
     // 1. REAR EXHAUST PANNER (Behind driver, simulating sound coming from trunk / rear parcel shelf)
     this.exhaustPanner = this.ctx.createPanner();
-    this.exhaustPanner.panningModel = 'HRTF';
-    this.exhaustPanner.distanceModel = 'inverse';
+    this.exhaustPanner.panningModel = 'equalpower';
+    this.exhaustPanner.distanceModel = 'linear';
+    this.exhaustPanner.maxDistance = 10000;
     this.exhaustPanner.refDistance = 1;
-    this.exhaustPanner.maxDistance = 100;
-    this.exhaustPanner.rolloffFactor = 1;
-    this.exhaustPanner.coneInnerAngle = 360;
-    this.exhaustPanner.setPosition(0, -0.3, 1.4); // Z > 0 is behind in Web Audio
+    this.exhaustPanner.rolloffFactor = 0;
+    this.exhaustPanner.setPosition(0, -0.2, 1.0);
 
     this.exhaustBus = this.ctx.createGain();
     this.exhaustBus.connect(this.exhaustPanner);
@@ -156,9 +155,11 @@ class AudioEngine {
 
     // 2. FRONT INTAKE & DASHBOARD PANNER (Directly on windshield / dashboard immersion speakers)
     this.intakePanner = this.ctx.createPanner();
-    this.intakePanner.panningModel = 'HRTF';
-    this.intakePanner.distanceModel = 'inverse';
-    this.intakePanner.setPosition(0, 0.4, -1.2); // Z < 0 is in front (dashboard)
+    this.intakePanner.panningModel = 'equalpower';
+    this.intakePanner.distanceModel = 'linear';
+    this.intakePanner.maxDistance = 10000;
+    this.intakePanner.rolloffFactor = 0;
+    this.intakePanner.setPosition(0, 0.3, -1.0);
 
     this.intakeBus = this.ctx.createGain();
     this.intakeBus.connect(this.intakePanner);
@@ -166,8 +167,11 @@ class AudioEngine {
 
     // 3. CENTER TRANSMISSION / GEARBOX TUNNEL PANNER
     this.transmissionPanner = this.ctx.createPanner();
-    this.transmissionPanner.panningModel = 'HRTF';
-    this.transmissionPanner.setPosition(0.1, -0.4, -0.1); // Center console next to driver leg
+    this.transmissionPanner.panningModel = 'equalpower';
+    this.transmissionPanner.distanceModel = 'linear';
+    this.transmissionPanner.maxDistance = 10000;
+    this.transmissionPanner.rolloffFactor = 0;
+    this.transmissionPanner.setPosition(0.1, -0.2, 0.0);
 
     this.transBus = this.ctx.createGain();
     this.transBus.connect(this.transmissionPanner);
@@ -175,13 +179,17 @@ class AudioEngine {
 
     // 4. DUAL EXHAUST PIPES (Left / Right backfire localization)
     this.popLeftPanner = this.ctx.createPanner();
-    this.popLeftPanner.panningModel = 'HRTF';
-    this.popLeftPanner.setPosition(-0.55, -0.4, 2.0); // Rear Left exhaust pipe
+    this.popLeftPanner.panningModel = 'equalpower';
+    this.popLeftPanner.distanceModel = 'linear';
+    this.popLeftPanner.rolloffFactor = 0;
+    this.popLeftPanner.setPosition(-0.8, -0.2, 1.0);
     this.popLeftPanner.connect(this.masterGain);
 
     this.popRightPanner = this.ctx.createPanner();
-    this.popRightPanner.panningModel = 'HRTF';
-    this.popRightPanner.setPosition(0.55, -0.4, 2.0);  // Rear Right exhaust pipe
+    this.popRightPanner.panningModel = 'equalpower';
+    this.popRightPanner.distanceModel = 'linear';
+    this.popRightPanner.rolloffFactor = 0;
+    this.popRightPanner.setPosition(0.8, -0.2, 1.0);
     this.popRightPanner.connect(this.masterGain);
 
     // 5. TESLA DEDICATED SUBWOOFER / BASS SHAKER (Door woofers + trunk sub)
@@ -525,15 +533,19 @@ class AudioEngine {
     }
 
     const rL = this.redlineRpm;
-    const g_vlow = this.calcGain(rpm, 0, this.idleRpm * 0.8, this.idleRpm * 1.3, rL * 0.3);
-    const g_low = this.calcGain(rpm, this.idleRpm * 1.1, rL * 0.25, rL * 0.35, rL * 0.55);
-    const g_mid = this.calcGain(rpm, rL * 0.3, rL * 0.45, rL * 0.6, rL * 0.78);
-    const g_high = this.calcGain(rpm, rL * 0.55, rL * 0.72, rL * 0.85, rL * 1.0);
-    const g_ex_high = this.calcGain(rpm, rL * 0.75, rL * 0.92, rL * 1.02, rL * 1.25);
+    const hasExHigh = !!this.sources['ex_high'];
 
-    const g_off_low = this.calcGain(rpm, 0, this.idleRpm * 0.8, this.idleRpm * 1.6, rL * 0.35);
-    const g_off_mid = this.calcGain(rpm, rL * 0.2, rL * 0.4, rL * 0.55, rL * 0.75);
-    const g_off_high = this.calcGain(rpm, rL * 0.55, rL * 0.78, rL * 1.05, rL * 1.25);
+    const g_vlow = this.calcGain(rpm, 0, this.idleRpm * 0.8, this.idleRpm * 1.4, rL * 0.35);
+    const g_low = this.calcGain(rpm, this.idleRpm * 1.1, rL * 0.22, rL * 0.38, rL * 0.58);
+    const g_mid = this.calcGain(rpm, rL * 0.30, rL * 0.45, rL * 0.62, rL * 0.82);
+    const g_high = hasExHigh
+      ? this.calcGain(rpm, rL * 0.55, rL * 0.72, rL * 0.85, rL * 1.0)
+      : this.calcGain(rpm, rL * 0.52, rL * 0.72, rL * 1.10, rL * 1.40);
+    const g_ex_high = hasExHigh ? this.calcGain(rpm, rL * 0.75, rL * 0.92, rL * 1.02, rL * 1.25) : 0.0001;
+
+    const g_off_low = this.calcGain(rpm, 0, this.idleRpm * 0.8, this.idleRpm * 1.6, rL * 0.40);
+    const g_off_mid = this.calcGain(rpm, rL * 0.2, rL * 0.4, rL * 0.58, rL * 0.80);
+    const g_off_high = this.calcGain(rpm, rL * 0.52, rL * 0.78, rL * 1.10, rL * 1.40);
 
     const limiterCut = this.isRevLimiting ? 0.2 : 1.0;
 

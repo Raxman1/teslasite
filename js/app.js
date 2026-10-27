@@ -114,6 +114,9 @@ document.addEventListener('DOMContentLoaded', () => {
         if (pedalLogo) pedalLogo.textContent = presetInfo.name.toUpperCase();
       }
       await audio.setPreset(selectedId);
+      if (!audio.isPlaying) {
+        await unlockAndStartEngine();
+      }
     });
   }
 
