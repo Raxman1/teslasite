@@ -1,0 +1,8 @@
+# Ignore raw dumps and heavy mod archives
+extracted/
+extracted_wav/
+*.zip
+*.wav
+*.mp3
+!sounds/*.mp3
+start_local_test.bat

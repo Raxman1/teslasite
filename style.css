@@ -1,0 +1,609 @@
+:root {
+  --bg-dark: #0a0c10;
+  --bg-card: rgba(18, 22, 30, 0.85);
+  --accent-amber: #ff9900;
+  --accent-red: #ff2222;
+  --accent-green: #00e676;
+  --text-main: #f0f4f8;
+  --text-muted: #8a99a8;
+  --border-glass: rgba(255, 255, 255, 0.08);
+  --pedal-metal: linear-gradient(145deg, #d8d8d8, #8c8c8c);
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", sans-serif;
+  background-color: var(--bg-dark);
+  color: var(--text-main);
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  overflow-x: hidden;
+  background-image: 
+    radial-gradient(circle at 50% 20%, rgba(255, 153, 0, 0.05) 0%, transparent 60%),
+    radial-gradient(circle at 80% 80%, rgba(255, 34, 34, 0.03) 0%, transparent 50%);
+}
+
+/* Header & Status Bar */
+header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 24px;
+  background: rgba(10, 12, 16, 0.9);
+  border-bottom: 1px solid var(--border-glass);
+  backdrop-filter: blur(10px);
+  z-index: 100;
+}
+
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.brand-badge {
+  background: var(--accent-amber);
+  color: #000;
+  font-size: 11px;
+  font-weight: 800;
+  padding: 3px 8px;
+  border-radius: 4px;
+  letter-spacing: 1px;
+}
+
+.brand-title {
+  font-size: 16px;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+}
+
+.header-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+/* Buttons */
+.btn {
+  background: rgba(255, 255, 255, 0.08);
+  color: var(--text-main);
+  border: 1px solid var(--border-glass);
+  padding: 8px 16px;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.btn:hover {
+  background: rgba(255, 255, 255, 0.15);
+  transform: translateY(-1px);
+}
+
+.btn:active {
+  transform: translateY(1px);
+}
+
+.btn-primary {
+  background: var(--accent-amber);
+  color: #000;
+  border: none;
+  animation: pulse-btn 1.8s infinite;
+}
+
+@keyframes pulse-btn {
+  0% { box-shadow: 0 0 0 0 rgba(255, 153, 0, 0.7); }
+  70% { box-shadow: 0 0 0 10px rgba(255, 153, 0, 0); }
+  100% { box-shadow: 0 0 0 0 rgba(255, 153, 0, 0); }
+}
+
+.btn-primary:hover {
+  background: #ffaa22;
+  box-shadow: 0 0 15px rgba(255, 153, 0, 0.4);
+}
+
+.btn-danger {
+  background: var(--accent-red);
+  color: #fff;
+  border: none;
+}
+
+.btn-danger:hover {
+  background: #ff4444;
+  box-shadow: 0 0 15px rgba(255, 34, 34, 0.4);
+}
+
+/* Mode Switcher Tabs */
+.tabs-container {
+  display: flex;
+  justify-content: center;
+  padding: 10px 16px 0 16px;
+}
+
+.tabs {
+  display: flex;
+  background: rgba(0, 0, 0, 0.5);
+  border: 1px solid var(--border-glass);
+  padding: 4px;
+  border-radius: 12px;
+  gap: 4px;
+}
+
+.tab-btn {
+  background: transparent;
+  border: none;
+  color: var(--text-muted);
+  padding: 8px 18px;
+  font-size: 13px;
+  font-weight: 600;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.tab-btn.active {
+  background: rgba(255, 255, 255, 0.12);
+  color: var(--text-main);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
+}
+
+/* Shift Lights Bar */
+.shift-lights {
+  display: flex;
+  justify-content: center;
+  gap: 6px;
+  padding: 10px 20px 0 20px;
+}
+
+.shift-led {
+  width: 22px;
+  height: 10px;
+  border-radius: 3px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  transition: all 0.1s;
+}
+
+.shift-led.green.active {
+  background: #00e676;
+  box-shadow: 0 0 10px #00e676;
+}
+
+.shift-led.yellow.active {
+  background: #ffeb3b;
+  box-shadow: 0 0 10px #ffeb3b;
+}
+
+.shift-led.red.active {
+  background: #ff1744;
+  box-shadow: 0 0 12px #ff1744;
+  animation: flash 0.12s infinite alternate;
+}
+
+@keyframes flash {
+  from { opacity: 0.4; }
+  to { opacity: 1; }
+}
+
+/* Main Dashboard Area */
+main {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  padding: 16px 24px;
+  max-width: 1400px;
+  margin: 0 auto;
+  width: 100%;
+}
+
+.cockpit-grid {
+  display: grid;
+  grid-template-columns: 320px 1fr 340px;
+  gap: 24px;
+  align-items: center;
+  flex: 1;
+}
+
+@media (max-width: 1050px) {
+  .cockpit-grid {
+    grid-template-columns: 1fr;
+    gap: 16px;
+  }
+}
+
+/* Cards */
+.card {
+  background: var(--bg-card);
+  border: 1px solid var(--border-glass);
+  border-radius: 16px;
+  padding: 20px;
+  backdrop-filter: blur(16px);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+}
+
+/* Center Cluster (Tachometer & Speed) */
+.cluster-panel {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  position: relative;
+}
+
+.tachometer-container {
+  position: relative;
+  width: 380px;
+  height: 380px;
+  max-width: 90vw;
+  max-height: 90vw;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+#gaugeCanvas {
+  width: 100%;
+  height: 100%;
+}
+
+.gauge-center-data {
+  position: absolute;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  pointer-events: none;
+}
+
+.gear-display {
+  font-size: 64px;
+  font-weight: 900;
+  color: var(--accent-amber);
+  line-height: 1;
+  text-shadow: 0 0 20px rgba(255, 153, 0, 0.6);
+  font-family: monospace;
+}
+
+.speed-display {
+  font-size: 42px;
+  font-weight: 800;
+  color: #fff;
+  line-height: 1.1;
+  margin-top: 4px;
+}
+
+.speed-unit {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text-muted);
+  letter-spacing: 1px;
+}
+
+.rpm-numeric {
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--accent-amber);
+  margin-top: 8px;
+  font-family: monospace;
+}
+
+/* Left Panel: Telemetry HUD */
+.hud-title {
+  font-size: 13px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 1.5px;
+  color: var(--text-muted);
+  margin-bottom: 16px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.hud-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  margin-bottom: 18px;
+}
+
+.hud-item {
+  background: rgba(0, 0, 0, 0.3);
+  padding: 10px 14px;
+  border-radius: 10px;
+  border: 1px solid var(--border-glass);
+}
+
+.hud-label {
+  font-size: 11px;
+  color: var(--text-muted);
+  margin-bottom: 4px;
+}
+
+.hud-value {
+  font-size: 18px;
+  font-weight: 700;
+  font-family: monospace;
+}
+
+.hud-value.highlight {
+  color: var(--accent-amber);
+}
+
+/* G-Force Ball Meter */
+.g-meter-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  margin-top: 10px;
+}
+
+.g-circle {
+  width: 140px;
+  height: 140px;
+  border-radius: 50%;
+  border: 1px dashed rgba(255, 255, 255, 0.2);
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: radial-gradient(circle, rgba(255,255,255,0.02) 0%, transparent 70%);
+}
+
+.g-circle::before, .g-circle::after {
+  content: '';
+  position: absolute;
+  background: rgba(255, 255, 255, 0.15);
+}
+
+.g-circle::before {
+  width: 100%;
+  height: 1px;
+}
+
+.g-circle::after {
+  height: 100%;
+  width: 1px;
+}
+
+.g-dot {
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: var(--accent-amber);
+  box-shadow: 0 0 12px var(--accent-amber);
+  position: absolute;
+  transform: translate(-50%, -50%);
+  left: 50%;
+  top: 50%;
+  transition: all 0.05s ease-out;
+}
+
+/* Right Panel: Interactive Pedal & Simulator Controls */
+.pedal-section {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.pedal-wrapper {
+  perspective: 500px;
+  width: 100%;
+  display: flex;
+  justify-content: center;
+  margin: 16px 0;
+}
+
+/* 3D Realistic Aluminum Racing Pedal */
+.pedal-frame {
+  width: 130px;
+  height: 240px;
+  background: #14171d;
+  border-radius: 18px;
+  padding: 10px;
+  box-shadow: inset 0 0 20px #000, 0 8px 24px rgba(0,0,0,0.6);
+  border: 1px solid rgba(255,255,255,0.08);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  cursor: pointer;
+  touch-action: none;
+}
+
+.pedal-plate {
+  width: 110px;
+  height: 215px;
+  background: linear-gradient(135deg, #e4e4e4 0%, #b8b8b8 40%, #7e7e7e 100%);
+  border-radius: 14px;
+  box-shadow: 
+    0 12px 25px rgba(0, 0, 0, 0.8),
+    inset 0 1px 2px rgba(255, 255, 255, 0.9),
+    inset 0 -2px 4px rgba(0, 0, 0, 0.4);
+  transform-origin: bottom center;
+  transform: rotateX(15deg) translateZ(10px);
+  transition: transform 0.08s ease-out, box-shadow 0.08s;
+  position: relative;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-around;
+  align-items: center;
+  padding: 18px 0;
+}
+
+.pedal-frame.active .pedal-plate {
+  transform: rotateX(32deg) translateY(12px) translateZ(-15px);
+  box-shadow: 
+    0 4px 10px rgba(0, 0, 0, 0.9),
+    0 0 25px rgba(255, 153, 0, 0.6);
+}
+
+/* Rubber traction studs */
+.rubber-stud-row {
+  display: flex;
+  gap: 12px;
+}
+
+.rubber-stud {
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: #1a1a1a;
+  box-shadow: inset 0 2px 3px #000, 0 1px 1px rgba(255, 255, 255, 0.4);
+}
+
+.pedal-logo {
+  font-size: 11px;
+  font-weight: 900;
+  color: #333;
+  letter-spacing: 2px;
+}
+
+.pedal-stats {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  margin-top: 6px;
+}
+
+.pedal-gauge-bar {
+  flex: 1;
+  height: 8px;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 4px;
+  overflow: hidden;
+  margin: 0 12px;
+}
+
+.pedal-gauge-fill {
+  width: 0%;
+  height: 100%;
+  background: linear-gradient(90deg, var(--accent-amber), var(--accent-red));
+  transition: width 0.05s linear;
+}
+
+.pedal-actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  width: 100%;
+  margin-top: 14px;
+}
+
+/* Quick Gear Controls */
+.gear-selector {
+  display: flex;
+  gap: 8px;
+  margin-top: 12px;
+  width: 100%;
+}
+
+.gear-mode-btn {
+  flex: 1;
+  padding: 8px 0;
+  text-align: center;
+  font-size: 13px;
+  font-weight: 700;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid var(--border-glass);
+  border-radius: 8px;
+  color: var(--text-muted);
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.gear-mode-btn.active {
+  background: rgba(255, 153, 0, 0.2);
+  color: var(--accent-amber);
+  border-color: var(--accent-amber);
+}
+
+/* P2P QR Modal */
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.75);
+  backdrop-filter: blur(8px);
+  display: none;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+}
+
+.modal-overlay.open {
+  display: flex;
+}
+
+.modal-content {
+  background: #141822;
+  border: 1px solid var(--border-glass);
+  border-radius: 20px;
+  padding: 28px;
+  max-width: 440px;
+  width: 90%;
+  text-align: center;
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.8);
+}
+
+.p2p-code-box {
+  font-size: 38px;
+  font-weight: 900;
+  letter-spacing: 6px;
+  color: var(--accent-amber);
+  background: rgba(0, 0, 0, 0.4);
+  padding: 12px 20px;
+  border-radius: 12px;
+  margin: 16px 0;
+  font-family: monospace;
+  border: 1px dashed var(--accent-amber);
+}
+
+#qrcode {
+  display: flex;
+  justify-content: center;
+  margin: 16px 0;
+  padding: 12px;
+  background: #fff;
+  border-radius: 12px;
+  width: 180px;
+  height: 180px;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+/* Footer / Instructions */
+footer {
+  padding: 12px 24px;
+  text-align: center;
+  font-size: 12px;
+  color: var(--text-muted);
+  border-top: 1px solid var(--border-glass);
+  background: rgba(10, 12, 16, 0.7);
+}
+
+.footer-keybinds {
+  margin-top: 4px;
+  display: flex;
+  justify-content: center;
+  gap: 16px;
+}
+
+kbd {
+  background: rgba(255, 255, 255, 0.1);
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-family: monospace;
+  font-size: 11px;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+}
