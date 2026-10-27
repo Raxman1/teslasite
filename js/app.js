@@ -611,34 +611,20 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   }
 
-  // Intercept physical hardware media keys (Chrome on Tesla MCU fires these keydown events)
+  // Intercept physical hardware media keys from Tesla steering wheel
+  // NOTE: Volume Up/Down (vertical roll) is NOT intercepted so you can always adjust Tesla volume normally!
   window.addEventListener('keydown', (e) => {
+    // Left wheel TILT RIGHT (Next Track) -> Shift UP
     if (e.key === 'MediaTrackNext' || e.code === 'MediaTrackNext' || e.keyCode === 176) {
       e.preventDefault();
       handleSteeringWheelShiftUp();
-    } else if (e.key === 'MediaTrackPrevious' || e.code === 'MediaTrackPrevious' || e.keyCode === 177) {
+    }
+    // Left wheel TILT LEFT (Previous Track) -> Shift DOWN
+    else if (e.key === 'MediaTrackPrevious' || e.code === 'MediaTrackPrevious' || e.keyCode === 177) {
       e.preventDefault();
       handleSteeringWheelShiftDown();
-    } else if (e.key === 'AudioVolumeMute' || e.key === 'MediaPlayPause' || e.keyCode === 179 || e.keyCode === 173) {
-      e.preventDefault();
-      handleSteeringWheelShiftUp();
     }
   });
-
-  // Mouse wheel / Tesla browser scroll wheel event
-  let lastWheelTime = 0;
-  window.addEventListener('wheel', (e) => {
-    const now = performance.now();
-    if (now - lastWheelTime > 280) { // debounce scroll clicks
-      if (e.deltaY < -15) {
-        lastWheelTime = now;
-        handleSteeringWheelShiftUp();
-      } else if (e.deltaY > 15) {
-        lastWheelTime = now;
-        handleSteeringWheelShiftDown();
-      }
-    }
-  }, { passive: true });
 
   // 13. MAIN ANIMATION LOOP (60 FPS)
   function loop(currentTime) {
