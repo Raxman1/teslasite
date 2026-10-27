@@ -18,7 +18,6 @@ document.addEventListener('DOMContentLoaded', () => {
   let activeTab = 'pedal'; // 'pedal' | 'gps' | 'p2p'
   let isPedalPressed = false;
   let pedalThrottle = 0;
-  let isLaunchControl = false;
   let animationFrameId = null;
   let lastFrameTime = performance.now();
 
