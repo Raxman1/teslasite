@@ -6,6 +6,8 @@ class P2PBridge {
   constructor(options = {}) {
     this.onTelemetryReceived = options.onTelemetryReceived || (() => {});
     this.onStatusChange = options.onStatusChange || (() => {});
+    this.onGearShiftReceived = options.onGearShiftReceived || (() => {});
+    this.onRpmMultiplierReceived = options.onRpmMultiplierReceived || (() => {});
 
     this.peer = null;
     this.connection = null;
@@ -124,6 +126,23 @@ class P2PBridge {
       // Received telemetry packet from phone
       if (data.type === 'telemetry') {
         this.onTelemetryReceived(data.payload);
+        return;
+      }
+
+      // Received gear shift from paired phone / steering wheel
+      if (data.type === 'gear_shift') {
+        if (typeof this.onGearShiftReceived === 'function') {
+          this.onGearShiftReceived(data.action);
+        }
+        return;
+      }
+
+      // Received RPM multiplier change from paired device
+      if (data.type === 'rpm_multiplier') {
+        if (typeof this.onRpmMultiplierReceived === 'function') {
+          this.onRpmMultiplierReceived(data.multiplier);
+        }
+        return;
       }
     });
 
@@ -143,6 +162,26 @@ class P2PBridge {
       this.connection.send({
         type: 'telemetry',
         payload: payload
+      });
+    }
+  }
+
+  // Send gear shift between paired Tesla and phone
+  sendGearShift(action) {
+    if (this.isConnected && this.connection && this.connection.open) {
+      this.connection.send({
+        type: 'gear_shift',
+        action: action
+      });
+    }
+  }
+
+  // Send RPM multiplier between paired Tesla and phone
+  sendRpmMultiplier(multiplier) {
+    if (this.isConnected && this.connection && this.connection.open) {
+      this.connection.send({
+        type: 'rpm_multiplier',
+        multiplier: multiplier
       });
     }
   }

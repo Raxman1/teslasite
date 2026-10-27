@@ -1051,7 +1051,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const rpmMultiplierBtn = document.getElementById('rpmMultiplierBtn');
   const headerRpmMultBtn = document.getElementById('headerRpmMultBtn');
 
-  function switchToManualAndShift(action) {
+  function switchToManualAndShift(action, broadcast = true) {
     ensureAudioActive();
     audio.gearMode = 'M';
     gearBtns.forEach(b => b.classList.toggle('active', b.dataset.mode === 'M'));
@@ -1070,6 +1070,11 @@ document.addEventListener('DOMContentLoaded', () => {
     audio.gear = curG;
     showShiftNotification(`▲ M${curG}`);
     updateMediaSessionInfo();
+
+    // Broadcast gear shift to paired Tesla or Phone via P2P
+    if (broadcast && typeof p2p !== 'undefined' && p2p.isConnected) {
+      p2p.sendGearShift(action);
+    }
   }
 
   if (shiftUpBtn) addTouchInstantListener(shiftUpBtn, () => switchToManualAndShift('up'));
@@ -1135,7 +1140,7 @@ document.addEventListener('DOMContentLoaded', () => {
     audio.setRpmMultiplier(currentRpmMultiplier);
   }
 
-  function cycleRpmMultiplier() {
+  function cycleRpmMultiplier(broadcast = true) {
     ensureAudioActive();
     const curIdx = RPM_MULTIPLIERS.indexOf(currentRpmMultiplier);
     const nextIdx = (curIdx + 1) % RPM_MULTIPLIERS.length;
@@ -1146,6 +1151,10 @@ document.addEventListener('DOMContentLoaded', () => {
       ? 'Стандарт (1x)' 
       : (currentRpmMultiplier === 1.5 ? 'Sport (x1.5: 20 км/ч = 3,000 RPM)' : (currentRpmMultiplier === 2.0 ? 'Race (x2: 20 км/ч = 4,000 RPM)' : 'Beast (x3: 20 км/ч = 6,000 RPM)'));
     showShiftNotification(`⚡ Обороты: ${rpmDesc}`);
+
+    if (broadcast && typeof p2p !== 'undefined' && p2p.isConnected) {
+      p2p.sendRpmMultiplier(currentRpmMultiplier);
+    }
   }
 
   if (rpmMultiplierBtn) addTouchInstantListener(rpmMultiplierBtn, cycleRpmMultiplier);
@@ -1514,6 +1523,15 @@ document.addEventListener('DOMContentLoaded', () => {
     audio.applyTelemetry(data);
   }
 
+  // Synchronize gear shifts across P2P (e.g. Steering wheel tilt on phone -> shifts on Tesla screen)
+  p2p.onGearShiftReceived = (action) => {
+    switchToManualAndShift(action, false);
+  };
+  p2p.onRpmMultiplierReceived = (mult) => {
+    currentRpmMultiplier = mult;
+    updateRpmMultiplierUI();
+  };
+
   function handleTelemetryError(err) {
     if (hudAccuracy) hudAccuracy.textContent = '–';
     if (gnssStatusBadge) {
@@ -1726,6 +1744,40 @@ document.addEventListener('DOMContentLoaded', () => {
     switchToManualAndShift('down');
   }
 
+  // Live continuous audio stream to keep Tesla Media Player card attached and active
+  function attachMediaSessionStream() {
+    if (!audio || !audio.ctx || !mediaSessionKeeper) return;
+    try {
+      if (!mediaSessionKeeper._hasStreamAttached && audio.ctx) {
+        const ctx = audio.ctx;
+        if (ctx.state === 'suspended' || ctx.state === 'interrupted') {
+          ctx.resume().catch(() => {});
+        }
+        // Sub-audible carrier so Chromium audio mixer registers continuous active audio frames
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.frequency.value = 32;
+        gain.gain.value = 0.004; // inaudible amplitude (~ -48 dBFS)
+        osc.connect(gain);
+
+        if (ctx.createMediaStreamDestination) {
+          const streamDest = ctx.createMediaStreamDestination();
+          gain.connect(streamDest);
+          osc.start();
+          mediaSessionKeeper.srcObject = streamDest.stream;
+          mediaSessionKeeper._hasStreamAttached = true;
+        }
+      }
+      mediaSessionKeeper.volume = 1.0; // 100% volume so OS media routing binds to this tab
+      const playPromise = mediaSessionKeeper.play();
+      if (playPromise !== undefined) {
+        playPromise.catch(e => console.warn('Keeper stream play:', e));
+      }
+    } catch (err) {
+      console.warn('attachMediaSessionStream warning:', err);
+    }
+  }
+
   // Synchronize lock-screen / Bluetooth metadata with current car preset
   function updateMediaSessionInfo() {
     if ('mediaSession' in navigator) {
@@ -1739,17 +1791,37 @@ document.addEventListener('DOMContentLoaded', () => {
           carName = presetSelect.options[presetSelect.selectedIndex].textContent;
         }
 
+        const curG = (audio.dspEngine && audio.dspEngine.vehicle) ? audio.dspEngine.vehicle.gear : (audio.gear || 1);
+        const gearLabel = audio.gearMode === 'N' ? 'N' : (audio.gearMode === 'M' ? `M${curG}` : `D${curG}`);
+        const speedKmh = Math.round(audio.speed || 0);
+
         navigator.mediaSession.metadata = new MediaMetadata({
-          title: `${carName} 🏎️`,
-          artist: 'Tesla Sound Simulator • GPS & Звук в фоне',
-          album: 'Фоновый режим активен: звук и GPS работают при блокировке экрана'
+          title: `${carName} [${gearLabel}]`,
+          artist: `Передача: ${gearLabel} • ${speedKmh} км/ч • Стик руля = КПП`,
+          album: 'Tesla Virtual Exhaust',
+          artwork: [
+            { src: 'https://images.unsplash.com/photo-1617788138017-80ad40651399?w=512', sizes: '512x512', type: 'image/jpeg' },
+            { src: 'https://images.unsplash.com/photo-1617788138017-80ad40651399?w=192', sizes: '192x192', type: 'image/jpeg' }
+          ]
         });
+
         navigator.mediaSession.playbackState = audio.isPlaying ? 'playing' : 'paused';
+
+        // Keep 1-hour virtual timeline so Tesla OS and Bluetooth keep both Prev and Next track active
+        if (navigator.mediaSession.setPositionState) {
+          try {
+            navigator.mediaSession.setPositionState({
+              duration: 3600,
+              playbackRate: 1.0,
+              position: 120
+            });
+          } catch (e) {}
+        }
       } catch (err) {}
     }
   }
 
-  // Register MediaSession hardware button handlers (Left scroll wheel on Tesla steering wheel)
+  // Register MediaSession hardware button handlers (Left scroll wheel / stick on Tesla steering wheel)
   function initTeslaMediaSession() {
     updateMediaSessionInfo();
 
@@ -1768,7 +1840,7 @@ document.addEventListener('DOMContentLoaded', () => {
         // 3. Play / Pause handlers from Lock Screen or Tesla steering wheel
         navigator.mediaSession.setActionHandler('play', () => {
           ensureAudioActive();
-          if (mediaSessionKeeper) mediaSessionKeeper.play().catch(() => {});
+          attachMediaSessionStream();
           updateMediaSessionInfo();
         });
         navigator.mediaSession.setActionHandler('pause', () => {
@@ -1781,23 +1853,36 @@ document.addEventListener('DOMContentLoaded', () => {
           updateMediaSessionInfo();
         });
 
-        // 4. Seek buttons if fired
+        // 4. Seek buttons if fired by steering wheel tilt or timeline scrub
         navigator.mediaSession.setActionHandler('seekforward', () => {
           handleSteeringWheelShiftUp();
         });
         navigator.mediaSession.setActionHandler('seekbackward', () => {
           handleSteeringWheelShiftDown();
         });
+        navigator.mediaSession.setActionHandler('seekto', (details) => {
+          if (details && typeof details.seekTime === 'number') {
+            if (details.seekTime > 120) handleSteeringWheelShiftUp();
+            else if (details.seekTime < 120) handleSteeringWheelShiftDown();
+          }
+          updateMediaSessionInfo();
+        });
+        try {
+          navigator.mediaSession.setActionHandler('skipad', () => {
+            handleSteeringWheelShiftUp();
+          });
+        } catch (e) {}
+        try {
+          navigator.mediaSession.setActionHandler('stop', () => {
+            if (audio.isPlaying) audio.stop();
+          });
+        } catch (e) {}
       } catch (err) {
         console.warn('MediaSession handler warning:', err);
       }
     }
 
-    // Play background keeper audio to maintain iOS audio session in background
-    if (mediaSessionKeeper) {
-      mediaSessionKeeper.volume = 0.05;
-      mediaSessionKeeper.play().catch(() => {});
-    }
+    attachMediaSessionStream();
   }
 
   // 14. SCREEN WAKE LOCK API (Prevents phone from auto-sleeping while driving in car)
