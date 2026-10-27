@@ -181,13 +181,7 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
-  if (whineLevelSlider) {
-    whineLevelSlider.addEventListener('input', (e) => {
-      const val = parseInt(e.target.value, 10);
-      if (whineLevelValText) whineLevelValText.textContent = `${val}%`;
-      if (audio.dspEngine) audio.dspEngine.whineLevel = val / 100.0;
-    });
-  }
+  // whineLevelSlider is synchronized with universal turbo system below
 
   if (whinePitchSlider) {
     whinePitchSlider.addEventListener('input', (e) => {
@@ -277,18 +271,21 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
-  // Universal Turbocharger Sound Elements
+  // Universal Turbocharger Sound Elements (Dual Controls Synchronized)
   const turboToggleBtn = document.getElementById('turboToggleBtn');
   const turboToggleText = document.getElementById('turboToggleText');
   const turboStateBadge = document.getElementById('turboStateBadge');
   const turboVolumeSlider = document.getElementById('turboVolumeSlider');
   const turboVolumeValText = document.getElementById('turboVolumeValText');
+  const advWhineToggleBtn = document.getElementById('advWhineToggleBtn');
   const turboBovCheck = document.getElementById('turboBovCheck');
 
   let isTurboWhineActive = true;
 
   function updateTurboWhineUI(enabled, vol) {
     isTurboWhineActive = enabled;
+    
+    // 1. Dedicated Turbo Box UI
     if (turboStateBadge) {
       turboStateBadge.textContent = enabled ? 'ВКЛ' : 'ВЫКЛ';
       turboStateBadge.classList.toggle('active', enabled);
@@ -300,33 +297,50 @@ document.addEventListener('DOMContentLoaded', () => {
     if (turboVolumeValText) {
       turboVolumeValText.textContent = enabled ? `${vol}%` : 'ВЫКЛ';
     }
+    if (turboVolumeSlider && parseInt(turboVolumeSlider.value, 10) !== vol) {
+      turboVolumeSlider.value = vol;
+    }
+
+    // 2. Collapsible DSP Options UI (synchronized)
+    if (advWhineToggleBtn) {
+      advWhineToggleBtn.classList.toggle('active', enabled);
+      advWhineToggleBtn.textContent = enabled ? 'ВКЛ' : 'ВЫКЛ';
+    }
+    if (whineLevelValText) {
+      whineLevelValText.textContent = enabled ? `${vol}%` : 'ВЫКЛ';
+    }
+    if (whineLevelSlider && parseInt(whineLevelSlider.value, 10) !== vol) {
+      whineLevelSlider.value = vol;
+    }
+
+    // 3. Audio Engines
+    audio.setTurboWhine(enabled);
+    audio.setTurboVolume(vol);
+    if (audio.dspEngine) {
+      audio.dspEngine.whineLevel = enabled ? (vol / 100.0) : 0;
+    }
   }
 
-  if (turboToggleBtn) {
-    turboToggleBtn.addEventListener('click', () => {
-      ensureAudioActive();
-      const newState = !isTurboWhineActive;
-      const vol = turboVolumeSlider ? parseInt(turboVolumeSlider.value, 10) : 100;
-      updateTurboWhineUI(newState, vol);
-      audio.setTurboWhine(newState);
-      if (newState && vol === 0 && turboVolumeSlider) {
-        turboVolumeSlider.value = 100;
-        updateTurboWhineUI(true, 100);
-        audio.setTurboVolume(100);
-      }
-    });
+  function handleTurboToggle() {
+    ensureAudioActive();
+    const newState = !isTurboWhineActive;
+    let vol = turboVolumeSlider ? parseInt(turboVolumeSlider.value, 10) : 100;
+    if (newState && vol === 0) vol = 100;
+    updateTurboWhineUI(newState, vol);
   }
 
-  if (turboVolumeSlider) {
-    turboVolumeSlider.addEventListener('input', (e) => {
-      ensureAudioActive();
-      const val = parseInt(e.target.value, 10);
-      const enabled = val > 0;
-      updateTurboWhineUI(enabled, val);
-      audio.setTurboVolume(val);
-      audio.setTurboWhine(enabled);
-    });
+  if (turboToggleBtn) turboToggleBtn.addEventListener('click', handleTurboToggle);
+  if (advWhineToggleBtn) advWhineToggleBtn.addEventListener('click', handleTurboToggle);
+
+  function handleTurboVolumeInput(e) {
+    ensureAudioActive();
+    const val = parseInt(e.target.value, 10);
+    const enabled = val > 0;
+    updateTurboWhineUI(enabled, val);
   }
+
+  if (turboVolumeSlider) turboVolumeSlider.addEventListener('input', handleTurboVolumeInput);
+  if (whineLevelSlider) whineLevelSlider.addEventListener('input', handleTurboVolumeInput);
 
   if (turboBovCheck) {
     turboBovCheck.addEventListener('change', (e) => {
