@@ -7,7 +7,7 @@
   <meta http-equiv="Pragma" content="no-cache">
   <meta http-equiv="Expires" content="0">
   <title>Tesla V10 Sound Simulator | Carrera GT</title>
-  <link rel="stylesheet" href="style.css?v=5.1">
+  <link rel="stylesheet" href="style.css?v=5.2">
   <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🏎️</text></svg>">
 </head>
 <body>
@@ -118,26 +118,143 @@
 
         <!-- Tesla Model 3 / Y Spatial Audio Optimization Panel -->
         <div class="tesla-audio-panel" style="margin-top: 18px; border-top: 1px solid var(--border-glass); padding-top: 14px;">
-          <div class="hud-title">
-            <span>⚡ Акустика Tesla Model 3/Y</span>
-            <span style="color: var(--accent-amber); font-size: 11px;">14 колонок + Саб</span>
+          <div class="hud-title" style="margin-bottom: 6px;">
+            <span>⚡ Акустика салона Tesla</span>
+            <span style="color: var(--accent-amber); font-size: 11px;">14 динамиков + Сабвуфер</span>
           </div>
           
           <div style="font-size: 11px; color: var(--text-muted); margin-bottom: 8px;">
-            Распределение звука по салону:
+            Пространственные пресеты расстановки:
           </div>
 
           <div class="tesla-soundstage-selector">
-            <button class="stage-btn active" data-stage="tesla_mid" title="Мотор и выхлоп звучат строго сзади за сиденьями">🏎️ Задний выхлоп</button>
-            <button class="stage-btn" data-stage="tesla_front" title="Впуск и турбина на лобовом стекле, выхлоп в багажнике">🏁 Впуск/Выхлоп</button>
-            <button class="stage-btn" data-stage="tesla_3d" title="Полный 3D охват всех динамиков салона">🎧 3D Окружение</button>
+            <button class="stage-btn active" data-stage="tesla_front" title="Впуск и мотор на лобовом стекле, выхлоп в багажнике">🏎️ Капот/Выхлоп</button>
+            <button class="stage-btn" data-stage="tesla_mid" title="Мотор и выхлоп звучат строго сзади за сиденьями (как в Carrera GT/Lambo)">🏁 Всё сзади</button>
+            <button class="stage-btn" data-stage="tesla_3d" title="Полный 3D охват всех 14 динамиков салона Tesla">🎧 3D Окружение</button>
+            <button class="stage-btn" data-stage="rear_only" title="Только задние динамики и сабвуфер">💨 Только выхлоп</button>
           </div>
 
-          <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 12px;">
-            <span style="font-size: 11px; color: var(--text-muted);">Вибрация сабвуфера:</span>
-            <span id="bassLevelText" style="font-size: 11px; font-weight: 700; color: var(--accent-amber);">100%</span>
+          <!-- Interactive Tesla Cabin Map (Visualizer) -->
+          <div class="tesla-cabin-map-card">
+            <div class="tesla-cabin-map-wrapper">
+              <svg id="teslaCabinSvg" viewBox="0 0 320 135" class="tesla-cabin-svg" xmlns="http://www.w3.org/2000/svg">
+                <defs>
+                  <radialGradient id="gradFrontAura" cx="50%" cy="50%" r="50%">
+                    <stop offset="0%" stop-color="#10b981" stop-opacity="0.6"/>
+                    <stop offset="100%" stop-color="#10b981" stop-opacity="0"/>
+                  </radialGradient>
+                  <radialGradient id="gradRearAura" cx="50%" cy="50%" r="50%">
+                    <stop offset="0%" stop-color="#f59e0b" stop-opacity="0.6"/>
+                    <stop offset="100%" stop-color="#f59e0b" stop-opacity="0"/>
+                  </radialGradient>
+                  <radialGradient id="gradSubAura" cx="50%" cy="50%" r="50%">
+                    <stop offset="0%" stop-color="#ef4444" stop-opacity="0.7"/>
+                    <stop offset="100%" stop-color="#ef4444" stop-opacity="0"/>
+                  </radialGradient>
+                </defs>
+
+                <!-- Tesla Silhouette Top View -->
+                <path d="M 50,67 C 50,38 75,30 110,30 L 215,30 C 265,30 285,44 285,67 C 285,90 265,104 215,104 L 110,104 C 75,104 50,96 50,67 Z" 
+                      fill="rgba(12, 17, 26, 0.85)" stroke="rgba(255,255,255,0.22)" stroke-width="1.6"/>
+
+                <!-- Front Hood Glass -->
+                <path d="M 65,67 C 65,46 85,38 110,38 L 135,38 C 122,48 122,86 135,96 L 110,96 C 85,96 65,88 65,67 Z" 
+                      fill="rgba(16, 185, 129, 0.08)" stroke="rgba(16, 185, 129, 0.45)" stroke-dasharray="2 2"/>
+
+                <!-- Rear Window Glass -->
+                <path d="M 205,38 L 230,38 C 255,38 270,48 270,67 C 270,86 255,96 230,96 L 205,96 C 215,84 215,50 205,38 Z" 
+                      fill="rgba(245, 158, 11, 0.08)" stroke="rgba(245, 158, 11, 0.45)" stroke-dasharray="2 2"/>
+
+                <!-- Seats -->
+                <rect x="145" y="42" width="20" height="19" rx="4" fill="rgba(255,255,255,0.06)" stroke="rgba(255,255,255,0.18)"/>
+                <rect x="145" y="73" width="20" height="19" rx="4" fill="rgba(255,255,255,0.06)" stroke="rgba(255,255,255,0.18)"/>
+                <rect x="180" y="41" width="18" height="52" rx="4" fill="rgba(255,255,255,0.04)" stroke="rgba(255,255,255,0.12)"/>
+
+                <!-- Front Motor Aura & Node -->
+                <circle id="mapFrontAura" cx="80" cy="67" r="22" fill="url(#gradFrontAura)"/>
+                <circle id="mapFrontDot" cx="80" cy="67" r="7" fill="#10b981" stroke="#fff" stroke-width="1.5"/>
+                <text x="80" y="20" fill="#10b981" font-size="9" font-weight="700" text-anchor="middle">🏎️ МОТОР / ВПУСК</text>
+
+                <!-- Rear Exhaust Aura & Node -->
+                <circle id="mapRearAura" cx="260" cy="67" r="24" fill="url(#gradRearAura)"/>
+                <circle id="mapRearDot" cx="260" cy="67" r="7" fill="#f59e0b" stroke="#fff" stroke-width="1.5"/>
+                <text x="260" y="20" fill="#f59e0b" font-size="9" font-weight="700" text-anchor="middle">💨 ВЫХЛОП</text>
+
+                <!-- Subwoofer in trunk -->
+                <circle id="mapSubAura" cx="255" cy="94" r="14" fill="url(#gradSubAura)"/>
+                <circle id="mapSubDot" cx="255" cy="94" r="5" fill="#ef4444" stroke="#fff" stroke-width="1.2"/>
+                <text x="255" y="122" fill="#ef4444" font-size="8" font-weight="700" text-anchor="middle">🔊 САБВУФЕР</text>
+
+                <!-- Sliding Acoustic Center Orb -->
+                <circle id="mapCenterOrb" cx="170" cy="67" r="9" fill="#ff9900" stroke="#fff" stroke-width="2" filter="drop-shadow(0 0 6px #ff9900)"/>
+              </svg>
+            </div>
           </div>
-          <input id="bassSlider" class="tesla-slider" type="range" min="0" max="200" value="100">
+
+          <!-- Main Acoustic Balance Crossfader (Front ↔ Rear) -->
+          <div class="spatial-fader-card">
+            <div class="slider-row">
+              <span class="slider-label">⚖️ Баланс салона: Капот ↔ Выхлоп</span>
+              <span id="faderValText" class="slider-value highlight">50 / 50 (Центр)</span>
+            </div>
+            <input id="faderSlider" class="tesla-slider" type="range" min="-100" max="100" value="0">
+            <div class="fader-scale-labels">
+              <span>🏎️ Спереди (Мотор)</span>
+              <span>⚖️ Центр</span>
+              <span>💨 Сзади (Выхлоп)</span>
+            </div>
+          </div>
+
+          <!-- Advanced Acoustic Controls Header & Toggle -->
+          <div class="spatial-advanced-toggle-row">
+            <button id="toggleSpatialAdvBtn" class="btn-adv-toggle" type="button">⚙️ Подробные параметры акустики (7) ▼</button>
+            <button id="resetAcousticsBtn" class="btn-adv-toggle reset" type="button" title="Вернуть калибровку Tesla по умолчанию">↺ Сброс</button>
+          </div>
+
+          <!-- Advanced Sliders Container -->
+          <div id="spatialAdvancedBox" class="spatial-advanced-box">
+            <!-- 1. Front Engine & Intake Volume -->
+            <div class="slider-row">
+              <span class="slider-label">🏎️ Громкость двигателя и впуска (Спереди)</span>
+              <span id="frontVolValText" class="slider-value">100%</span>
+            </div>
+            <input id="frontVolSlider" class="tesla-slider" type="range" min="0" max="150" value="100">
+
+            <!-- 2. Rear Exhaust Volume -->
+            <div class="slider-row">
+              <span class="slider-label">💨 Громкость основного выхлопа (Сзади)</span>
+              <span id="rearVolValText" class="slider-value">100%</span>
+            </div>
+            <input id="rearVolSlider" class="tesla-slider" type="range" min="0" max="150" value="100">
+
+            <!-- 3. Pops & Bangs Level -->
+            <div class="slider-row">
+              <span class="slider-label">💥 Отстрелы / Прострелы Pops & Bangs</span>
+              <span id="popsVolValText" class="slider-value">100%</span>
+            </div>
+            <input id="popsVolSlider" class="tesla-slider" type="range" min="0" max="200" value="100">
+
+            <!-- 4. Subwoofer Vibration -->
+            <div class="slider-row">
+              <span class="slider-label">🔊 Вибрация сабвуфера (Бас-шейкер)</span>
+              <span id="bassLevelText" class="slider-value">100%</span>
+            </div>
+            <input id="bassSlider" class="tesla-slider" type="range" min="0" max="200" value="100">
+
+            <!-- 5. Exhaust Acoustic Distance Delay -->
+            <div class="slider-row">
+              <span class="slider-label">⏱️ Задержка выхлопа (Ощущение длины машины 4.7м)</span>
+              <span id="exhaustDelayValText" class="slider-value">18 мс</span>
+            </div>
+            <input id="exhaustDelaySlider" class="tesla-slider" type="range" min="0" max="35" value="18">
+
+            <!-- 6. 3D Spatial Stereo Width -->
+            <div class="slider-row">
+              <span class="slider-label">🎧 3D Ширина стереосцены (14 динамиков Tesla)</span>
+              <span id="stereoWidthValText" class="slider-value">130%</span>
+            </div>
+            <input id="stereoWidthSlider" class="tesla-slider" type="range" min="50" max="180" value="130">
+          </div>
 
           <!-- Universal Turbocharger & Whine Control Panel (Works for ALL cars in DSP & Samples HD) -->
           <div id="turboControlBox" class="turbo-control-container">
@@ -398,16 +515,16 @@
   <!-- Scripts -->
   <script src="js/peerjs.min.js"></script>
   <script src="js/qrcode.min.js"></script>
-  <script src="js/sound-data.js?v=5.1"></script>
+  <script src="js/sound-data.js?v=5.2"></script>
   <!-- Procedural DSP Engine (from teslasound.io) -->
-  <script src="js/dsp/cars.js?v=5.1"></script>
-  <script src="js/dsp/engine-dsp.js?v=5.1"></script>
-  <script src="js/dsp/vehicle.js?v=5.1"></script>
-  <script src="js/dsp-audio.js?v=5.1"></script>
-  <script src="js/turbo-sound.js?v=5.1"></script>
-  <script src="js/audio-engine.js?v=5.1"></script>
-  <script src="js/telemetry.js?v=5.1"></script>
-  <script src="js/p2p.js?v=5.1"></script>
-  <script src="js/app.js?v=5.1"></script>
+  <script src="js/dsp/cars.js?v=5.2"></script>
+  <script src="js/dsp/engine-dsp.js?v=5.2"></script>
+  <script src="js/dsp/vehicle.js?v=5.2"></script>
+  <script src="js/dsp-audio.js?v=5.2"></script>
+  <script src="js/turbo-sound.js?v=5.2"></script>
+  <script src="js/audio-engine.js?v=5.2"></script>
+  <script src="js/telemetry.js?v=5.2"></script>
+  <script src="js/p2p.js?v=5.2"></script>
+  <script src="js/app.js?v=5.2"></script>
 </body>
 </html>

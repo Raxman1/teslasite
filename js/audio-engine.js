@@ -63,9 +63,27 @@ class AudioEngine {
     this.subwooferGain = null;
     this.bassShakeLevel = 1.0;
 
-    // Tesla Soundstage Configuration
-    this.soundstageMode = 'tesla_mid';
-    this.frontRearFader = 0.2;
+    // Tesla Model 3 / Y Spatial Soundstage & Acoustic Fader
+    this.soundstageMode = 'tesla_front';
+    this.frontRearFader = 0.0;     // -1.0 (All Front) .. 0.0 (Balanced 50/50) .. +1.0 (All Rear)
+    this.frontVolumeLevel = 1.0;   // 0.0 .. 1.5
+    this.rearVolumeLevel = 1.0;    // 0.0 .. 1.5
+    this.bassShakeLevel = 1.0;     // 0.0 .. 2.0
+    this.exhaustDelayMs = 18;      // 0 .. 35 ms (acoustic distance delay)
+    this.stereoWidthLevel = 1.3;   // 0.5 .. 1.8 (130% Tesla 3D immersion)
+    this.popsAggressiveness = 1.0; // 0.0 .. 2.0
+
+    // Spatial Cabin Network Nodes
+    this.frontBus = null;
+    this.frontPresenceFilter = null;
+    this.rearBus = null;
+    this.rearWarmthFilter = null;
+    this.rearDelay = null;
+    this.stereoWidenerGain = null;
+    this.dspSplitterBus = null;
+    this.dspFrontGain = null;
+    this.dspRearGain = null;
+    this.dspSubGain = null;
 
     // Engine parameters
     this.rpm = 920;
@@ -163,9 +181,9 @@ class AudioEngine {
     this.compressor.connect(this.masterGain);
     this.masterGain.connect(this.ctx.destination);
 
-    // Initialize Procedural DSP engine sharing this.ctx and feeding into submixBus
+    // Initialize Procedural DSP engine sharing this.ctx and feeding into dspSplitterBus
     if (window.DSPAudioEngine && !this.dspEngine) {
-      this.dspEngine = new window.DSPAudioEngine(this.ctx, () => this.submixBus || this.masterGain || this.ctx.destination);
+      this.dspEngine = new window.DSPAudioEngine(this.ctx, () => this.dspSplitterBus || this.submixBus || this.masterGain || this.ctx.destination);
     }
 
     // Initialize Universal Turbo Sound Synthesizer feeding into intakeBus or submixBus
@@ -186,90 +204,217 @@ class AudioEngine {
 
   buildTeslaSpatialAcoustics() {
     try {
-      // Intermediate submix bus feeding into master compressor
+      // 1. Master Submix Bus feeding into Dynamics Compressor
       this.submixBus = this.ctx.createGain();
       this.submixBus.gain.setValueAtTime(1.0, this.ctx.currentTime);
       if (this.compressor) this.submixBus.connect(this.compressor);
 
-      // Create dedicated cabin routing buses
+      // 2. Front Stage (Engine Hood, Intake, Turbo Whistle)
+      this.frontBus = this.ctx.createGain();
+      this.frontBus.gain.setValueAtTime(1.0, this.ctx.currentTime);
+
+      this.frontPresenceFilter = this.ctx.createBiquadFilter();
+      this.frontPresenceFilter.type = 'peaking';
+      this.frontPresenceFilter.frequency.setValueAtTime(3600, this.ctx.currentTime);
+      this.frontPresenceFilter.Q.setValueAtTime(1.1, this.ctx.currentTime);
+      this.frontPresenceFilter.gain.setValueAtTime(3.2, this.ctx.currentTime);
+
+      this.frontBus.connect(this.frontPresenceFilter);
+      this.frontPresenceFilter.connect(this.submixBus);
+
+      // Intake Bus feeds directly into Front Stage
+      this.intakeBus = this.ctx.createGain();
+      this.intakeBus.gain.setValueAtTime(1.0, this.ctx.currentTime);
+      this.intakeBus.connect(this.frontBus);
+
+      // 3. Rear Stage (Exhaust Pipes, Muffler, Pops & Bangs)
+      this.rearBus = this.ctx.createGain();
+      this.rearBus.gain.setValueAtTime(1.0, this.ctx.currentTime);
+
+      this.rearWarmthFilter = this.ctx.createBiquadFilter();
+      this.rearWarmthFilter.type = 'lowshelf';
+      this.rearWarmthFilter.frequency.setValueAtTime(260, this.ctx.currentTime);
+      this.rearWarmthFilter.gain.setValueAtTime(3.5, this.ctx.currentTime);
+
+      // 18ms acoustic distance delay (sound traveling 4.7m from rear pipes to driver's ears)
+      this.rearDelay = this.ctx.createDelay(0.1);
+      this.rearDelay.delayTime.setValueAtTime(this.exhaustDelayMs / 1000.0, this.ctx.currentTime);
+
+      this.rearBus.connect(this.rearWarmthFilter);
+      this.rearWarmthFilter.connect(this.rearDelay);
+      this.rearDelay.connect(this.submixBus);
+
+      // Exhaust Bus feeds directly into Rear Stage
       this.exhaustBus = this.ctx.createGain();
       this.exhaustBus.gain.setValueAtTime(1.0, this.ctx.currentTime);
-      this.exhaustBus.connect(this.submixBus);
+      this.exhaustBus.connect(this.rearBus);
 
-      this.intakeBus = this.ctx.createGain();
-      this.intakeBus.gain.setValueAtTime(0.9, this.ctx.currentTime);
-      this.intakeBus.connect(this.submixBus);
-
+      // Center Transmission Tunnel Bus (Gear whine)
       this.transBus = this.ctx.createGain();
-      this.transBus.gain.setValueAtTime(0.8, this.ctx.currentTime);
+      this.transBus.gain.setValueAtTime(0.85, this.ctx.currentTime);
       this.transBus.connect(this.submixBus);
 
-      // Tesla Model 3 / Y Subwoofer Bass Shaker
+      // 4. Tesla Model 3 / Y Subwoofer Bass Shaker Network
       this.subwooferFilter = this.ctx.createBiquadFilter();
       this.subwooferFilter.type = 'lowpass';
-      this.subwooferFilter.frequency.setValueAtTime(80, this.ctx.currentTime);
-      this.subwooferFilter.Q.setValueAtTime(1.8, this.ctx.currentTime);
+      this.subwooferFilter.frequency.setValueAtTime(78, this.ctx.currentTime);
+      this.subwooferFilter.Q.setValueAtTime(2.0, this.ctx.currentTime);
 
       this.subwooferBooster = this.ctx.createBiquadFilter();
       this.subwooferBooster.type = 'peaking';
-      this.subwooferBooster.frequency.setValueAtTime(45, this.ctx.currentTime);
-      this.subwooferBooster.gain.setValueAtTime(6.0, this.ctx.currentTime);
-      this.subwooferBooster.Q.setValueAtTime(1.2, this.ctx.currentTime);
+      this.subwooferBooster.frequency.setValueAtTime(42, this.ctx.currentTime);
+      this.subwooferBooster.gain.setValueAtTime(7.0, this.ctx.currentTime);
+      this.subwooferBooster.Q.setValueAtTime(1.4, this.ctx.currentTime);
 
       this.subwooferGain = this.ctx.createGain();
-      this.subwooferGain.gain.setValueAtTime(this.bassShakeLevel, this.ctx.currentTime);
+      this.subwooferGain.gain.setValueAtTime(this.bassShakeLevel * 1.2, this.ctx.currentTime);
 
       this.subBus = this.ctx.createGain();
       this.subBus.connect(this.subwooferFilter);
       this.subwooferFilter.connect(this.subwooferBooster);
       this.subwooferBooster.connect(this.subwooferGain);
       this.subwooferGain.connect(this.submixBus);
+
+      // 5. DSP Splitter Bus (Distributes procedural engine sound across Front, Rear & Sub)
+      this.dspSplitterBus = this.ctx.createGain();
+      this.dspSplitterBus.gain.setValueAtTime(1.0, this.ctx.currentTime);
+
+      this.dspFrontGain = this.ctx.createGain();
+      this.dspFrontGain.gain.setValueAtTime(0.85, this.ctx.currentTime);
+      this.dspSplitterBus.connect(this.dspFrontGain);
+      this.dspFrontGain.connect(this.frontBus);
+
+      this.dspRearGain = this.ctx.createGain();
+      this.dspRearGain.gain.setValueAtTime(1.0, this.ctx.currentTime);
+      this.dspSplitterBus.connect(this.dspRearGain);
+      this.dspRearGain.connect(this.rearBus);
+
+      this.dspSubGain = this.ctx.createGain();
+      this.dspSubGain.gain.setValueAtTime(0.9, this.ctx.currentTime);
+      this.dspSplitterBus.connect(this.dspSubGain);
+      this.dspSubGain.connect(this.subBus);
+
+      // Apply initial acoustic gains
+      this.updateSpatialGains();
+
     } catch (err) {
       console.warn('buildTeslaSpatialAcoustics warning:', err);
     }
+  }
 
-    // Optional 3D panners with safe fallback
-    try {
-      this.exhaustPanner = this.ctx.createPanner();
-      this.exhaustPanner.panningModel = 'equalpower';
-      this.exhaustPanner.distanceModel = 'linear';
-      this.exhaustPanner.maxDistance = 10000;
-      this.exhaustPanner.rolloffFactor = 0;
-      safeSetPannerPosition(this.exhaustPanner, 0, -0.2, 1.0, this.ctx);
+  updateSpatialGains() {
+    if (!this.ctx) return;
+    const now = this.ctx.currentTime;
+    const smooth = 0.04;
 
-      this.intakePanner = this.ctx.createPanner();
-      this.intakePanner.panningModel = 'equalpower';
-      this.intakePanner.distanceModel = 'linear';
-      this.intakePanner.maxDistance = 10000;
-      this.intakePanner.rolloffFactor = 0;
-      safeSetPannerPosition(this.intakePanner, 0, 0.3, -1.0, this.ctx);
-    } catch (e) {
-      console.warn('PannerNode init warning:', e);
+    // Equal-Power Crossfader Law (-1.0 to +1.0)
+    const angle = (this.frontRearFader + 1.0) * (Math.PI / 4); // 0 .. PI/2
+    const frontFactor = Math.cos(angle) * Math.SQRT2;
+    const rearFactor = Math.sin(angle) * Math.SQRT2;
+
+    const finalFront = frontFactor * this.frontVolumeLevel;
+    const finalRear = rearFactor * this.rearVolumeLevel;
+
+    if (this.frontBus) {
+      this.frontBus.gain.setTargetAtTime(Math.max(0.0001, finalFront), now, smooth);
+    }
+    if (this.rearBus) {
+      this.rearBus.gain.setTargetAtTime(Math.max(0.0001, finalRear), now, smooth);
+    }
+    if (this.subwooferGain) {
+      const subLevel = this.bassShakeLevel * (0.6 + rearFactor * 0.4);
+      this.subwooferGain.gain.setTargetAtTime(Math.max(0.0001, subLevel * 1.2), now, smooth);
     }
   }
 
-  setTeslaSoundstage(mode, fader = 0.2, bass = 1.0) {
+  setFrontRearFader(faderVal) {
+    this.frontRearFader = Math.max(-1.0, Math.min(1.0, faderVal));
+    this.updateSpatialGains();
+  }
+
+  setFrontVolume(vol) {
+    this.frontVolumeLevel = Math.max(0, Math.min(1.5, vol));
+    this.updateSpatialGains();
+  }
+
+  setRearVolume(vol) {
+    this.rearVolumeLevel = Math.max(0, Math.min(1.5, vol));
+    this.updateSpatialGains();
+  }
+
+  setExhaustDelay(ms) {
+    this.exhaustDelayMs = Math.max(0, Math.min(35, ms));
+    if (this.rearDelay && this.ctx) {
+      this.rearDelay.delayTime.setTargetAtTime(this.exhaustDelayMs / 1000.0, this.ctx.currentTime, 0.04);
+    }
+  }
+
+  setPopsVolume(vol) {
+    this.popsAggressiveness = Math.max(0, Math.min(2.0, vol));
+    if (this.dspEngine) {
+      this.dspEngine.crackle = this.popsAggressiveness;
+    }
+  }
+
+  setStereoWidth(width) {
+    this.stereoWidthLevel = Math.max(0.5, Math.min(2.0, width));
+    if (this.stereoWidenerGain && this.ctx) {
+      this.stereoWidenerGain.gain.setTargetAtTime(this.stereoWidthLevel, this.ctx.currentTime, 0.04);
+    }
+  }
+
+  setTeslaSoundstage(mode) {
     this.soundstageMode = mode;
-    this.frontRearFader = fader;
-    this.bassShakeLevel = bass;
-
-    if (this.subwooferGain && this.ctx) {
-      this.subwooferGain.gain.setTargetAtTime(this.bassShakeLevel * 1.2, this.ctx.currentTime, 0.05);
+    if (mode === 'tesla_front') {
+      // 🏎️ Спорткар: Мотор на лобовом стекле, Выхлоп сзади
+      this.frontRearFader = -0.15;
+      this.frontVolumeLevel = 1.1;
+      this.rearVolumeLevel = 1.0;
+      this.exhaustDelayMs = 18;
+      this.bassShakeLevel = 1.0;
+      this.stereoWidthLevel = 1.3;
+    } else if (mode === 'tesla_mid') {
+      // 🏁 Среднемоторный болид (Carrera GT / Lambo): Всё сзади
+      this.frontRearFader = 0.45;
+      this.frontVolumeLevel = 0.65;
+      this.rearVolumeLevel = 1.25;
+      this.exhaustDelayMs = 10;
+      this.bassShakeLevel = 1.3;
+      this.stereoWidthLevel = 1.2;
+    } else if (mode === 'tesla_3d') {
+      // 🎧 3D Окружение: Все 14 динамиков Tesla
+      this.frontRearFader = 0.0;
+      this.frontVolumeLevel = 1.0;
+      this.rearVolumeLevel = 1.0;
+      this.exhaustDelayMs = 16;
+      this.bassShakeLevel = 1.05;
+      this.stereoWidthLevel = 1.65;
+    } else if (mode === 'rear_only') {
+      // 💨 Только выхлоп: 100% назад в багажник
+      this.frontRearFader = 1.0;
+      this.frontVolumeLevel = 0.0;
+      this.rearVolumeLevel = 1.35;
+      this.exhaustDelayMs = 22;
+      this.bassShakeLevel = 1.5;
+      this.stereoWidthLevel = 1.1;
     }
-
-    if (this.exhaustBus && this.intakeBus && this.ctx) {
-      const now = this.ctx.currentTime;
-      if (mode === 'tesla_mid') {
-        this.exhaustBus.gain.setTargetAtTime(1.1, now, 0.05);
-        this.intakeBus.gain.setTargetAtTime(0.8, now, 0.05);
-      } else if (mode === 'tesla_front') {
-        this.exhaustBus.gain.setTargetAtTime(0.9, now, 0.05);
-        this.intakeBus.gain.setTargetAtTime(1.1, now, 0.05);
-      } else {
-        this.exhaustBus.gain.setTargetAtTime(1.0, now, 0.05);
-        this.intakeBus.gain.setTargetAtTime(1.0, now, 0.05);
-      }
+    this.updateSpatialGains();
+    if (this.rearDelay && this.ctx) {
+      this.rearDelay.delayTime.setTargetAtTime(this.exhaustDelayMs / 1000.0, this.ctx.currentTime, 0.04);
     }
+    this.setSubwooferBoost(this.bassShakeLevel);
+  }
+
+  resetAcousticsToDefault() {
+    this.setTeslaSoundstage('tesla_front');
+    this.frontRearFader = 0.0;
+    this.frontVolumeLevel = 1.0;
+    this.rearVolumeLevel = 1.0;
+    this.bassShakeLevel = 1.0;
+    this.exhaustDelayMs = 18;
+    this.stereoWidthLevel = 1.3;
+    this.popsAggressiveness = 1.0;
+    this.updateSpatialGains();
   }
 
   setSubwooferBoost(level) {

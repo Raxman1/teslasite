@@ -247,11 +247,80 @@ document.addEventListener('DOMContentLoaded', () => {
   // Populate default mode (DSP)
   populatePresetDropdown('dsp');
 
-  // Tesla Audio Optimization Elements
+  // -------------------------------------------------------------
+  // Tesla Model 3 / Y Cabin Acoustic Controls & Spatial Fader
+  // -------------------------------------------------------------
   const stageBtns = document.querySelectorAll('.stage-btn');
+  const faderSlider = document.getElementById('faderSlider');
+  const faderValText = document.getElementById('faderValText');
+  const frontVolSlider = document.getElementById('frontVolSlider');
+  const frontVolValText = document.getElementById('frontVolValText');
+  const rearVolSlider = document.getElementById('rearVolSlider');
+  const rearVolValText = document.getElementById('rearVolValText');
+  const popsVolSlider = document.getElementById('popsVolSlider');
+  const popsVolValText = document.getElementById('popsVolValText');
   const bassSlider = document.getElementById('bassSlider');
   const bassLevelText = document.getElementById('bassLevelText');
+  const exhaustDelaySlider = document.getElementById('exhaustDelaySlider');
+  const exhaustDelayValText = document.getElementById('exhaustDelayValText');
+  const stereoWidthSlider = document.getElementById('stereoWidthSlider');
+  const stereoWidthValText = document.getElementById('stereoWidthValText');
+  const toggleSpatialAdvBtn = document.getElementById('toggleSpatialAdvBtn');
+  const spatialAdvancedBox = document.getElementById('spatialAdvancedBox');
+  const resetAcousticsBtn = document.getElementById('resetAcousticsBtn');
 
+  // SVG Cabin Map Nodes
+  const mapCenterOrb = document.getElementById('mapCenterOrb');
+  const mapFrontAura = document.getElementById('mapFrontAura');
+  const mapRearAura = document.getElementById('mapRearAura');
+  const mapSubAura = document.getElementById('mapSubAura');
+
+  function syncAcousticUIToAudio() {
+    if (faderSlider) {
+      const faderValInt = Math.round(audio.frontRearFader * 100);
+      faderSlider.value = faderValInt;
+      if (faderValText) {
+        if (faderValInt === 0) faderValText.textContent = '50 / 50 (Центр)';
+        else if (faderValInt < 0) faderValText.textContent = `Капот ${Math.abs(faderValInt)}%`;
+        else faderValText.textContent = `Выхлоп ${faderValInt}%`;
+      }
+      if (mapCenterOrb) {
+        const orbX = 170 + (audio.frontRearFader * 90);
+        mapCenterOrb.setAttribute('cx', orbX);
+      }
+    }
+    if (frontVolSlider && frontVolValText) {
+      const frontPct = Math.round(audio.frontVolumeLevel * 100);
+      frontVolSlider.value = frontPct;
+      frontVolValText.textContent = `${frontPct}%`;
+    }
+    if (rearVolSlider && rearVolValText) {
+      const rearPct = Math.round(audio.rearVolumeLevel * 100);
+      rearVolSlider.value = rearPct;
+      rearVolValText.textContent = `${rearPct}%`;
+    }
+    if (popsVolSlider && popsVolValText) {
+      const popsPct = Math.round(audio.popsAggressiveness * 100);
+      popsVolSlider.value = popsPct;
+      popsVolValText.textContent = `${popsPct}%`;
+    }
+    if (bassSlider && bassLevelText) {
+      const bassPct = Math.round(audio.bassShakeLevel * 100);
+      bassSlider.value = bassPct;
+      bassLevelText.textContent = `${bassPct}%`;
+    }
+    if (exhaustDelaySlider && exhaustDelayValText) {
+      exhaustDelaySlider.value = audio.exhaustDelayMs;
+      exhaustDelayValText.textContent = `${audio.exhaustDelayMs} мс`;
+    }
+    if (stereoWidthSlider && stereoWidthValText) {
+      const widthPct = Math.round(audio.stereoWidthLevel * 100);
+      stereoWidthSlider.value = widthPct;
+      stereoWidthValText.textContent = `${widthPct}%`;
+    }
+  }
+
+  // 1. Stage Presets (Buttons)
   if (stageBtns) {
     stageBtns.forEach(btn => {
       btn.addEventListener('click', () => {
@@ -259,20 +328,110 @@ document.addEventListener('DOMContentLoaded', () => {
         btn.classList.add('active');
         const mode = btn.dataset.stage;
         audio.setTeslaSoundstage(mode);
+        syncAcousticUIToAudio();
       });
     });
   }
 
+  // 2. Front ↔ Rear Crossfader Slider
+  if (faderSlider) {
+    faderSlider.addEventListener('input', (e) => {
+      const val = parseInt(e.target.value, 10);
+      const normalized = val / 100.0;
+      audio.setFrontRearFader(normalized);
+      if (faderValText) {
+        if (val === 0) faderValText.textContent = '50 / 50 (Центр)';
+        else if (val < 0) faderValText.textContent = `Капот ${Math.abs(val)}%`;
+        else faderValText.textContent = `Выхлоп ${val}%`;
+      }
+      if (mapCenterOrb) {
+        const orbX = 170 + (normalized * 90);
+        mapCenterOrb.setAttribute('cx', orbX);
+      }
+    });
+  }
+
+  // 3. Front Engine Volume Slider
+  if (frontVolSlider) {
+    frontVolSlider.addEventListener('input', (e) => {
+      const val = parseInt(e.target.value, 10);
+      frontVolValText.textContent = `${val}%`;
+      audio.setFrontVolume(val / 100.0);
+    });
+  }
+
+  // 4. Rear Exhaust Volume Slider
+  if (rearVolSlider) {
+    rearVolSlider.addEventListener('input', (e) => {
+      const val = parseInt(e.target.value, 10);
+      rearVolValText.textContent = `${val}%`;
+      audio.setRearVolume(val / 100.0);
+    });
+  }
+
+  // 5. Pops & Bangs Slider
+  if (popsVolSlider) {
+    popsVolSlider.addEventListener('input', (e) => {
+      const val = parseInt(e.target.value, 10);
+      popsVolValText.textContent = `${val}%`;
+      audio.setPopsVolume(val / 100.0);
+      if (typeof crackleSlider !== 'undefined' && crackleSlider && crackleValText) {
+        crackleSlider.value = val;
+        crackleValText.textContent = `${val}%`;
+      }
+    });
+  }
+
+  // 6. Subwoofer Bass Slider
   if (bassSlider) {
     bassSlider.addEventListener('input', (e) => {
       const val = parseInt(e.target.value, 10);
       bassLevelText.textContent = `${val}%`;
-      audio.bassShakeLevel = val / 100.0;
-      if (audio.subwooferGain && audio.ctx) {
-        audio.subwooferGain.gain.setTargetAtTime(audio.bassShakeLevel * 1.2, audio.ctx.currentTime, 0.05);
-      }
+      audio.setSubwooferBoost(val / 100.0);
     });
   }
+
+  // 7. Exhaust Distance Delay Slider
+  if (exhaustDelaySlider) {
+    exhaustDelaySlider.addEventListener('input', (e) => {
+      const val = parseInt(e.target.value, 10);
+      exhaustDelayValText.textContent = `${val} мс`;
+      audio.setExhaustDelay(val);
+    });
+  }
+
+  // 8. 3D Stereo Width Slider
+  if (stereoWidthSlider) {
+    stereoWidthSlider.addEventListener('input', (e) => {
+      const val = parseInt(e.target.value, 10);
+      stereoWidthValText.textContent = `${val}%`;
+      audio.setStereoWidth(val / 100.0);
+    });
+  }
+
+  // 9. Reset Button
+  if (resetAcousticsBtn) {
+    resetAcousticsBtn.addEventListener('click', () => {
+      audio.resetAcousticsToDefault();
+      if (stageBtns) {
+        stageBtns.forEach(b => b.classList.toggle('active', b.dataset.stage === 'tesla_front'));
+      }
+      syncAcousticUIToAudio();
+    });
+  }
+
+  // 10. Toggle Detailed Acoustic Controls
+  if (toggleSpatialAdvBtn && spatialAdvancedBox) {
+    toggleSpatialAdvBtn.addEventListener('click', () => {
+      const isCollapsed = spatialAdvancedBox.classList.toggle('collapsed');
+      toggleSpatialAdvBtn.textContent = isCollapsed 
+        ? '⚙️ Подробные параметры акустики (7) ▼' 
+        : '⚙️ Свернуть параметры акустики ▲';
+    });
+  }
+
+  // Initialize UI values
+  syncAcousticUIToAudio();
 
   // Universal Turbocharger Sound Elements (Dual Controls Synchronized)
   const turboToggleBtn = document.getElementById('turboToggleBtn');
@@ -1453,6 +1612,19 @@ document.addEventListener('DOMContentLoaded', () => {
       console.warn('drawGauge error:', err);
     }
     updateShiftLights(currentRpm);
+
+    // Pulse Tesla Cabin Map sound nodes in real-time
+    if (mapFrontAura && mapRearAura && audio.isPlaying) {
+      const rpmRatio = Math.max(0, Math.min(1, (currentRpm - 700) / (audio.maxRpm - 700)));
+      const frontR = 20 + rpmRatio * 14 + (audio.throttle * 8);
+      const rearR = 22 + rpmRatio * 16 + (audio.throttle * 12);
+      mapFrontAura.setAttribute('r', frontR.toFixed(1));
+      mapRearAura.setAttribute('r', rearR.toFixed(1));
+      if (mapSubAura) {
+        const subR = 13 + (audio.throttle * 12) + (rpmRatio * 6);
+        mapSubAura.setAttribute('r', subR.toFixed(1));
+      }
+    }
 
     animationFrameId = requestAnimationFrame(loop);
   }
