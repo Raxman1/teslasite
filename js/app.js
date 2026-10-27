@@ -267,7 +267,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   } catch (e) {}
 
-  function setV6ProState(enabled) {
+  function setV6ProState(enabled, applyAudio = true) {
     isV6ProEnabled = enabled;
     try {
       localStorage.setItem('tesla_v6_pro_enabled', enabled ? '1' : '0');
@@ -286,11 +286,14 @@ document.addEventListener('DOMContentLoaded', () => {
       proAcousticView.style.display = enabled ? 'block' : 'none';
     }
 
-    if (!enabled) {
-      // Classic mode: default to balanced rear soundstage
-      audio.setTeslaSoundstage('tesla_mid');
-    } else {
-      syncAcousticUIToAudio();
+    // Only touch audio engine when it is already running
+    if (applyAudio && audio.isReady) {
+      if (!enabled) {
+        // Classic mode: balanced rear soundstage
+        audio.setTeslaSoundstage('tesla_mid');
+      } else {
+        syncAcousticUIToAudio();
+      }
     }
   }
 
@@ -321,7 +324,7 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
-  const stageBtns = document.querySelectorAll('.stage-btn');
+  const stageBtns = document.querySelectorAll('#proAcousticView .stage-btn');
   const teslaTrimSelect = document.getElementById('teslaTrimSelect');
   const teslaTrimBadge = document.getElementById('teslaTrimBadge');
   const teslaTrimDesc = document.getElementById('teslaTrimDesc');
@@ -552,9 +555,9 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
-  // Initialize UI values & apply saved v6.0 PRO state
+  // Initialize UI values & apply saved v6.0 PRO state (no audio changes at init)
   syncAcousticUIToAudio();
-  setV6ProState(isV6ProEnabled);
+  setV6ProState(isV6ProEnabled, false);
 
   // Universal Turbocharger Sound Elements (Dual Controls Synchronized)
   const turboToggleBtn = document.getElementById('turboToggleBtn');
