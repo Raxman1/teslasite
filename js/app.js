@@ -298,6 +298,7 @@ document.addEventListener('DOMContentLoaded', () => {
   let launchTimer1 = null;
   let launchTimer2 = null;
   let brakePressure = 0;
+  let isBrakePressed = false;
 
   // Mode Buttons
   const tabBtns = document.querySelectorAll('.tab-btn');
@@ -354,11 +355,17 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   // 1. ENGINE START / STOP BUTTON & AUTO-UNLOCK
+  let isStartingAudio = false;
   async function unlockAndStartEngine() {
-    if (audio.isPlaying) return;
+    if (audio.isPlaying || isStartingAudio) return;
+    isStartingAudio = true;
     startBtn.textContent = 'ЗАПУСК...';
     startBtn.disabled = true;
     try {
+      audio.ensureContext();
+      if (audio.ctx && audio.ctx.state === 'suspended') {
+        await audio.ctx.resume().catch(() => {});
+      }
       if (presetSelect && presetSelect.value) {
         await audio.setPreset(presetSelect.value);
       }
@@ -370,10 +377,11 @@ document.addEventListener('DOMContentLoaded', () => {
       console.log('Engine successfully started!');
     } catch (err) {
       console.error('Audio start failed:', err);
-      alert('Ошибка аудио: ' + (err.message || err));
       startBtn.textContent = 'START ENGINE';
       startBtn.className = 'btn btn-primary';
       startBtn.disabled = false;
+    } finally {
+      isStartingAudio = false;
     }
   }
 
@@ -603,6 +611,18 @@ document.addEventListener('DOMContentLoaded', () => {
     };
     pedalFrame.addEventListener('pointerup', releaseGas);
     pedalFrame.addEventListener('pointercancel', releaseGas);
+
+    // Explicit touch fallback
+    pedalFrame.addEventListener('touchstart', (e) => {
+      e.preventDefault();
+      isPedalPressed = true;
+      handleGasPointer(e);
+    }, { passive: false });
+    pedalFrame.addEventListener('touchmove', (e) => {
+      e.preventDefault();
+      if (isPedalPressed) handleGasPointer(e);
+    }, { passive: false });
+    pedalFrame.addEventListener('touchend', releaseGas);
   }
 
   // Pointer drag for Brake Pedal
@@ -638,6 +658,18 @@ document.addEventListener('DOMContentLoaded', () => {
     };
     brakeFrame.addEventListener('pointerup', releaseBrake);
     brakeFrame.addEventListener('pointercancel', releaseBrake);
+
+    // Explicit touch fallback
+    brakeFrame.addEventListener('touchstart', (e) => {
+      e.preventDefault();
+      isBrakePressed = true;
+      handleBrakePointer(e);
+    }, { passive: false });
+    brakeFrame.addEventListener('touchmove', (e) => {
+      e.preventDefault();
+      if (isBrakePressed) handleBrakePointer(e);
+    }, { passive: false });
+    brakeFrame.addEventListener('touchend', releaseBrake);
   }
 
   // Throttle Hold / Cruise Toggle Button (Cancellable)

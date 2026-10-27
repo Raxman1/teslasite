@@ -371,6 +371,15 @@ main {
     grid-template-columns: 1fr;
     gap: 16px;
   }
+  .cluster-panel {
+    order: 1;
+  }
+  .pedal-section {
+    order: 2;
+  }
+  .card:not(.pedal-section) {
+    order: 3;
+  }
 }
 
 /* Cards */
@@ -403,6 +412,9 @@ main {
 }
 
 #gaugeCanvas {
+  position: absolute;
+  top: 0;
+  left: 0;
   width: 100%;
   height: 100%;
   display: block;
@@ -410,6 +422,9 @@ main {
 
 .gauge-center-data {
   position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -555,6 +570,7 @@ main {
   align-items: flex-end;
   gap: 16px;
   margin: 14px 0 10px 0;
+  touch-action: none;
 }
 
 /* Base Pedal Frame */
