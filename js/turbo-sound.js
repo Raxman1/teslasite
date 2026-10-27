@@ -14,9 +14,13 @@ class TurboSoundEngine {
 
     this.isInitialized = false;
     this.spool = 0.0;
+    this.peakSpool = 0.0;
     this.lastThrottle = 0.0;
+    this.lastTargetThrottle = 0.0;
     this.lastBovTime = 0.0;
     this.bovBuffer = null;
+    this.bovLoading = false;
+    this.hasVented = false;
 
     // Master Audio Chain
     this.masterGain = null;
@@ -146,8 +150,9 @@ class TurboSoundEngine {
   }
 
   async loadStudioBov() {
+    if (this.bovBuffer || this.bovLoading || !this.ctx) return;
+    this.bovLoading = true;
     try {
-      if (this.bovBuffer || !this.ctx) return;
       let b64 = null;
       if (window.CAR_PRESETS) {
         if (window.CAR_PRESETS.amg_m177 && window.CAR_PRESETS.amg_m177.sounds && window.CAR_PRESETS.amg_m177.sounds.bov) {
@@ -162,11 +167,18 @@ class TurboSoundEngine {
         for (let i = 0; i < binaryString.length; i++) {
           bytes[i] = binaryString.charCodeAt(i);
         }
-        this.ctx.decodeAudioData(bytes.buffer, (decoded) => {
+        this.ctx.decodeAudioData(bytes.buffer.slice(0), (decoded) => {
           this.bovBuffer = decoded;
-        }, () => {});
+          this.bovLoading = false;
+        }, () => {
+          this.bovLoading = false;
+        });
+      } else {
+        this.bovLoading = false;
       }
-    } catch (e) {}
+    } catch (e) {
+      this.bovLoading = false;
+    }
   }
 
   setEnabled(val) {
@@ -195,18 +207,19 @@ class TurboSoundEngine {
   triggerBlowOff(spool) {
     if (!this.enabled || !this.bovEnabled || this.volume <= 0 || !this.ctx) return;
     const now = this.ctx.currentTime;
-    if (now - this.lastBovTime < 0.38) return; // cooldown
+    if (now - this.lastBovTime < 0.28) return; // cooldown
     this.lastBovTime = now;
 
-    const bovVol = Math.min(1.0, (spool * 1.15) * (this.volume / 100.0) * 0.9);
+    const clampedSpool = Math.max(0.15, Math.min(1.0, spool || 0.5));
+    const bovVol = Math.max(0.15, Math.min(1.0, (clampedSpool * 1.3) * (this.volume / 100.0) * 0.95));
 
     // 1. Play real studio-recorded BOV sample if available
     if (this.bovBuffer) {
       try {
         const src = this.ctx.createBufferSource();
         src.buffer = this.bovBuffer;
-        // Natural slight pitch variation (+/- 4%)
-        src.playbackRate.setValueAtTime(0.96 + Math.random() * 0.08, now);
+        // Natural slight pitch variation (+/- 5%)
+        src.playbackRate.setValueAtTime(0.95 + Math.random() * 0.1, now);
 
         const gain = this.ctx.createGain();
         gain.gain.setValueAtTime(bovVol, now);
@@ -235,7 +248,8 @@ class TurboSoundEngine {
       pulseIntervals.forEach((tOffset, idx) => {
         const pStart = now + tOffset;
         const decay = Math.pow(0.68, idx);
-        bovGain.gain.setValueAtTime(bovVol * decay, pStart);
+        const pAmp = Math.max(0.001, bovVol * decay);
+        bovGain.gain.setValueAtTime(pAmp, pStart);
         bovGain.gain.exponentialRampToValueAtTime(0.0001, pStart + 0.055);
       });
 
@@ -259,52 +273,80 @@ class TurboSoundEngine {
   /**
    * Per-frame physics & sound update at 60 FPS
    */
-  update(dt, rpm, redlineRpm, throttle, isEngineRunning) {
+  update(dt, rpm, redlineRpm, throttle, isEngineRunning, targetThrottle) {
     if (!this.isInitialized) this.init();
     if (!this.isInitialized || !this.ctx) return;
+
+    if (!this.bovBuffer && !this.bovLoading) {
+      this.loadStudioBov();
+    }
 
     const safeRpm = Math.max(0, rpm || 0);
     const safeRedline = Math.max(3000, redlineRpm || 7000);
     const safeThrottle = Math.max(0, Math.min(1.0, throttle || 0));
+    const safeTargetThrottle = (targetThrottle !== undefined && targetThrottle !== null)
+      ? Math.max(0, Math.min(1.0, targetThrottle))
+      : safeThrottle;
+    const effectiveThrottle = Math.max(safeThrottle, safeTargetThrottle);
 
     if (!this.enabled || !isEngineRunning || this.volume <= 0) {
       this.spool = 0;
+      this.peakSpool = 0;
       if (this.whistleGain1) this.whistleGain1.gain.setTargetAtTime(0, this.ctx.currentTime, 0.05);
       if (this.whistleGain2) this.whistleGain2.gain.setTargetAtTime(0, this.ctx.currentTime, 0.05);
       if (this.intakeHissGain) this.intakeHissGain.gain.setTargetAtTime(0, this.ctx.currentTime, 0.05);
       if (this.metallicGain) this.metallicGain.gain.setTargetAtTime(0, this.ctx.currentTime, 0.05);
       this.lastThrottle = safeThrottle;
+      this.lastTargetThrottle = safeTargetThrottle;
       return;
     }
 
     // REAL TURBO BOOST PHYSICS:
-    // A turbo requires both exhaust velocity (RPM > 1800) AND throttle load (> 15%) to build boost!
-    // At idle or gentle cruising, boost is near 0 bar (completely silent).
-    const minSpoolRpm = 1800;
-    const fullSpoolRpm = Math.min(6200, safeRedline * 0.88);
+    // A turbo requires both exhaust velocity (RPM > 1600) AND throttle load (> 12%) to build boost!
+    const minSpoolRpm = 1600;
+    const fullSpoolRpm = Math.min(5800, safeRedline * 0.85);
 
     let targetBoost = 0.0;
-    if (safeRpm > minSpoolRpm && safeThrottle > 0.15) {
+    if (safeRpm > minSpoolRpm && effectiveThrottle > 0.12) {
       const rpmFactor = Math.min(1.0, Math.max(0, (safeRpm - minSpoolRpm) / (fullSpoolRpm - minSpoolRpm)));
-      // Throttle non-linear ramp: builds significantly under hard throttle
-      const throttleFactor = Math.pow((safeThrottle - 0.15) / 0.85, 1.25);
-      targetBoost = Math.min(1.0, Math.pow(rpmFactor, 0.70) * throttleFactor);
+      const throttleFactor = Math.pow((effectiveThrottle - 0.12) / 0.88, 1.15);
+      targetBoost = Math.min(1.0, Math.pow(rpmFactor, 0.65) * throttleFactor);
     }
 
     // Realistic Turbo Lag / Spool Inertia:
     if (targetBoost > this.spool) {
-      // Spools up over ~0.25 - 0.35s as exhaust spins the turbine
-      this.spool += (targetBoost - this.spool) * Math.min(1.0, dt * 4.0);
+      // Spools up quickly under throttle load (~0.25 - 0.3s)
+      this.spool += (targetBoost - this.spool) * Math.min(1.0, dt * 5.0);
     } else {
       // Rapid boost drop when throttle closes
-      this.spool += (targetBoost - this.spool) * Math.min(1.0, dt * 7.5);
+      this.spool += (targetBoost - this.spool) * Math.min(1.0, dt * 6.5);
     }
 
-    // Check for Blow-off / Wastegate trigger (throttle lift while under boost)
-    if ((this.lastThrottle - safeThrottle > 0.22) && this.spool > 0.22) {
-      this.triggerBlowOff(this.spool);
+    // Track peak boost achieved under current throttle application
+    if (safeTargetThrottle > 0.18) {
+      this.hasVented = false;
+      if (this.spool > 0.10) {
+        this.peakSpool = Math.max(this.peakSpool || 0, this.spool);
+      }
     }
+
+    // Blow-Off Valve (BOV) Trigger Logic:
+    // Triggers cleanly once when driver lifts off throttle under boost
+    const boostAtLift = Math.max(this.spool, this.peakSpool || 0);
+    const targetLift = (this.lastTargetThrottle - safeTargetThrottle > 0.10);
+    const smoothedLift = (this.lastThrottle - safeThrottle > 0.04);
+    const directClose = (safeTargetThrottle < 0.08 && (this.peakSpool || 0) > 0.12);
+
+    if (!this.hasVented && (targetLift || smoothedLift || directClose) && boostAtLift > 0.12) {
+      this.triggerBlowOff(boostAtLift);
+      this.hasVented = true;
+      this.peakSpool = 0;
+    } else if (effectiveThrottle < 0.08) {
+      this.peakSpool = 0;
+    }
+
     this.lastThrottle = safeThrottle;
+    this.lastTargetThrottle = safeTargetThrottle;
 
     // Organic Aerodynamic Frequencies:
     // Turbine spool tone sweeps smoothly from 1,800 Hz up to 4,200 Hz

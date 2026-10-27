@@ -598,7 +598,7 @@ class AudioEngine {
 
       // Update universal turbocharger for DSP mode
       if (this.turboEngine) {
-        this.turboEngine.update(dt, this.rpm, this.redlineRpm, this.throttle, this.isPlaying);
+        this.turboEngine.update(dt, this.rpm, this.redlineRpm, this.throttle, this.isPlaying, this.targetThrottle);
       }
       return;
     }
@@ -669,7 +669,7 @@ class AudioEngine {
 
     // Update universal turbocharger for Samples mode
     if (this.turboEngine) {
-      this.turboEngine.update(dt, this.rpm, this.redlineRpm, this.throttle, this.isPlaying);
+      this.turboEngine.update(dt, this.rpm, this.redlineRpm, this.throttle, this.isPlaying, this.targetThrottle);
     }
 
     this.updateAudioParameters();

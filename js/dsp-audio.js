@@ -312,7 +312,7 @@ class DSPAudioEngine {
   get redlineRpm() { return (this.car && this.car.engine) ? this.car.engine.redlineRpm : 8000; }
   get maxRpm() { return (this.car && this.car.engine) ? this.car.engine.limiterRpm * 1.05 : 9500; }
   get idleRpm() { return (this.car && this.car.engine) ? this.car.engine.idleRpm : 850; }
-  get throttle() { return this.vehicle ? this.vehicle.throttle : 0; }
+  get throttle() { return this.vehicle ? (this.vehicle.neutral ? Math.max(this.vehicle.revPedal || 0, this.vehicle.throttle || 0) : this.vehicle.throttle) : 0; }
   get isRevLimiting() { return this.vehicle ? !!this.vehicle.limiterCut : false; }
 }
 
