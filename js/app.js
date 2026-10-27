@@ -167,6 +167,10 @@ document.addEventListener('DOMContentLoaded', () => {
     if (brandTitle) brandTitle.textContent = name;
     if (brandBadge) brandBadge.textContent = badge;
     if (pedalLogo) pedalLogo.textContent = getShortBrandLogo(name);
+    const dashBrandTitle = document.getElementById('dashBrandTitle');
+    const dashBrandBadge = document.getElementById('dashBrandBadge');
+    if (dashBrandTitle) dashBrandTitle.textContent = name;
+    if (dashBrandBadge) dashBrandBadge.textContent = badge;
   }
 
   function populatePresetDropdown(mode) {
@@ -796,9 +800,10 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   // ==============================================================
-  // Touch-Friendly Car Selection Modal (Reliable on Tesla Touchscreen)
+  // Touch-Friendly Car Selection Modal / Шторка выбора звука
   // ==============================================================
   const carSelectModalBtn = document.getElementById('carSelectModalBtn');
+  const dashboardCarPickerBtn = document.getElementById('dashboardCarPickerBtn');
   const carSelectModal = document.getElementById('carSelectModal');
   const closeCarModalBtn = document.getElementById('closeCarModalBtn');
   const closeCarModalBtnBottom = document.getElementById('closeCarModalBtnBottom');
@@ -822,7 +827,7 @@ document.addEventListener('DOMContentLoaded', () => {
           <span class="car-card-badge">${item.badge}</span>
         </div>
       `;
-      card.addEventListener('click', async () => {
+      addTouchInstantListener(card, async () => {
         carCardsGrid.querySelectorAll('.car-card-item').forEach(c => c.classList.remove('active'));
         card.classList.add('active');
         if (presetSelect) presetSelect.value = item.id;
@@ -853,18 +858,27 @@ document.addEventListener('DOMContentLoaded', () => {
       modalTabSamples.classList.toggle('active', activeMode === 'samples');
     }
     renderCarCards(activeMode);
+    carSelectModal.classList.add('open');
     carSelectModal.classList.add('active');
+    carSelectModal.style.display = 'flex';
   }
 
   function closeCarModal() {
-    if (carSelectModal) carSelectModal.classList.remove('active');
+    if (carSelectModal) {
+      carSelectModal.classList.remove('open');
+      carSelectModal.classList.remove('active');
+      carSelectModal.style.display = 'none';
+    }
   }
 
   if (carSelectModalBtn) {
-    carSelectModalBtn.addEventListener('click', () => openCarModal(currentEngineMode));
+    addTouchInstantListener(carSelectModalBtn, () => openCarModal(currentEngineMode));
   }
-  if (closeCarModalBtn) closeCarModalBtn.addEventListener('click', closeCarModal);
-  if (closeCarModalBtnBottom) closeCarModalBtnBottom.addEventListener('click', closeCarModal);
+  if (dashboardCarPickerBtn) {
+    addTouchInstantListener(dashboardCarPickerBtn, () => openCarModal(currentEngineMode));
+  }
+  if (closeCarModalBtn) addTouchInstantListener(closeCarModalBtn, closeCarModal);
+  if (closeCarModalBtnBottom) addTouchInstantListener(closeCarModalBtnBottom, closeCarModal);
   if (carSelectModal) {
     carSelectModal.addEventListener('click', (e) => {
       if (e.target === carSelectModal) closeCarModal();

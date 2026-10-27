@@ -47,7 +47,7 @@ header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 8px 20px;
+  padding: 12px 20px;
   background: rgba(10, 12, 16, 0.98);
   backdrop-filter: blur(20px);
   border-bottom: 1px solid var(--border-glass);
@@ -56,6 +56,7 @@ header {
   width: 100%;
   max-width: 100vw;
   box-sizing: border-box;
+  gap: 12px;
 }
 
 .brand {
@@ -1059,20 +1060,25 @@ input[type="range"]::-moz-range-thumb,
   box-shadow: 0 0 10px rgba(255, 153, 0, 0.6);
 }
 
-/* P2P QR Modal */
+/* Modals Overlay (P2P and Car Picker Drawer) */
 .modal-overlay {
   position: fixed;
   inset: 0;
-  background: rgba(0, 0, 0, 0.75);
-  backdrop-filter: blur(8px);
+  background: rgba(0, 0, 0, 0.85);
+  backdrop-filter: blur(12px);
   display: none;
   justify-content: center;
   align-items: center;
-  z-index: 1000;
+  z-index: 99999 !important;
+  touch-action: pan-y;
 }
 
-.modal-overlay.open {
-  display: flex;
+.modal-overlay.open,
+.modal-overlay.active {
+  display: flex !important;
+  opacity: 1 !important;
+  visibility: visible !important;
+  z-index: 99999 !important;
 }
 
 .modal-content {
@@ -1896,7 +1902,80 @@ kbd {
   margin-left: 2px;
 }
 
-/* Quick Sound Controls Bar (Motor, Bass, Exhaust, RPM Dynamics) */
+/* Dedicated Dashboard Sound Tuning & Car Control Bar (Immune to Tesla UI Overlaps) */
+.dashboard-sound-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 12px;
+  padding: 10px 18px;
+  margin: 8px 16px 4px 16px;
+  background: rgba(18, 22, 32, 0.92);
+  backdrop-filter: blur(16px);
+  border: 1px solid var(--border-glass);
+  border-radius: 14px;
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.5);
+}
+
+.sound-slider-group {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.btn-dash-car-picker {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 6px 14px;
+  background: rgba(255, 153, 0, 0.12);
+  border: 1px solid rgba(255, 153, 0, 0.45);
+  border-radius: 10px;
+  color: #fff;
+  cursor: pointer;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+  user-select: none;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+.btn-dash-car-picker:hover {
+  background: rgba(255, 153, 0, 0.25);
+  border-color: var(--accent-amber);
+  box-shadow: 0 0 14px rgba(255, 153, 0, 0.5);
+  transform: scale(1.02);
+}
+.btn-dash-car-picker:active {
+  transform: scale(0.96);
+}
+
+.dash-car-icon {
+  font-size: 20px;
+}
+
+.dash-car-info {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  text-align: left;
+}
+
+.dash-car-title {
+  font-size: 13px;
+  font-weight: 800;
+  color: #fff;
+  line-height: 1.2;
+}
+
+.dash-car-badge {
+  font-size: 9.5px;
+  font-weight: 800;
+  color: var(--accent-amber);
+  text-transform: uppercase;
+}
+
+/* Quick Sound Controls Bar (Legacy & Header compatibility) */
 .quick-sound-controls {
   display: flex;
   align-items: center;
