@@ -307,12 +307,19 @@ document.addEventListener('DOMContentLoaded', () => {
   // Set Canvas resolution
   function resizeCanvas() {
     const rect = canvas.getBoundingClientRect();
-    canvas.width = rect.width * window.devicePixelRatio;
-    canvas.height = rect.height * window.devicePixelRatio;
-    ctx.scale(window.devicePixelRatio, window.devicePixelRatio);
+    const dpr = window.devicePixelRatio || 1;
+    const w = (rect && rect.width > 50) ? rect.width : (canvas.clientWidth > 50 ? canvas.clientWidth : 380);
+    const h = (rect && rect.height > 50) ? rect.height : (canvas.clientHeight > 50 ? canvas.clientHeight : 380);
+    canvas.width = Math.round(w * dpr);
+    canvas.height = Math.round(h * dpr);
+    ctx.setTransform(1, 0, 0, 1, 0, 0);
+    ctx.scale(dpr, dpr);
   }
   window.addEventListener('resize', resizeCanvas);
   resizeCanvas();
+  setTimeout(resizeCanvas, 60);
+  setTimeout(resizeCanvas, 300);
+  window.scrollTo(0, 0);
 
   // 0. PRESET SELECTOR
   if (presetSelect) {
@@ -888,13 +895,24 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // 10. CANVAS TACHOMETER GAUGE RENDERER (60 FPS)
   function drawGauge(rpm) {
-    const w = canvas.width / window.devicePixelRatio;
-    const h = canvas.height / window.devicePixelRatio;
+    const dpr = window.devicePixelRatio || 1;
+    let w = canvas.width / dpr;
+    let h = canvas.height / dpr;
+
+    if (w < 80 || h < 80) {
+      resizeCanvas();
+      w = canvas.width / dpr;
+      h = canvas.height / dpr;
+      if (w < 80 || h < 80) return;
+    }
+
     const cx = w / 2;
     const cy = h / 2;
-    const radius = Math.min(cx, cy) - 18;
+    const radius = Math.max(30, Math.min(cx, cy) - 18);
 
-    const maxRpm = audio.maxRpm || 10000;
+    const rawMaxRpm = audio.maxRpm || 10000;
+    // Round maxRpm to nearest 1000 (minimum 7000) for clean dial numbers (e.g. 0 to 8, 9, 10)
+    const maxRpm = Math.max(7000, Math.ceil(rawMaxRpm / 1000) * 1000);
     const redlineRpm = audio.redlineRpm || 8400;
 
     ctx.clearRect(0, 0, w, h);
@@ -911,7 +929,8 @@ document.addEventListener('DOMContentLoaded', () => {
     ctx.stroke();
 
     // Redline Arc
-    const redlineStart = startAngle + (redlineRpm / maxRpm) * totalAngle;
+    const redlineClamped = Math.min(redlineRpm, maxRpm);
+    const redlineStart = startAngle + (redlineClamped / maxRpm) * totalAngle;
     ctx.beginPath();
     ctx.arc(cx, cy, radius - 8, redlineStart, endAngle);
     ctx.strokeStyle = 'rgba(255, 34, 34, 0.8)';
@@ -919,7 +938,7 @@ document.addEventListener('DOMContentLoaded', () => {
     ctx.stroke();
 
     // Minor & Major Ticks and numbers
-    const numTicks = maxRpm / 100;
+    const numTicks = Math.round(maxRpm / 100);
     for (let i = 0; i <= numTicks; i++) {
       const tickRpm = i * 100;
       const angle = startAngle + (tickRpm / maxRpm) * totalAngle;
@@ -949,7 +968,7 @@ document.addEventListener('DOMContentLoaded', () => {
         ctx.font = 'bold 16px -apple-system, sans-serif';
         ctx.fillStyle = tickRpm >= redlineRpm ? '#ff4444' : '#ff9900';
         ctx.textAlign = 'center';
-        ctx.fillText(i / 10, tx, ty);
+        ctx.fillText(Math.round(i / 10), tx, ty);
       }
     }
 
@@ -1108,7 +1127,11 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     // Render Canvas & Shift Lights
-    drawGauge(currentRpm);
+    try {
+      drawGauge(currentRpm);
+    } catch (err) {
+      console.warn('drawGauge error:', err);
+    }
     updateShiftLights(currentRpm);
 
     animationFrameId = requestAnimationFrame(loop);
