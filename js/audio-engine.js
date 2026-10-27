@@ -94,6 +94,8 @@ class AudioEngine {
     this.dspRearGain = null;
     this.dspSubGain = null;
     this.dspDirectGain = null;
+    this.masterBassFilter = null;
+    this.exhaustVolumeLevel = 1.0;
 
     // Engine parameters
     this.rpm = 920;
@@ -214,10 +216,19 @@ class AudioEngine {
 
   buildTeslaSpatialAcoustics() {
     try {
-      // 1. Master Submix Bus feeding into Dynamics Compressor
+      // 1. Master Submix Bus feeding into Master Bass Filter & Compressor
       this.submixBus = this.ctx.createGain();
       this.submixBus.gain.setValueAtTime(1.0, this.ctx.currentTime);
-      if (this.compressor) this.submixBus.connect(this.compressor);
+
+      // Master Low-Shelf Bass Filter (110 Hz) - Allows real cutting of sub rumble so Tesla clips don't rattle!
+      this.masterBassFilter = this.ctx.createBiquadFilter();
+      this.masterBassFilter.type = 'lowshelf';
+      this.masterBassFilter.frequency.setValueAtTime(110, this.ctx.currentTime);
+      const initBassDb = this.bassShakeLevel < 1.0 ? (this.bassShakeLevel - 1.0) * 28.0 : (this.bassShakeLevel - 1.0) * 8.0;
+      this.masterBassFilter.gain.setValueAtTime(initBassDb, this.ctx.currentTime);
+
+      this.submixBus.connect(this.masterBassFilter);
+      if (this.compressor) this.masterBassFilter.connect(this.compressor);
 
       // 2. Front Stage (Engine Hood, Intake, Turbo Whistle)
       this.frontBus = this.ctx.createGain();
@@ -625,13 +636,38 @@ class AudioEngine {
   }
 
   setSubwooferBoost(level) {
-    this.bassShakeLevel = Math.max(0, Math.min(3.0, level));
+    this.bassShakeLevel = Math.max(0, Math.min(2.5, level));
+    const now = this.ctx ? this.ctx.currentTime : 0;
+
+    // Master Low-Shelf Filter: real sub-bass control for BOTH DSP and samples
+    // When level < 1.0, cuts low frequencies down to -28 dB so Tesla door clips and trim don't rattle!
+    if (this.masterBassFilter && this.ctx) {
+      let bassDb = 0;
+      if (this.bassShakeLevel < 1.0) {
+        bassDb = (this.bassShakeLevel - 1.0) * 28.0; // level 0 -> -28 dB, level 0.5 -> -14 dB
+      } else {
+        bassDb = (this.bassShakeLevel - 1.0) * 8.0;  // level 1.5 -> +4 dB, level 2.0 -> +8 dB
+      }
+      this.masterBassFilter.gain.setTargetAtTime(bassDb, now, 0.03);
+    }
+
     if (this.subwooferGain && this.ctx) {
-      this.subwooferGain.gain.setTargetAtTime(this.bassShakeLevel * 1.2, this.ctx.currentTime, 0.05);
+      this.subwooferGain.gain.setTargetAtTime(this.bassShakeLevel * 1.2, now, 0.04);
     }
     if (this.subwooferBooster && this.ctx) {
       const boostDb = (this.bassShakeLevel - 1.0) * 8.0;
-      this.subwooferBooster.gain.setTargetAtTime(boostDb, this.ctx.currentTime, 0.05);
+      this.subwooferBooster.gain.setTargetAtTime(boostDb, now, 0.04);
+    }
+  }
+
+  setExhaustVolume(vol) {
+    this.exhaustVolumeLevel = Math.max(0.1, Math.min(2.0, vol));
+    const now = this.ctx ? this.ctx.currentTime : 0;
+    if (this.exhaustBus && this.ctx) {
+      this.exhaustBus.gain.setTargetAtTime(this.exhaustVolumeLevel, now, 0.04);
+    }
+    if (this.dspEngine) {
+      this.dspEngine.character = Math.max(0.15, Math.min(1.0, this.exhaustVolumeLevel * 0.85));
     }
   }
 

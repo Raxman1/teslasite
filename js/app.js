@@ -41,6 +41,48 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
+  // Quick Sound Controls Bar (Always Visible in Header)
+  const quickBassSlider = document.getElementById('quickBassSlider');
+  const quickBassText = document.getElementById('quickBassText');
+  const quickExhaustSlider = document.getElementById('quickExhaustSlider');
+  const quickExhaustText = document.getElementById('quickExhaustText');
+
+  function updateAllBassSliders(val) {
+    if (quickBassSlider) quickBassSlider.value = val;
+    if (quickBassText) quickBassText.textContent = `${val}%`;
+    const classicBassSlider = document.getElementById('classicBassSlider');
+    const classicBassLevelText = document.getElementById('classicBassLevelText');
+    const bassSlider = document.getElementById('bassSlider');
+    const bassLevelText = document.getElementById('bassLevelText');
+    if (classicBassSlider) classicBassSlider.value = val;
+    if (classicBassLevelText) classicBassLevelText.textContent = `${val}%`;
+    if (bassSlider) bassSlider.value = val;
+    if (bassLevelText) bassLevelText.textContent = `${val}%`;
+    audio.setSubwooferBoost(val / 100.0);
+  }
+
+  function updateAllExhaustSliders(val) {
+    if (quickExhaustSlider) quickExhaustSlider.value = val;
+    if (quickExhaustText) quickExhaustText.textContent = `${val}%`;
+    const characterSlider = document.getElementById('characterSlider');
+    const characterValText = document.getElementById('characterValText');
+    if (characterSlider) characterSlider.value = val;
+    if (characterValText) characterValText.textContent = `${val}%`;
+    audio.setExhaustVolume(val / 100.0);
+  }
+
+  if (quickBassSlider) {
+    quickBassSlider.addEventListener('input', (e) => {
+      updateAllBassSliders(parseInt(e.target.value, 10));
+    });
+  }
+
+  if (quickExhaustSlider) {
+    quickExhaustSlider.addEventListener('input', (e) => {
+      updateAllExhaustSliders(parseInt(e.target.value, 10));
+    });
+  }
+
   // Mode Switcher & DSP Tuning Elements
   const modeDspBtn = document.getElementById('modeDspBtn');
   const modeSamplesBtn = document.getElementById('modeSamplesBtn');
@@ -170,9 +212,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
   if (characterSlider) {
     characterSlider.addEventListener('input', (e) => {
-      const val = parseInt(e.target.value, 10);
-      if (characterValText) characterValText.textContent = `${val}%`;
-      if (audio.dspEngine) audio.dspEngine.character = val / 100.0;
+      updateAllExhaustSliders(parseInt(e.target.value, 10));
     });
   }
 
@@ -331,11 +371,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
   if (classicBassSlider) {
     classicBassSlider.addEventListener('input', (e) => {
-      const val = parseInt(e.target.value, 10);
-      if (classicBassLevelText) classicBassLevelText.textContent = `${val}%`;
-      if (bassLevelText) bassLevelText.textContent = `${val}%`;
-      if (bassSlider) bassSlider.value = val;
-      audio.setSubwooferBoost(val / 100.0);
+      updateAllBassSliders(parseInt(e.target.value, 10));
     });
   }
 
@@ -523,9 +559,7 @@ document.addEventListener('DOMContentLoaded', () => {
   // 6. Subwoofer Bass Slider
   if (bassSlider) {
     bassSlider.addEventListener('input', (e) => {
-      const val = parseInt(e.target.value, 10);
-      bassLevelText.textContent = `${val}%`;
-      audio.setSubwooferBoost(val / 100.0);
+      updateAllBassSliders(parseInt(e.target.value, 10));
     });
   }
 
@@ -760,6 +794,105 @@ document.addEventListener('DOMContentLoaded', () => {
       }
     });
   }
+
+  // ==============================================================
+  // Touch-Friendly Car Selection Modal (Reliable on Tesla Touchscreen)
+  // ==============================================================
+  const carSelectModalBtn = document.getElementById('carSelectModalBtn');
+  const carSelectModal = document.getElementById('carSelectModal');
+  const closeCarModalBtn = document.getElementById('closeCarModalBtn');
+  const closeCarModalBtnBottom = document.getElementById('closeCarModalBtnBottom');
+  const modalTabDsp = document.getElementById('modalTabDsp');
+  const modalTabSamples = document.getElementById('modalTabSamples');
+  const carCardsGrid = document.getElementById('carCardsGrid');
+
+  function renderCarCards(mode) {
+    if (!carCardsGrid) return;
+    carCardsGrid.innerHTML = '';
+    const list = mode === 'dsp' ? DSP_PRESETS : SAMPLE_PRESETS;
+    list.forEach(item => {
+      const card = document.createElement('div');
+      card.className = 'car-card-item';
+      if (item.id === audio.currentPresetId || (presetSelect && presetSelect.value === item.id)) {
+        card.classList.add('active');
+      }
+      card.innerHTML = `
+        <div class="car-card-top">
+          <span class="car-card-name">${item.name}</span>
+          <span class="car-card-badge">${item.badge}</span>
+        </div>
+      `;
+      card.addEventListener('click', async () => {
+        carCardsGrid.querySelectorAll('.car-card-item').forEach(c => c.classList.remove('active'));
+        card.classList.add('active');
+        if (presetSelect) presetSelect.value = item.id;
+        updateBrandDisplay(item.name, item.badge);
+        try {
+          await audio.setPreset(item.id);
+          syncSoundstageButtons(audio.soundstageMode);
+          if (isV6ProEnabled) {
+            syncAcousticUIToAudio();
+          }
+        } catch (err) {
+          console.error('Error switching car:', err);
+        }
+        if (!audio.isPlaying) {
+          await unlockAndStartEngine();
+        }
+        closeCarModal();
+      });
+      carCardsGrid.appendChild(card);
+    });
+  }
+
+  function openCarModal(mode) {
+    if (!carSelectModal) return;
+    const activeMode = mode || currentEngineMode;
+    if (modalTabDsp && modalTabSamples) {
+      modalTabDsp.classList.toggle('active', activeMode === 'dsp');
+      modalTabSamples.classList.toggle('active', activeMode === 'samples');
+    }
+    renderCarCards(activeMode);
+    carSelectModal.classList.add('active');
+  }
+
+  function closeCarModal() {
+    if (carSelectModal) carSelectModal.classList.remove('active');
+  }
+
+  if (carSelectModalBtn) {
+    carSelectModalBtn.addEventListener('click', () => openCarModal(currentEngineMode));
+  }
+  if (closeCarModalBtn) closeCarModalBtn.addEventListener('click', closeCarModal);
+  if (closeCarModalBtnBottom) closeCarModalBtnBottom.addEventListener('click', closeCarModal);
+  if (carSelectModal) {
+    carSelectModal.addEventListener('click', (e) => {
+      if (e.target === carSelectModal) closeCarModal();
+    });
+  }
+
+  if (modalTabDsp && modalTabSamples) {
+    modalTabDsp.addEventListener('click', () => {
+      modalTabDsp.classList.add('active');
+      modalTabSamples.classList.remove('active');
+      if (modeDspBtn) modeDspBtn.classList.add('active');
+      if (modeSamplesBtn) modeSamplesBtn.classList.remove('active');
+      currentEngineMode = 'dsp';
+      populatePresetDropdown('dsp');
+      renderCarCards('dsp');
+    });
+
+    modalTabSamples.addEventListener('click', () => {
+      modalTabSamples.classList.add('active');
+      modalTabDsp.classList.remove('active');
+      if (modeSamplesBtn) modeSamplesBtn.classList.add('active');
+      if (modeDspBtn) modeDspBtn.classList.remove('active');
+      currentEngineMode = 'samples';
+      populatePresetDropdown('samples');
+      renderCarCards('samples');
+    });
+  }
+
 
   // iOS Safari & Tesla Audio Session Unlocker
   // Plays valid silent audio to force iOS out of "Ambient" into "Playback" (bypasses silent switch)
