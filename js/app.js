@@ -250,6 +250,77 @@ document.addEventListener('DOMContentLoaded', () => {
   // -------------------------------------------------------------
   // Tesla Model 3 / Y Cabin Acoustic Controls & Spatial Fader
   // -------------------------------------------------------------
+  const v6ToggleBtn = document.getElementById('v6ToggleBtn');
+  const v6ToggleText = document.getElementById('v6ToggleText');
+  const classicAcousticView = document.getElementById('classicAcousticView');
+  const proAcousticView = document.getElementById('proAcousticView');
+  const classicStageBtns = document.querySelectorAll('.classic-stage-btn');
+  const classicBassSlider = document.getElementById('classicBassSlider');
+  const classicBassLevelText = document.getElementById('classicBassLevelText');
+
+  let isV6ProEnabled = true;
+  // Restore saved preference if any
+  try {
+    const savedV6 = localStorage.getItem('tesla_v6_pro_enabled');
+    if (savedV6 === '0') {
+      isV6ProEnabled = false;
+    }
+  } catch (e) {}
+
+  function setV6ProState(enabled) {
+    isV6ProEnabled = enabled;
+    try {
+      localStorage.setItem('tesla_v6_pro_enabled', enabled ? '1' : '0');
+    } catch (e) {}
+
+    if (v6ToggleBtn) {
+      v6ToggleBtn.classList.toggle('off', !enabled);
+    }
+    if (v6ToggleText) {
+      v6ToggleText.textContent = enabled ? '⚡ v6.0 PRO: ВКЛ' : '⚡ v6.0 PRO: ВЫКЛ';
+    }
+    if (classicAcousticView) {
+      classicAcousticView.style.display = enabled ? 'none' : 'block';
+    }
+    if (proAcousticView) {
+      proAcousticView.style.display = enabled ? 'block' : 'none';
+    }
+
+    if (!enabled) {
+      // Classic mode: default to balanced rear soundstage
+      audio.setTeslaSoundstage('tesla_mid');
+    } else {
+      syncAcousticUIToAudio();
+    }
+  }
+
+  if (v6ToggleBtn) {
+    v6ToggleBtn.addEventListener('click', () => {
+      setV6ProState(!isV6ProEnabled);
+    });
+  }
+
+  // Bind Classic View (3 buttons & 1 bass slider)
+  if (classicStageBtns) {
+    classicStageBtns.forEach(btn => {
+      btn.addEventListener('click', () => {
+        classicStageBtns.forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        audio.setTeslaSoundstage(btn.dataset.stage);
+      });
+    });
+  }
+
+  if (classicBassSlider) {
+    classicBassSlider.addEventListener('input', (e) => {
+      const val = parseInt(e.target.value, 10);
+      if (classicBassLevelText) classicBassLevelText.textContent = `${val}%`;
+      if (bassLevelText) bassLevelText.textContent = `${val}%`;
+      if (bassSlider) bassSlider.value = val;
+      audio.setSubwooferBoost(val / 100.0);
+    });
+  }
+
   const stageBtns = document.querySelectorAll('.stage-btn');
   const teslaTrimSelect = document.getElementById('teslaTrimSelect');
   const teslaTrimBadge = document.getElementById('teslaTrimBadge');
@@ -481,8 +552,9 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
-  // Initialize UI values
+  // Initialize UI values & apply saved v6.0 PRO state
   syncAcousticUIToAudio();
+  setV6ProState(isV6ProEnabled);
 
   // Universal Turbocharger Sound Elements (Dual Controls Synchronized)
   const turboToggleBtn = document.getElementById('turboToggleBtn');

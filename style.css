@@ -1774,3 +1774,46 @@ kbd {
   padding: 1px 7px;
   letter-spacing: 0.5px;
 }
+
+/* Toggle Button v6.0 PRO (ON / OFF switch) */
+.btn-v6-toggle {
+  background: rgba(255, 153, 0, 0.22);
+  color: var(--accent-amber);
+  border: 1.5px solid var(--accent-amber);
+  border-radius: 12px;
+  padding: 3px 10px;
+  font-size: 11px;
+  font-weight: 800;
+  cursor: pointer;
+  box-shadow: 0 0 10px rgba(255, 153, 0, 0.4);
+  transition: all 0.2s ease;
+  letter-spacing: 0.5px;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.btn-v6-toggle:hover {
+  transform: scale(1.05);
+  box-shadow: 0 0 15px rgba(255, 153, 0, 0.7);
+}
+
+.btn-v6-toggle.off {
+  background: rgba(255, 255, 255, 0.08);
+  color: var(--text-muted);
+  border-color: rgba(255, 255, 255, 0.25);
+  box-shadow: none;
+}
+
+.classic-acoustic-view {
+  animation: fadeInAcoustics 0.25s ease;
+}
+
+.pro-acoustic-view {
+  animation: fadeInAcoustics 0.25s ease;
+}
+
+@keyframes fadeInAcoustics {
+  from { opacity: 0; transform: translateY(-4px); }
+  to { opacity: 1; transform: translateY(0); }
+}
