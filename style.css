@@ -18,14 +18,23 @@
   -webkit-user-select: none;
 }
 
+html {
+  width: 100%;
+  max-width: 100vw;
+  overflow-x: hidden;
+}
+
 body {
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", sans-serif;
   background-color: var(--bg-dark);
   color: var(--text-main);
   min-height: 100vh;
+  width: 100%;
+  max-width: 100vw;
   display: flex;
   flex-direction: column;
   overflow-x: hidden;
+  position: relative;
   background-image: 
     radial-gradient(circle at 50% 20%, rgba(255, 153, 0, 0.05) 0%, transparent 60%),
     radial-gradient(circle at 80% 80%, rgba(255, 34, 34, 0.03) 0%, transparent 50%);
@@ -41,6 +50,9 @@ header {
   border-bottom: 1px solid var(--border-glass);
   z-index: 1000;
   flex-shrink: 0;
+  width: 100%;
+  max-width: 100vw;
+  box-sizing: border-box;
 }
 
 .brand {
@@ -1116,4 +1128,202 @@ kbd {
   font-family: monospace;
   font-size: 11px;
   border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+/* =========================================================
+   RESPONSIVE MOBILE & HARMONIOUS LAYOUT (Tesla UI Polish)
+   ========================================================= */
+
+@media (max-width: 880px) {
+  header {
+    display: flex;
+    flex-direction: column;
+    padding: 8px 12px;
+    gap: 8px;
+    width: 100%;
+    box-sizing: border-box;
+  }
+
+  .brand {
+    width: 100%;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .brand-title, .brand-badge {
+    display: none;
+  }
+
+  .engine-mode-switcher {
+    flex-shrink: 0;
+  }
+
+  .mode-tab-btn {
+    padding: 4px 8px;
+    font-size: 10px;
+  }
+
+  .preset-dropdown {
+    flex: 1;
+    min-width: 0;
+    max-width: calc(100% - 140px);
+    margin-left: 0;
+    font-size: 11px;
+    padding: 6px 8px;
+    text-overflow: ellipsis;
+  }
+
+  .header-actions {
+    width: 100%;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 6px;
+    margin-left: 0;
+  }
+
+  .engine-volume-control {
+    flex: 1;
+    min-width: 110px;
+    padding: 4px 8px;
+    gap: 6px;
+  }
+
+  .engine-volume-control .vol-slider {
+    width: 50px;
+    flex: 1;
+  }
+
+  .engine-volume-control .vol-value {
+    min-width: 28px;
+    font-size: 11px;
+  }
+
+  .btn {
+    padding: 6px 10px;
+    font-size: 11px;
+    white-space: nowrap;
+  }
+
+  #startBtn {
+    flex: 1.2;
+    justify-content: center;
+    font-weight: 800;
+  }
+}
+
+@media (max-width: 680px) {
+  main {
+    padding: 6px 10px;
+    width: 100%;
+    max-width: 100vw;
+    box-sizing: border-box;
+  }
+
+  .tabs-container {
+    padding: 6px 10px 0 10px;
+    width: 100%;
+  }
+
+  .tabs {
+    width: 100%;
+    display: flex;
+    justify-content: space-between;
+  }
+
+  .tab-btn {
+    flex: 1;
+    padding: 6px 2px;
+    font-size: 10px;
+    text-align: center;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .card {
+    padding: 14px 12px;
+    border-radius: 14px;
+    width: 100%;
+    box-sizing: border-box;
+  }
+
+  .tachometer-container {
+    width: 320px;
+    height: 320px;
+    max-width: 88vw;
+    max-height: 88vw;
+    margin: 0 auto;
+  }
+
+  .gear-display {
+    font-size: 52px;
+  }
+
+  .speed-display {
+    font-size: 34px;
+  }
+
+  .rpm-numeric {
+    font-size: 14px;
+  }
+
+  .footer-keybinds {
+    display: none;
+  }
+
+  footer {
+    padding: 8px 12px;
+    font-size: 10px;
+  }
+}
+
+@media (max-width: 420px) {
+  .pedal-wrapper {
+    gap: 10px;
+    margin: 8px 0;
+  }
+
+  .pedal-brake-frame {
+    width: 95px;
+    height: 160px;
+  }
+
+  .pedal-brake-plate {
+    width: 82px;
+    height: 146px;
+  }
+
+  .pedal-gas-frame {
+    width: 82px;
+    height: 185px;
+  }
+
+  .pedal-plate {
+    width: 70px;
+    height: 172px;
+  }
+
+  .rubber-brake-bar {
+    width: 54px;
+    height: 8px;
+  }
+
+  .gear-num-btn {
+    width: 18px;
+    height: 24px;
+    font-size: 10px;
+  }
+
+  .btn-paddle {
+    font-size: 10px;
+    padding: 6px 3px;
+  }
+
+  .pedal-actions .btn {
+    padding: 6px 2px;
+    font-size: 10px;
+  }
 }
