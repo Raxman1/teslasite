@@ -1019,6 +1019,7 @@ document.addEventListener('DOMContentLoaded', () => {
   // Auto-start audio on first user touch/click on the pedal or action buttons
   function ensureAudioActive() {
     unlockSafariAndTeslaAudio();
+    initTeslaMediaSession();
     if (!audio.isPlaying) {
       unlockAndStartEngine();
     }
@@ -1904,6 +1905,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
     attachMediaSessionStream();
   }
+
+  // Auto-initialize MediaSession immediately so steering wheel buttons bind on launch
+  initTeslaMediaSession();
 
   // 14. SCREEN WAKE LOCK API (Prevents phone from auto-sleeping while driving in car)
   let wakeLockObj = null;
