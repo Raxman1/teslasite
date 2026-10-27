@@ -30,6 +30,14 @@ document.addEventListener('DOMContentLoaded', () => {
   const closeModalBtn = document.getElementById('closeModalBtn');
   const connectPhoneBtn = document.getElementById('connectPhoneBtn');
   const phoneCodeInput = document.getElementById('phoneCodeInput');
+  const engineVolumeSlider = document.getElementById('engineVolumeSlider');
+
+  if (engineVolumeSlider) {
+    engineVolumeSlider.addEventListener('input', (e) => {
+      const vol = parseInt(e.target.value, 10) / 100.0;
+      audio.setVolume(vol);
+    });
+  }
 
   // Preset Selector Elements
   const presetSelect = document.getElementById('presetSelect');
