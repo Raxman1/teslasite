@@ -77,8 +77,8 @@ class TelemetryTracker {
 
     const geoOptions = {
       enableHighAccuracy: true,  // Forces GPS hardware GNSS rather than WiFi/Cell tower triangulation
-      maximumAge: 0,            // Do not use cached readings
-      timeout: 6000             // High frequency timeout
+      maximumAge: 500,           // Fast response with hardware GNSS
+      timeout: 12000             // Reliable timeout for background execution & tunnels
     };
 
     this.watchId = navigator.geolocation.watchPosition(

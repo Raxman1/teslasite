@@ -501,6 +501,8 @@ document.addEventListener('DOMContentLoaded', () => {
       startBtn.textContent = '⏹ ЗАГЛУШИТЬ';
       startBtn.className = 'btn btn-danger';
       startBtn.disabled = false;
+      requestScreenWakeLock();
+      updateMediaSessionInfo();
       console.log('Engine successfully started!');
     } catch (err) {
       console.error('Audio start failed:', err);
@@ -518,6 +520,8 @@ document.addEventListener('DOMContentLoaded', () => {
       await unlockAndStartEngine();
     } else {
       audio.stop();
+      releaseScreenWakeLock();
+      updateMediaSessionInfo();
       startBtn.textContent = 'START ENGINE';
       startBtn.className = 'btn btn-primary';
     }
@@ -1193,16 +1197,35 @@ document.addEventListener('DOMContentLoaded', () => {
     showShiftNotification(`▼ ПЕРЕДАЧА ${audio.gear} (-)`);
   }
 
-  // Register MediaSession hardware button handlers (Left scroll wheel on Tesla steering wheel)
-  function initTeslaMediaSession() {
+  // Synchronize lock-screen / Bluetooth metadata with current car preset
+  function updateMediaSessionInfo() {
     if ('mediaSession' in navigator) {
       try {
-        navigator.mediaSession.metadata = new MediaMetadata({
-          title: 'Tesla V10 Paddle Shifter Active',
-          artist: 'Tesla Steering Wheel Controller',
-          album: 'Left Scroll Wheel: Left/Right = Shift'
-        });
+        let carName = 'Tesla V10 Sound Simulator';
+        if (currentEngineMode === 'dsp' && audio.dspEngine && audio.dspEngine.car) {
+          carName = audio.dspEngine.car.name;
+        } else if (audio.currentPreset && audio.currentPreset.name) {
+          carName = audio.currentPreset.name;
+        } else if (presetSelect && presetSelect.options[presetSelect.selectedIndex]) {
+          carName = presetSelect.options[presetSelect.selectedIndex].textContent;
+        }
 
+        navigator.mediaSession.metadata = new MediaMetadata({
+          title: `${carName} 🏎️`,
+          artist: 'Tesla Sound Simulator • GPS & Звук в фоне',
+          album: 'Фоновый режим активен: звук и GPS работают при блокировке экрана'
+        });
+        navigator.mediaSession.playbackState = audio.isPlaying ? 'playing' : 'paused';
+      } catch (err) {}
+    }
+  }
+
+  // Register MediaSession hardware button handlers (Left scroll wheel on Tesla steering wheel)
+  function initTeslaMediaSession() {
+    updateMediaSessionInfo();
+
+    if ('mediaSession' in navigator) {
+      try {
         // 1. Tilt Left Wheel RIGHT -> Shift UP
         navigator.mediaSession.setActionHandler('nexttrack', () => {
           handleSteeringWheelShiftUp();
@@ -1213,12 +1236,20 @@ document.addEventListener('DOMContentLoaded', () => {
           handleSteeringWheelShiftDown();
         });
 
-        // 3. Click Left Wheel IN (Pause/Play) -> Shift UP
+        // 3. Play / Pause handlers from Lock Screen or Tesla steering wheel
         navigator.mediaSession.setActionHandler('play', () => {
-          handleSteeringWheelShiftUp();
+          ensureAudioActive();
+          if (mediaSessionKeeper) mediaSessionKeeper.play().catch(() => {});
+          updateMediaSessionInfo();
         });
         navigator.mediaSession.setActionHandler('pause', () => {
-          handleSteeringWheelShiftDown();
+          if (audio.isPlaying) {
+            audio.stop();
+            startBtn.textContent = 'START ENGINE';
+            startBtn.className = 'btn btn-primary';
+          }
+          if (mediaSessionKeeper) mediaSessionKeeper.pause();
+          updateMediaSessionInfo();
         });
 
         // 4. Seek buttons if fired
@@ -1233,11 +1264,88 @@ document.addEventListener('DOMContentLoaded', () => {
       }
     }
 
-    // Play silent keeper audio on user gesture to bind Tesla hardware media keys
+    // Play background keeper audio to maintain iOS audio session in background
     if (mediaSessionKeeper) {
-      mediaSessionKeeper.volume = 0.01;
+      mediaSessionKeeper.volume = 0.05;
       mediaSessionKeeper.play().catch(() => {});
     }
+  }
+
+  // 14. SCREEN WAKE LOCK API (Prevents phone from auto-sleeping while driving in car)
+  let wakeLockObj = null;
+  async function requestScreenWakeLock() {
+    if ('wakeLock' in navigator && document.visibilityState === 'visible') {
+      try {
+        wakeLockObj = await navigator.wakeLock.request('screen');
+        wakeLockObj.addEventListener('release', () => {
+          wakeLockObj = null;
+        });
+        console.log('Screen Wake Lock acquired: phone will stay on while driving.');
+      } catch (err) {
+        console.warn('Wake Lock warning:', err);
+      }
+    }
+  }
+
+  function releaseScreenWakeLock() {
+    if (wakeLockObj) {
+      wakeLockObj.release().catch(() => {});
+      wakeLockObj = null;
+    }
+  }
+
+  // 15. BACKGROUND RUNNER FOR LOCKED DEVICE (Keeps AudioContext & GPS transmission alive)
+  let backgroundInterval = null;
+  function startBackgroundRunner() {
+    if (backgroundInterval) return;
+    if (mediaSessionKeeper && audio && audio.isPlaying) {
+      mediaSessionKeeper.play().catch(() => {});
+    }
+    updateMediaSessionInfo();
+
+    let lastBgTick = performance.now();
+    backgroundInterval = setInterval(() => {
+      const now = performance.now();
+      const dt = Math.min(0.1, (now - lastBgTick) / 1000.0);
+      lastBgTick = now;
+
+      // Ensure Web Audio context remains running and un-suspended when phone is locked
+      if (audio && audio.isPlaying) {
+        if (audio.ctx && audio.ctx.state === 'suspended') {
+          audio.ctx.resume().catch(() => {});
+        }
+        audio.updatePhysics(dt, activeTab);
+      }
+    }, 33); // 30 Hz background physics ticker while screen is off
+  }
+
+  function stopBackgroundRunner() {
+    if (backgroundInterval) {
+      clearInterval(backgroundInterval);
+      backgroundInterval = null;
+    }
+    lastFrameTime = performance.now();
+  }
+
+  document.addEventListener('visibilitychange', () => {
+    if (document.hidden) {
+      // Screen locked or tab backgrounded: run background ticker to keep physics and GPS active
+      startBackgroundRunner();
+    } else {
+      // Screen unlocked: resume smooth 60 FPS rAF loop and re-acquire screen wake lock
+      stopBackgroundRunner();
+      if (audio && audio.isPlaying) {
+        requestScreenWakeLock();
+      }
+    }
+  });
+
+  if (mediaSessionKeeper) {
+    mediaSessionKeeper.addEventListener('pause', () => {
+      if (audio && audio.isPlaying) {
+        mediaSessionKeeper.play().catch(() => {});
+      }
+    });
   }
 
   // Intercept physical hardware media keys from Tesla steering wheel
