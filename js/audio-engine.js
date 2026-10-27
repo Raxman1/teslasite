@@ -49,8 +49,9 @@ class AudioEngine {
     // Master nodes & Tesla Spatial Audio Network
     this.masterGain = null;
     this.compressor = null;
+    this.submixBus = null;
     
-    // Buses
+    // Cabin Buses
     this.exhaustBus = null;
     this.intakeBus = null;
     this.transBus = null;
@@ -58,6 +59,7 @@ class AudioEngine {
 
     // Tesla Model 3 / Y Subwoofer Bass Shaker
     this.subwooferFilter = null;
+    this.subwooferBooster = null;
     this.subwooferGain = null;
     this.bassShakeLevel = 1.0;
 
@@ -92,18 +94,31 @@ class AudioEngine {
 
     this.popsAggressiveness = 1.0;
     this.volume = 1.0;
+
+    // Immediately prepare context so preset buffers decode even before first touch
+    this.ensureContext();
+  }
+
+  ensureContext() {
+    if (!this.ctx) {
+      const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+      if (AudioContextClass) {
+        this.ctx = new AudioContextClass({ latencyHint: 'interactive' });
+      }
+    }
+    return this.ctx;
   }
 
   async init() {
+    this.ensureContext();
     if (this.ctx && this.isReady) return true;
 
-    const AudioContextClass = window.AudioContext || window.webkitAudioContext;
-    if (!this.ctx) {
-      this.ctx = new AudioContextClass({ latencyHint: 'interactive' });
-    }
-
-    if (this.ctx.state === 'suspended') {
-      await this.ctx.resume();
+    if (this.ctx && this.ctx.state === 'suspended') {
+      try {
+        await this.ctx.resume();
+      } catch (e) {
+        // Will resume on user gesture
+      }
     }
 
     // High quality master dynamics compressor
@@ -114,14 +129,16 @@ class AudioEngine {
     this.compressor.attack.setValueAtTime(0.003, this.ctx.currentTime);
     this.compressor.release.setValueAtTime(0.12, this.ctx.currentTime);
 
+    // Master Gain (Post-compressor for authentic linear volume scaling and silent mute)
     this.masterGain = this.ctx.createGain();
     this.masterGain.gain.setValueAtTime(this.volume, this.ctx.currentTime);
 
-    this.masterGain.connect(this.compressor);
-    this.compressor.connect(this.ctx.destination);
-
     // Build Tesla Model 3 / Y Spatial Audio Buses
     this.buildTeslaSpatialAcoustics();
+
+    // Signal chain: Submix -> Compressor -> Master Gain -> Destination
+    this.compressor.connect(this.masterGain);
+    this.masterGain.connect(this.ctx.destination);
 
     // Load initial preset
     await this.loadPresetBuffers(this.currentPresetId);
@@ -132,18 +149,23 @@ class AudioEngine {
   }
 
   buildTeslaSpatialAcoustics() {
+    // Intermediate submix bus feeding into master compressor
+    this.submixBus = this.ctx.createGain();
+    this.submixBus.gain.setValueAtTime(1.0, this.ctx.currentTime);
+    this.submixBus.connect(this.compressor);
+
     // Create dedicated cabin routing buses
     this.exhaustBus = this.ctx.createGain();
     this.exhaustBus.gain.setValueAtTime(1.0, this.ctx.currentTime);
-    this.exhaustBus.connect(this.masterGain);
+    this.exhaustBus.connect(this.submixBus);
 
     this.intakeBus = this.ctx.createGain();
     this.intakeBus.gain.setValueAtTime(0.9, this.ctx.currentTime);
-    this.intakeBus.connect(this.masterGain);
+    this.intakeBus.connect(this.submixBus);
 
     this.transBus = this.ctx.createGain();
     this.transBus.gain.setValueAtTime(0.8, this.ctx.currentTime);
-    this.transBus.connect(this.masterGain);
+    this.transBus.connect(this.submixBus);
 
     // Tesla Model 3 / Y Subwoofer Bass Shaker
     this.subwooferFilter = this.ctx.createBiquadFilter();
@@ -164,7 +186,7 @@ class AudioEngine {
     this.subBus.connect(this.subwooferFilter);
     this.subwooferFilter.connect(this.subwooferBooster);
     this.subwooferBooster.connect(this.subwooferGain);
-    this.subwooferGain.connect(this.masterGain);
+    this.subwooferGain.connect(this.submixBus);
 
     // Optional 3D panners with safe fallback
     try {
@@ -211,10 +233,12 @@ class AudioEngine {
   }
 
   async loadPresetBuffers(presetId) {
-    if (this.presetBuffers[presetId]) {
+    if (this.presetBuffers[presetId] && Object.keys(this.presetBuffers[presetId]).length > 0) {
       this.applyPresetConfig(presetId);
       return true;
     }
+
+    this.ensureContext();
 
     const presetData = window.CAR_PRESETS ? window.CAR_PRESETS[presetId] : null;
     if (!presetData) {
@@ -222,20 +246,29 @@ class AudioEngine {
       return false;
     }
 
+    console.log(`[AudioEngine] Loading & decoding sound buffers for: ${presetId}`);
     const buffers = {};
     const decodePromises = Object.entries(presetData.sounds).map(async ([key, b64]) => {
       try {
         const arrayBuf = base64ToArrayBuffer(b64);
-        buffers[key] = await this.ctx.decodeAudioData(arrayBuf);
+        const decoded = await this.ctx.decodeAudioData(arrayBuf);
+        if (decoded) {
+          buffers[key] = decoded;
+        }
       } catch (err) {
         console.error(`Failed to decode ${key} for ${presetId}:`, err);
       }
     });
 
     await Promise.all(decodePromises);
-    this.presetBuffers[presetId] = buffers;
+    const count = Object.keys(buffers).length;
+    console.log(`[AudioEngine] Decoded ${count} audio buffers for: ${presetId}`);
+
+    if (count > 0) {
+      this.presetBuffers[presetId] = buffers;
+    }
     this.applyPresetConfig(presetId);
-    return true;
+    return count > 0;
   }
 
   applyPresetConfig(presetId) {
@@ -260,6 +293,8 @@ class AudioEngine {
       this.setTeslaSoundstage('tesla_mid', 0.35, 1.1);
     } else if (presetId === 'supra_2jz' || presetId === 'amg_m177') {
       this.setTeslaSoundstage('tesla_front', 0.15, 1.25);
+    } else if (presetId === 'bmw_z4_gt3') {
+      this.setTeslaSoundstage('tesla_front', 0.20, 1.3);
     } else {
       this.setTeslaSoundstage('tesla_3d', 0.25, 1.4);
     }
@@ -280,16 +315,25 @@ class AudioEngine {
   }
 
   async start() {
+    this.ensureContext();
     if (!this.isReady) await this.init();
     if (this.ctx && this.ctx.state === 'suspended') {
-      await this.ctx.resume();
+      try {
+        await this.ctx.resume();
+      } catch (e) {}
     }
 
     if (this.isPlaying) return;
 
+    // Ensure buffers are loaded for current preset
+    if (!this.presetBuffers[this.currentPresetId] || Object.keys(this.presetBuffers[this.currentPresetId]).length === 0) {
+      await this.loadPresetBuffers(this.currentPresetId);
+    }
+
     const buffers = this.presetBuffers[this.currentPresetId] || {};
     const loopKeys = ['vlow', 'low', 'mid', 'high', 'ex_high', 'off_low', 'off_mid', 'off_high', 'transmission', 'blower'];
 
+    let startedLoops = 0;
     loopKeys.forEach(key => {
       if (!buffers[key]) return;
       const src = this.ctx.createBufferSource();
@@ -320,13 +364,14 @@ class AudioEngine {
 
       this.sources[key] = src;
       this.gains[key] = gain;
+      startedLoops++;
     });
 
     this.isPlaying = true;
     this.rpm = this.idleRpm;
     this.targetRpm = this.idleRpm;
     this.updateAudioParameters();
-    console.log(`Tesla Engine running: ${this.currentPresetId}`);
+    console.log(`Tesla Engine running: ${this.currentPresetId} (${startedLoops} active loops)`);
   }
 
   stop() {
@@ -342,7 +387,11 @@ class AudioEngine {
   setVolume(val) {
     this.volume = Math.max(0, Math.min(1, val));
     if (this.masterGain && this.ctx) {
-      this.masterGain.gain.setTargetAtTime(this.volume, this.ctx.currentTime, 0.05);
+      try {
+        this.masterGain.gain.setValueAtTime(this.volume, this.ctx.currentTime);
+      } catch (e) {
+        this.masterGain.gain.value = this.volume;
+      }
     }
   }
 
@@ -358,7 +407,7 @@ class AudioEngine {
     src.playbackRate.setValueAtTime(rate, this.ctx.currentTime);
 
     const gain = this.ctx.createGain();
-    gain.gain.setValueAtTime(volume * this.volume, this.ctx.currentTime);
+    gain.gain.setValueAtTime(volume, this.ctx.currentTime);
 
     src.connect(gain);
 

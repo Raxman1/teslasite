@@ -24,9 +24,11 @@
     </div>
     <div class="header-actions">
       <!-- Engine Sound Volume vs Music Balance Slider -->
-      <div class="engine-volume-control" title="Баланс громкости двигателя">
-        <span style="font-size: 13px;">🔊 Мотор</span>
-        <input id="engineVolumeSlider" type="range" min="0" max="100" value="90" style="width: 80px; accent-color: var(--accent-amber); cursor: pointer;">
+      <div class="engine-volume-control" title="Громкость звука мотора">
+        <span class="vol-icon">🔊</span>
+        <span class="vol-label">Мотор</span>
+        <input id="engineVolumeSlider" type="range" min="0" max="100" value="100" class="vol-slider">
+        <span id="engineVolumeText" class="vol-value">100%</span>
       </div>
       <button id="p2pModalBtn" class="btn">📱 Связка с телефоном</button>
       <button id="fullscreenBtn" class="btn">⛶ Полный экран</button>

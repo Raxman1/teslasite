@@ -31,10 +31,13 @@ document.addEventListener('DOMContentLoaded', () => {
   const connectPhoneBtn = document.getElementById('connectPhoneBtn');
   const phoneCodeInput = document.getElementById('phoneCodeInput');
   const engineVolumeSlider = document.getElementById('engineVolumeSlider');
+  const engineVolumeText = document.getElementById('engineVolumeText');
 
   if (engineVolumeSlider) {
     engineVolumeSlider.addEventListener('input', (e) => {
-      const vol = parseInt(e.target.value, 10) / 100.0;
+      const val = parseInt(e.target.value, 10);
+      const vol = val / 100.0;
+      if (engineVolumeText) engineVolumeText.textContent = `${val}%`;
       audio.setVolume(vol);
     });
   }
@@ -118,10 +121,17 @@ document.addEventListener('DOMContentLoaded', () => {
       const presetInfo = window.CAR_PRESETS ? window.CAR_PRESETS[selectedId] : null;
       if (presetInfo) {
         brandBadge.textContent = presetInfo.badge;
-        brandTitle.textContent = presetInfo.name;
+        brandTitle.textContent = `${presetInfo.name} ⏳`;
         if (pedalLogo) pedalLogo.textContent = presetInfo.name.toUpperCase();
       }
-      await audio.setPreset(selectedId);
+      try {
+        await audio.setPreset(selectedId);
+      } catch (err) {
+        console.error('Error switching preset:', err);
+      }
+      if (presetInfo) {
+        brandTitle.textContent = presetInfo.name;
+      }
       if (!audio.isPlaying) {
         await unlockAndStartEngine();
       }
