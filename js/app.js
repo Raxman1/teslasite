@@ -442,6 +442,36 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
+  // iOS Safari & Tesla Audio Session Unlocker
+  // Plays valid silent audio to force iOS out of "Ambient" into "Playback" (bypasses silent switch)
+  function unlockSafariAndTeslaAudio() {
+    try {
+      const ctx = audio.ensureContext();
+      if (ctx) {
+        if (ctx.state === 'suspended') {
+          ctx.resume().catch(() => {});
+        }
+        // iOS Safari one-sample dummy buffer unlock
+        try {
+          const buf = ctx.createBuffer(1, 1, 22050);
+          const src = ctx.createBufferSource();
+          src.buffer = buf;
+          src.connect(ctx.destination);
+          src.start(0);
+        } catch (e) {}
+      }
+      if (mediaSessionKeeper) {
+        mediaSessionKeeper.volume = 0.05;
+        mediaSessionKeeper.play().catch(() => {});
+      }
+    } catch (e) {}
+  }
+
+  // Pre-unlock on first user interaction anywhere
+  window.addEventListener('touchstart', unlockSafariAndTeslaAudio, { once: true, passive: true });
+  window.addEventListener('pointerdown', unlockSafariAndTeslaAudio, { once: true, passive: true });
+  window.addEventListener('click', unlockSafariAndTeslaAudio, { once: true });
+
   // 1. ENGINE START / STOP BUTTON & AUTO-UNLOCK
   let isStartingAudio = false;
   async function unlockAndStartEngine() {
@@ -449,11 +479,11 @@ document.addEventListener('DOMContentLoaded', () => {
     isStartingAudio = true;
     startBtn.textContent = 'ЗАПУСК...';
     startBtn.disabled = true;
+
+    // Synchronously unlock audio before any async awaits
+    unlockSafariAndTeslaAudio();
+
     try {
-      audio.ensureContext();
-      if (audio.ctx && audio.ctx.state === 'suspended') {
-        await audio.ctx.resume().catch(() => {});
-      }
       if (presetSelect && presetSelect.value) {
         await audio.setPreset(presetSelect.value);
       }
@@ -474,6 +504,7 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   startBtn.addEventListener('click', async () => {
+    unlockSafariAndTeslaAudio();
     if (!audio.isPlaying) {
       await unlockAndStartEngine();
     } else {
@@ -485,6 +516,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // Auto-start audio on first user touch/click on the pedal or action buttons
   function ensureAudioActive() {
+    unlockSafariAndTeslaAudio();
     if (!audio.isPlaying) {
       unlockAndStartEngine();
     }

@@ -123,10 +123,11 @@ class AudioEngine {
 
     if (this.ctx && this.ctx.state === 'suspended') {
       try {
-        await this.ctx.resume();
-      } catch (e) {
-        // Will resume on user gesture
-      }
+        await Promise.race([
+          this.ctx.resume(),
+          new Promise(r => setTimeout(r, 60))
+        ]).catch(() => {});
+      } catch (e) {}
     }
 
     // High quality master dynamics compressor
@@ -377,7 +378,10 @@ class AudioEngine {
     if (!this.isReady) await this.init();
     if (this.ctx && this.ctx.state === 'suspended') {
       try {
-        await this.ctx.resume();
+        await Promise.race([
+          this.ctx.resume(),
+          new Promise(r => setTimeout(r, 60))
+        ]).catch(() => {});
       } catch (e) {}
     }
 

@@ -167,7 +167,12 @@ class DSPAudioEngine {
 
   async start() {
     if (this.ctx.state === 'suspended') {
-      try { await this.ctx.resume(); } catch (e) {}
+      try {
+        await Promise.race([
+          this.ctx.resume(),
+          new Promise(r => setTimeout(r, 60))
+        ]).catch(() => {});
+      } catch (e) {}
     }
 
     if (!this.node) {

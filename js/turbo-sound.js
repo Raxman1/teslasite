@@ -162,7 +162,9 @@ class TurboSoundEngine {
         for (let i = 0; i < binaryString.length; i++) {
           bytes[i] = binaryString.charCodeAt(i);
         }
-        this.bovBuffer = await this.ctx.decodeAudioData(bytes.buffer);
+        this.ctx.decodeAudioData(bytes.buffer, (decoded) => {
+          this.bovBuffer = decoded;
+        }, () => {});
       }
     } catch (e) {}
   }
