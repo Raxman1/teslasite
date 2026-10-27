@@ -778,7 +778,7 @@ var EngineDSP = (function () {
       if (typeof msg.overrun === 'number') t.overrun = msg.overrun;
       if (typeof msg.cut === 'number') t.cut = msg.cut;
       if (typeof msg.character === 'number') t.character = msg.character;
-      if (typeof msg.crackle === 'number') t.crackle = clamp(msg.crackle, 0, 1);
+      if (typeof msg.crackle === 'number') t.crackle = clamp(msg.crackle, 0, 2);
       if (typeof msg.whinePitch === 'number') t.whinePitch = msg.whinePitch;
       if (typeof msg.whineLevel === 'number') t.whineLevel = msg.whineLevel;
     } else if (msg.type === 'config') {
@@ -1247,7 +1247,7 @@ var EngineDSP = (function () {
       if (typeof msg.load === 'number') t.load = msg.load;
       if (typeof msg.rev === 'number') t.rev = msg.rev;
       if (typeof msg.character === 'number') t.character = msg.character;
-      if (typeof msg.crackle === 'number') t.crackle = clamp(msg.crackle, 0, 1);
+      if (typeof msg.crackle === 'number') t.crackle = clamp(msg.crackle, 0, 2);
     } else if (msg.type === 'config') {
       this.configure(msg.config);
     }

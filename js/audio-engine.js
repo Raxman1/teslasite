@@ -420,6 +420,20 @@ class AudioEngine {
     }
   }
 
+  setCharacter(val) {
+    this.character = Math.max(0.1, Math.min(1.0, val));
+    if (this.dspEngine) {
+      this.dspEngine.setCharacter(this.character);
+    }
+  }
+
+  setGpsSensitivity(val) {
+    this.gpsSensitivity = Math.max(0.1, Math.min(1.5, val));
+    if (this.dspEngine) {
+      this.dspEngine.setIntensity(this.gpsSensitivity);
+    }
+  }
+
   setStereoWidth(width) {
     this.stereoWidthLevel = Math.max(0.5, Math.min(2.0, width));
     if (this.stereoWidenerGain && this.ctx) {

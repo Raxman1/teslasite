@@ -31,6 +31,7 @@ class DSPAudioEngine {
     this.throttleResponse = 'sport'; // 'linear' | 'sport' | 'race'
     this.shiftProfile = 'comfort'; // 'comfort' (обычные / пониженные) | 'sport' (спорт / повышенные)
     this.rpmMultiplier = 1.0;      // 1.0x (норма) | 2.0x (спорт) | 3.0x (экстрим)
+    this.intensity = 0.70;         // 0.35 (comfort) | 0.70 (sport) | 1.0 (insane throttle response)
 
     // Default car: Mercedes CLS 63 AMG «Банан»
     this.setCar('cls63-amg');
@@ -49,6 +50,9 @@ class DSPAudioEngine {
     }
     if (this.shiftProfile) {
       this.vehicle.shiftProfile = this.shiftProfile;
+    }
+    if (this.intensity !== undefined) {
+      this.vehicle.intensity = this.intensity;
     }
     this.applyTuningParams();
     console.log('[DSPAudioEngine] Selected car:', found.name);
@@ -362,6 +366,21 @@ class DSPAudioEngine {
     const target = Math.max(1, Math.min(maxGears, parseInt(g, 10)));
     this.vehicle.neutral = false;
     this.vehicle._startShift(target);
+  }
+
+  setIntensity(val) {
+    this.intensity = Math.max(0.1, Math.min(1.5, parseFloat(val) || 0.7));
+    if (this.vehicle) {
+      this.vehicle.intensity = this.intensity;
+    }
+  }
+
+  setCharacter(val) {
+    this.character = Math.max(0.1, Math.min(1.0, parseFloat(val) || 0.75));
+  }
+
+  setCrackle(val) {
+    this.crackle = Math.max(0.0, Math.min(2.0, parseFloat(val) || 0.75));
   }
 
   get rpm() { return this.vehicle ? this.vehicle.rpm : 900; }

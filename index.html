@@ -7,11 +7,11 @@
   <meta http-equiv="Pragma" content="no-cache">
   <meta http-equiv="Expires" content="0">
   <title>Tesla V10 Sound Simulator | Carrera GT</title>
-  <link rel="stylesheet" href="style.css?v=6.9">
+  <link rel="stylesheet" href="style.css?v=7.4">
   <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🏎️</text></svg>">
   <script>
     (function() {
-      const LATEST_V = '6.0';
+      const LATEST_V = '7.4';
       const p = new URLSearchParams(window.location.search);
       if (p.get('v') !== LATEST_V) {
         p.set('v', LATEST_V);
@@ -58,16 +58,8 @@
     <div class="shift-led red"></div>
   </div>
 
-  <!-- Dedicated Sound Tuning & Car Selection Bar (Immune to Tesla UI Overlaps) -->
+  <!-- Dedicated Sound Tuning Bar (Immune to Tesla UI Overlaps) -->
   <div class="dashboard-sound-bar">
-    <button id="dashboardCarPickerBtn" class="btn-dash-car-picker" type="button" title="Выбрать автомобиль и звук (шторка)">
-      <span class="dash-car-icon">🏎️</span>
-      <div class="dash-car-info">
-        <span id="dashBrandTitle" class="dash-car-title">Porsche 911 GT3</span>
-        <span id="dashBrandBadge" class="dash-car-badge">9,000 RPM</span>
-      </div>
-      <span class="picker-arrow">▼ ШТОРКА</span>
-    </button>
     <div class="sound-slider-group">
       <div class="engine-volume-control" title="Общая громкость мотора">
         <span class="vol-icon">🔊</span>
@@ -87,7 +79,14 @@
         <input id="quickExhaustSlider" type="range" min="0" max="150" value="100" class="vol-slider">
         <span id="quickExhaustText" class="vol-value">100%</span>
       </div>
-      <button id="shiftProfileBtn" class="btn-shift-profile" type="button" title="Переключение оборотов коробки передач: Обычные (1x: D) / СПОРТ (2x: 20 км/ч = 4,000 RPM) / ТРЕК (3x)">⚙️ Обороты: Обычные (1x)</button>
+    </div>
+    <div class="sound-quick-actions">
+      <button id="shiftProfileBtn" class="btn-quick-pill" type="button" title="Обороты: 1x (Обычные: D) / 2x (СПОРТ: 20 км/ч = 4,000 RPM) / 3x (ТРЕК)">⚙️ Обороты: 1x</button>
+      <button id="crackleQuickBtn" class="btn-quick-pill active" type="button" title="Отстрелы выхлопа: 🔇 Тихо / 💥 Спорт / 🔥 Огонь">💥 Отстрелы: Спорт</button>
+    </div>
+    <!-- Hidden compatibility elements to ensure no script errors -->
+    <div style="display: none;">
+      <button id="dashboardCarPickerBtn"><span id="dashBrandTitle"></span><span id="dashBrandBadge"></span></button>
     </div>
   </div>
 
@@ -104,16 +103,19 @@
   <main>
     <div class="cockpit-grid">
 
-      <!-- LEFT: Telemetry & Precision GPS HUD -->
+      <!-- LEFT COLUMN: Sensors, Driving Settings & Acoustics -->
+      <div class="cockpit-left-col">
+
+        <!-- LEFT 1: Telemetry & Precision GPS HUD -->
       <div class="card telemetry-card">
         <div class="hud-title">
           <span>Сенсоры и Телеметрия</span>
-          <span id="hudRate" style="color: var(--accent-green);">GPS 1 Гц</span>
+          <span id="hudRate" style="color: var(--accent-green); font-size: 13px;">GPS 1 Гц</span>
         </div>
 
-        <div id="bgNotice" style="font-size: 11px; color: var(--accent-green); background: rgba(0, 230, 118, 0.08); border: 1px solid rgba(0, 230, 118, 0.2); border-radius: 6px; padding: 4px 8px; margin-bottom: 8px; display: flex; align-items: center; gap: 6px;">
+        <div id="bgNotice" class="bg-notice-pill">
           <span>🔒</span>
-          <span>Фон активен: звук и передача GPS продолжаются при блокировке экрана</span>
+          <span>Фон активен: звук и GPS работают при блокировке экрана</span>
         </div>
 
         <div class="hud-grid">
@@ -135,33 +137,97 @@
           </div>
         </div>
 
-        <div class="hud-item" id="hudCoordsBox" style="margin-bottom: 14px; cursor: pointer;" title="Нажмите для активации GPS">
+        <div class="hud-item" id="hudCoordsBox" style="margin-bottom: 12px; cursor: pointer;" title="Нажмите для активации GPS">
           <div class="hud-label" style="display: flex; justify-content: space-between; align-items: center;">
             <span>Координаты GNSS</span>
-            <span id="gnssStatusBadge" style="font-size: 11px; color: var(--accent-amber);">Ожидание GPS</span>
+            <span id="gnssStatusBadge" style="font-size: 12px; color: var(--accent-amber);">Ожидание GPS</span>
           </div>
-          <div id="hudCoords" class="hud-value" style="font-size: 13px;">🛰️ Нажмите сюда или вкладку 📡 GPS</div>
+          <div id="hudCoords" class="hud-value" style="font-size: 13.5px;">🛰️ Нажмите сюда или вкладку 📡 GPS</div>
         </div>
 
-        <div class="hud-title" style="margin-bottom: 8px;">
-          <span>G-Meter (Продольное ускорение)</span>
-        </div>
         <div class="g-meter-container">
           <div class="g-circle">
             <div id="gDot" class="g-dot"></div>
           </div>
         </div>
+      </div>
 
-        <!-- Tesla Model 3 / Y / S / Cybertruck Spatial Audio Panel -->
-        <div class="tesla-audio-panel" style="margin-top: 18px; border-top: 1px solid var(--border-glass); padding-top: 14px;">
-          <div class="hud-title" style="margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center;">
-            <span>⚡ Акустика салона Tesla</span>
-            <button id="v6ToggleBtn" class="btn-v6-toggle" type="button" title="Нажмите для включения/выключения режима v6.0 PRO">
-              <span id="v6ToggleText">⚡ v6.0 PRO: ВКЛ</span>
-            </button>
+      <!-- LEFT 2: Driving Dynamics & Exhaust Controls (Лаконично, органично, понятно) -->
+      <div class="card driving-settings-card">
+        <div class="hud-title" style="margin-bottom: 6px;">
+          <span>🏎️ Настройки вождения и выхлопа</span>
+        </div>
+
+        <!-- 1. GPS Deadzone / Traffic Light Filter -->
+        <div class="setting-row">
+          <div class="setting-header">
+            <span class="setting-title">🛑 Фильтр светофора (Стоп-зона GPS)</span>
+            <span class="setting-hint">Исключает дёргание на месте</span>
           </div>
+          <div class="segmented-pill-group">
+            <button id="deadzone0Btn" class="segmented-pill" type="button" title="0 км/ч: фильтр выключен">0 км/ч</button>
+            <button id="deadzone2Btn" class="segmented-pill" type="button" title="2 км/ч: лёгкая фильтрация">2 км/ч</button>
+            <button id="deadzone4Btn" class="segmented-pill active pill-green" type="button" title="4 км/ч: чисто на светофорах (рекомендуется)">4 км/ч ★</button>
+          </div>
+        </div>
 
-          <!-- CLASSIC VIEW ("как до было" — 3 кнопки и 1 ползунок сабвуфера) -->
+        <!-- 2. Throttle Response Intensity -->
+        <div class="setting-row">
+          <div class="setting-header">
+            <span class="setting-title">⚡ Чувствительность газа (Отклик)</span>
+            <span class="setting-hint">Реакция мотора на ускорение</span>
+          </div>
+          <div class="segmented-pill-group">
+            <button id="sensComfortBtn" class="segmented-pill" type="button" title="Плавный комфортный набор оборотов для города">🚗 Комфорт</button>
+            <button id="sensSportBtn" class="segmented-pill active" type="button" title="Динамичный спортивный отклик педали">🏎️ Спорт</button>
+            <button id="sensInsaneBtn" class="segmented-pill" type="button" title="Мгновенная отдача и полный крутящий момент">⚡ Мгновенно</button>
+          </div>
+        </div>
+
+        <!-- 3. Exhaust Flaps / Character (Muffler vs Straight Pipe) -->
+        <div class="setting-row">
+          <div class="setting-header">
+            <span class="setting-title">🎺 Заслонки выхлопа (Характер)</span>
+            <span class="setting-hint">Звучание выхлопного тракта</span>
+          </div>
+          <div class="segmented-pill-group">
+            <button id="exhaustQuietBtn" class="segmented-pill" type="button" title="Заводской глушитель: благородный мягкий звук">🤫 Заводской</button>
+            <button id="exhaustOpenBtn" class="segmented-pill active" type="button" title="Спортивный прямоток: громкий басистый рык">🏁 Прямоток</button>
+          </div>
+        </div>
+
+        <!-- 4. Crackle / Pops & Bangs -->
+        <div class="setting-row">
+          <div class="setting-header">
+            <span class="setting-title">💥 Отстрелы выхлопа (Pops & Bangs)</span>
+            <span class="setting-hint">Прострелы при сбросе газа</span>
+          </div>
+          <div class="segmented-pill-group">
+            <button id="crackleQuietBtn" class="segmented-pill" type="button" title="Без отстрелов: спокойная плавная езда">🔇 Тихо</button>
+            <button id="crackleSportBtn" class="segmented-pill active" type="button" title="Спортивные сочные отстрелы">💥 Спорт</button>
+            <button id="crackleFireBtn" class="segmented-pill pill-fire" type="button" title="Антилаг: громкие хлопки и огонь">🔥 Огонь</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- LEFT 3: Collapsible Tesla Cabin Acoustics Panel -->
+      <div class="card tesla-audio-panel card-collapsible">
+        <div class="hud-title" style="margin-bottom: 0; display: flex; justify-content: space-between; align-items: center; cursor: pointer;" id="teslaAcousticHeader">
+          <div style="display: flex; align-items: center; gap: 8px;">
+            <span>⚡ Акустика салона Tesla</span>
+            <span id="teslaAcousticBadge" style="font-size: 11.5px; padding: 2px 7px; border-radius: 6px; background: rgba(0,230,118,0.12); color: var(--accent-green); border: 1px solid rgba(0,230,118,0.3);">14 колонок</span>
+          </div>
+          <div style="display: flex; gap: 8px; align-items: center;">
+            <button id="v6ToggleBtn" class="btn-v6-toggle" type="button" title="Нажмите для переключения режима v6.0 PRO">
+              <span id="v6ToggleText">⚡ PRO: ВКЛ</span>
+            </button>
+            <button id="teslaAcousticExpandBtn" class="btn-adv-toggle" type="button">⚙️ Настройки ▼</button>
+          </div>
+        </div>
+
+        <!-- Collapsible Body (Initially folded to keep the UI clean & fast) -->
+        <div id="teslaAcousticBody" style="display: none; margin-top: 14px;">
+<!-- CLASSIC VIEW ("как до было" — 3 кнопки и 1 ползунок сабвуфера) -->
           <div id="classicAcousticView" class="classic-acoustic-view" style="display: none;">
             <div style="font-size: 11px; color: var(--accent-green); background: rgba(0, 230, 118, 0.08); border: 1px solid rgba(0, 230, 118, 0.25); border-radius: 6px; padding: 6px 10px; margin-bottom: 10px; display: flex; align-items: center; gap: 6px;">
               <span>🔓</span>
@@ -435,6 +501,8 @@
         </div>
       </div>
 
+      </div> <!-- Close cockpit-left-col -->
+
       <!-- CENTER: Carrera GT Tachometer & Gear Display -->
       <div class="cluster-panel">
         <div class="tachometer-container">
@@ -620,14 +688,14 @@
   <script src="js/peerjs.min.js"></script>
   <script src="js/qrcode.min.js"></script>
   <!-- Procedural DSP Engine (from teslasound.io) -->
-  <script src="js/dsp/cars.js?v=7.3"></script>
-  <script src="js/dsp/engine-dsp.js?v=7.3"></script>
-  <script src="js/dsp/vehicle.js?v=7.3"></script>
-  <script src="js/dsp-audio.js?v=7.3"></script>
-  <script src="js/turbo-sound.js?v=7.3"></script>
-  <script src="js/audio-engine.js?v=7.3"></script>
-  <script src="js/telemetry.js?v=7.3"></script>
-  <script src="js/p2p.js?v=7.3"></script>
-  <script src="js/app.js?v=7.3"></script>
+  <script src="js/dsp/cars.js?v=7.4"></script>
+  <script src="js/dsp/engine-dsp.js?v=7.4"></script>
+  <script src="js/dsp/vehicle.js?v=7.4"></script>
+  <script src="js/dsp-audio.js?v=7.4"></script>
+  <script src="js/turbo-sound.js?v=7.4"></script>
+  <script src="js/audio-engine.js?v=7.4"></script>
+  <script src="js/telemetry.js?v=7.4"></script>
+  <script src="js/p2p.js?v=7.4"></script>
+  <script src="js/app.js?v=7.4"></script>
 </body>
 </html>

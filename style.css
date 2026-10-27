@@ -481,12 +481,12 @@ main {
 
 /* Left Panel: Telemetry HUD */
 .hud-title {
-  font-size: 13px;
-  font-weight: 700;
+  font-size: 13.5px;
+  font-weight: 800;
   text-transform: uppercase;
-  letter-spacing: 1.5px;
-  color: var(--text-muted);
-  margin-bottom: 16px;
+  letter-spacing: 1px;
+  color: rgba(255, 255, 255, 0.85);
+  margin-bottom: 14px;
   display: flex;
   justify-content: space-between;
   align-items: center;
@@ -507,19 +507,23 @@ main {
 }
 
 .hud-label {
-  font-size: 11px;
-  color: var(--text-muted);
+  font-size: 13px;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.72);
   margin-bottom: 4px;
 }
 
 .hud-value {
-  font-size: 18px;
-  font-weight: 700;
+  font-size: 19px;
+  font-weight: 800;
   font-family: monospace;
+  color: #fff;
 }
 
 .hud-value.highlight {
   color: var(--accent-amber);
+  font-size: 24px;
+  text-shadow: 0 0 12px rgba(255, 153, 0, 0.4);
 }
 
 /* G-Force Ball Meter */
@@ -1177,8 +1181,36 @@ kbd {
     gap: 6px;
   }
 
-  .brand-title, .brand-badge {
-    display: none;
+  .btn-car-picker {
+    width: 100%;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 7px 12px;
+    box-sizing: border-box;
+  }
+
+  .btn-car-picker .brand-title {
+    display: inline-block !important;
+    font-size: 13px;
+    font-weight: 800;
+    color: #fff;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 185px;
+  }
+
+  .btn-car-picker .brand-badge {
+    display: inline-block !important;
+    font-size: 10.5px;
+    padding: 2px 6px;
+  }
+
+  .btn-car-picker .picker-arrow {
+    display: inline-block !important;
+    font-size: 10px;
+    color: var(--accent-amber);
   }
 
   .engine-mode-switcher {
@@ -2214,4 +2246,289 @@ kbd {
   font-size: 10px;
   font-weight: 700;
   white-space: nowrap;
+}
+
+
+/* =========================================================
+   VERSION 7.4 UI REDESIGN: COCKPIT LEFT COLUMN & DRIVING SETTINGS
+   ========================================================= */
+
+.cockpit-left-col {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  width: 100%;
+}
+
+@media (min-width: 1051px) {
+  .cockpit-left-col {
+    max-height: calc(100vh - 100px);
+    overflow-y: auto;
+    overflow-x: hidden;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: thin;
+    scrollbar-color: rgba(255, 153, 0, 0.4) transparent;
+    padding-right: 8px;
+  }
+  .cockpit-left-col::-webkit-scrollbar {
+    width: 6px;
+  }
+  .cockpit-left-col::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  .cockpit-left-col::-webkit-scrollbar-thumb {
+    background: rgba(255, 153, 0, 0.35);
+    border-radius: 4px;
+  }
+  .cockpit-left-col::-webkit-scrollbar-thumb:hover {
+    background: rgba(255, 153, 0, 0.6);
+  }
+}
+
+@media (max-width: 1050px) {
+  .cockpit-left-col {
+    order: 3;
+  }
+}
+
+/* Background GPS Running Pill Notice */
+.bg-notice-pill {
+  font-size: 12px;
+  color: var(--accent-green);
+  background: rgba(0, 230, 118, 0.08);
+  border: 1px solid rgba(0, 230, 118, 0.22);
+  border-radius: 8px;
+  padding: 6px 10px;
+  margin-bottom: 12px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  line-height: 1.35;
+}
+
+/* Driving Dynamics & Exhaust Card */
+.driving-settings-card {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.setting-row {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.setting-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+.setting-title {
+  font-size: 13.5px;
+  font-weight: 800;
+  color: #fff;
+  letter-spacing: 0.2px;
+}
+
+.setting-hint {
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+.segmented-pill-group {
+  display: flex;
+  background: rgba(0, 0, 0, 0.45);
+  border: 1.5px solid var(--border-glass);
+  border-radius: 10px;
+  padding: 3px;
+  gap: 4px;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.segmented-pill {
+  flex: 1;
+  min-width: 0;
+  min-height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 8px;
+  color: rgba(255, 255, 255, 0.7);
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+  transition: all 0.18s cubic-bezier(0.4, 0, 0.2, 1);
+  text-align: center;
+  user-select: none;
+}
+
+.segmented-pill:hover {
+  background: rgba(255, 255, 255, 0.08);
+  color: #fff;
+}
+
+.segmented-pill.active {
+  background: rgba(255, 153, 0, 0.22);
+  border-color: var(--accent-amber);
+  color: var(--accent-amber);
+  box-shadow: 0 0 12px rgba(255, 153, 0, 0.4);
+  font-weight: 800;
+}
+
+.segmented-pill.active.pill-green {
+  background: rgba(0, 230, 118, 0.22);
+  border-color: var(--accent-green);
+  color: var(--accent-green);
+  box-shadow: 0 0 12px rgba(0, 230, 118, 0.4);
+}
+
+.segmented-pill.active.pill-fire {
+  background: rgba(255, 61, 0, 0.25);
+  border-color: #ff3d00;
+  color: #ff5722;
+  box-shadow: 0 0 14px rgba(255, 61, 0, 0.5);
+}
+
+/* Sound Quick Actions in Sound Bar */
+.sound-quick-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.btn-quick-pill {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 14px;
+  min-height: 40px;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1.5px solid var(--border-glass);
+  border-radius: 9px;
+  color: #fff;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+  transition: all 0.18s ease;
+  white-space: nowrap;
+  user-select: none;
+}
+
+.btn-quick-pill:hover {
+  background: rgba(255, 255, 255, 0.12);
+  border-color: rgba(255, 153, 0, 0.4);
+}
+
+.btn-quick-pill.active {
+  background: rgba(255, 153, 0, 0.18);
+  border-color: var(--accent-amber);
+  color: var(--accent-amber);
+  box-shadow: 0 0 10px rgba(255, 153, 0, 0.35);
+}
+
+/* Mobile & Touch Screen Readability Overrides */
+@media (max-width: 680px) {
+  .dashboard-sound-bar {
+    display: flex !important;
+    flex-direction: column !important;
+    margin: 6px 6px 4px 6px !important;
+    padding: 8px 8px !important;
+    gap: 8px !important;
+    width: calc(100% - 12px) !important;
+    box-sizing: border-box !important;
+  }
+  .sound-slider-group {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 6px;
+    width: 100%;
+    box-sizing: border-box;
+  }
+  .engine-volume-control {
+    display: grid !important;
+    grid-template-columns: auto 1fr auto !important;
+    grid-template-rows: auto auto !important;
+    align-items: center !important;
+    min-width: 0 !important;
+    max-width: none !important;
+    padding: 5px 4px !important;
+    gap: 2px 3px !important;
+    box-sizing: border-box !important;
+    overflow: hidden !important;
+  }
+  .engine-volume-control .vol-icon {
+    grid-column: 1 !important;
+    grid-row: 1 !important;
+    font-size: 11px !important;
+  }
+  .engine-volume-control .vol-label {
+    grid-column: 2 !important;
+    grid-row: 1 !important;
+    display: inline-block !important;
+    font-size: 10px !important;
+    font-weight: 700 !important;
+    white-space: nowrap !important;
+  }
+  .engine-volume-control .vol-value {
+    grid-column: 3 !important;
+    grid-row: 1 !important;
+    font-size: 10px !important;
+    font-weight: 800 !important;
+    min-width: 22px !important;
+    text-align: right !important;
+  }
+  .engine-volume-control .vol-slider {
+    grid-column: 1 / -1 !important;
+    grid-row: 2 !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    min-width: 0 !important;
+    margin: 2px 0 0 0 !important;
+    height: 6px !important;
+  }
+  .sound-quick-actions {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 6px;
+    width: 100%;
+    box-sizing: border-box;
+  }
+  .btn-quick-pill {
+    width: 100%;
+    justify-content: center;
+    font-size: 12.5px;
+    font-weight: 700;
+    padding: 8px 6px;
+    min-height: 40px;
+    box-sizing: border-box;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .tab-btn {
+    font-size: 12.5px !important;
+    padding: 8px 4px !important;
+    min-height: 38px;
+  }
+  .segmented-pill {
+    min-height: 42px;
+    font-size: 12.5px;
+    padding: 2px 4px;
+  }
+  .hud-title {
+    font-size: 13px !important;
+    margin-bottom: 10px;
+  }
 }

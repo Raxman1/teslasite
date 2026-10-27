@@ -155,6 +155,248 @@ document.addEventListener('DOMContentLoaded', () => {
     applyRpmMode(idx, false, false);
   };
 
+  // ==============================================================
+  // 1. CRACKLE / POPS & BANGS (Отстрелы выхлопа: 🔇 Тихо / 💥 Спорт / 🔥 Огонь)
+  // ==============================================================
+  const crackleQuickBtn = document.getElementById('crackleQuickBtn');
+  const crackleQuietBtn = document.getElementById('crackleQuietBtn');
+  const crackleSportBtn = document.getElementById('crackleSportBtn');
+  const crackleFireBtn = document.getElementById('crackleFireBtn');
+
+  const CRACKLE_MODES = [
+    { id: 'quiet', label: '🔇 Тихо',  val: 0.0, btnText: '💥 Отстрелы: 🔇 Тихо',  notify: '🔇 Выхлоп: Без отстрелов (Тихо)' },
+    { id: 'sport', label: '💥 Спорт', val: 0.75, btnText: '💥 Отстрелы: 💥 Спорт', notify: '💥 Выхлоп: Спортивные отстрелы' },
+    { id: 'fire',  label: '🔥 Огонь', val: 1.5,  btnText: '💥 Отстрелы: 🔥 Огонь', notify: '🔥 Выхлоп: Антилаг и огонь' }
+  ];
+
+  let currentCrackleIdx = 1; // Default to Sport (0.75)
+  try {
+    const savedCrackle = localStorage.getItem('tesla_crackle_mode');
+    if (savedCrackle) {
+      const idx = CRACKLE_MODES.findIndex(m => m.id === savedCrackle);
+      if (idx >= 0) currentCrackleIdx = idx;
+    }
+  } catch (e) {}
+
+  function applyCrackleMode(idx, broadcast = true, showToast = false) {
+    currentCrackleIdx = ((idx % CRACKLE_MODES.length) + CRACKLE_MODES.length) % CRACKLE_MODES.length;
+    const mode = CRACKLE_MODES[currentCrackleIdx];
+
+    try {
+      localStorage.setItem('tesla_crackle_mode', mode.id);
+    } catch (e) {}
+
+    if (audio) {
+      if (audio.setPopsVolume) audio.setPopsVolume(mode.val);
+      if (audio.dspEngine) audio.dspEngine.crackle = mode.val;
+    }
+
+    if (crackleQuickBtn) {
+      crackleQuickBtn.textContent = mode.btnText;
+      crackleQuickBtn.classList.toggle('active', mode.id !== 'quiet');
+    }
+
+    if (crackleQuietBtn) crackleQuietBtn.classList.toggle('active', mode.id === 'quiet');
+    if (crackleSportBtn) crackleSportBtn.classList.toggle('active', mode.id === 'sport');
+    if (crackleFireBtn) crackleFireBtn.classList.toggle('active', mode.id === 'fire');
+
+    const crackleSlider = document.getElementById('crackleSlider');
+    const crackleValText = document.getElementById('crackleValText');
+    if (crackleSlider) crackleSlider.value = Math.round(mode.val * 100);
+    if (crackleValText) crackleValText.textContent = `${Math.round(mode.val * 100)}%`;
+
+    if (showToast) {
+      showShiftNotification(mode.notify);
+    }
+
+    if (broadcast && typeof p2p !== 'undefined' && p2p.isConnected && p2p.sendCustom) {
+      p2p.sendCustom({ type: 'crackle_mode', mode: mode.id });
+    }
+  }
+
+  if (crackleQuickBtn) {
+    addTouchInstantListener(crackleQuickBtn, () => {
+      ensureAudioActive();
+      applyCrackleMode(currentCrackleIdx + 1, true, true);
+    });
+  }
+  if (crackleQuietBtn) {
+    addTouchInstantListener(crackleQuietBtn, () => { ensureAudioActive(); applyCrackleMode(0, true, true); });
+  }
+  if (crackleSportBtn) {
+    addTouchInstantListener(crackleSportBtn, () => { ensureAudioActive(); applyCrackleMode(1, true, true); });
+  }
+  if (crackleFireBtn) {
+    addTouchInstantListener(crackleFireBtn, () => { ensureAudioActive(); applyCrackleMode(2, true, true); });
+  }
+
+  // ==============================================================
+  // 2. GPS THROTTLE SENSITIVITY (Чувствительность газа: Комфорт / Спорт / Мгновенно)
+  // ==============================================================
+  const sensComfortBtn = document.getElementById('sensComfortBtn');
+  const sensSportBtn = document.getElementById('sensSportBtn');
+  const sensInsaneBtn = document.getElementById('sensInsaneBtn');
+
+  const SENS_MODES = [
+    { id: 'comfort', intensity: 0.35, notify: '🚗 Газ: Комфорт (Городской плавный отклик)' },
+    { id: 'sport',   intensity: 0.70, notify: '🏎️ Газ: Спорт (Динамичный отклик)' },
+    { id: 'insane',  intensity: 1.00, notify: '⚡ Газ: Мгновенно (Максимальная тяга и рев)' }
+  ];
+
+  let currentSensId = 'sport';
+  try {
+    const savedSens = localStorage.getItem('tesla_gps_sensitivity');
+    if (savedSens && SENS_MODES.some(m => m.id === savedSens)) {
+      currentSensId = savedSens;
+    }
+  } catch (e) {}
+
+  function applyGpsSensitivity(sensId, showToast = false) {
+    currentSensId = sensId;
+    try {
+      localStorage.setItem('tesla_gps_sensitivity', sensId);
+    } catch (e) {}
+
+    const found = SENS_MODES.find(m => m.id === sensId) || SENS_MODES[1];
+    if (audio) {
+      if (audio.setGpsSensitivity) audio.setGpsSensitivity(found.intensity);
+      if (audio.dspEngine) {
+        audio.dspEngine.intensity = found.intensity;
+        if (audio.dspEngine.vehicle) {
+          audio.dspEngine.vehicle.intensity = found.intensity;
+        }
+      }
+    }
+
+    if (sensComfortBtn) sensComfortBtn.classList.toggle('active', sensId === 'comfort');
+    if (sensSportBtn) sensSportBtn.classList.toggle('active', sensId === 'sport');
+    if (sensInsaneBtn) sensInsaneBtn.classList.toggle('active', sensId === 'insane');
+
+    if (showToast) {
+      showShiftNotification(found.notify);
+    }
+  }
+
+  if (sensComfortBtn) addTouchInstantListener(sensComfortBtn, () => applyGpsSensitivity('comfort', true));
+  if (sensSportBtn) addTouchInstantListener(sensSportBtn, () => applyGpsSensitivity('sport', true));
+  if (sensInsaneBtn) addTouchInstantListener(sensInsaneBtn, () => applyGpsSensitivity('insane', true));
+
+  // ==============================================================
+  // 3. GPS DEADZONE / TRAFFIC LIGHT FILTER (Стоп-фильтр на светофоре: 0 / 2 / 4 км/ч)
+  // ==============================================================
+  const deadzone0Btn = document.getElementById('deadzone0Btn');
+  const deadzone2Btn = document.getElementById('deadzone2Btn');
+  const deadzone4Btn = document.getElementById('deadzone4Btn');
+
+  let gpsDeadzone = 4.0; // Default 4 km/h (устраняет дрейф на светофорах)
+  try {
+    const savedDz = parseFloat(localStorage.getItem('tesla_gps_deadzone'));
+    if (!isNaN(savedDz)) gpsDeadzone = savedDz;
+  } catch (e) {}
+
+  function applyGpsDeadzone(val, showToast = false) {
+    gpsDeadzone = Number(val);
+    try {
+      localStorage.setItem('tesla_gps_deadzone', gpsDeadzone);
+    } catch (e) {}
+
+    if (deadzone0Btn) deadzone0Btn.classList.toggle('active', gpsDeadzone === 0);
+    if (deadzone2Btn) deadzone2Btn.classList.toggle('active', gpsDeadzone === 2);
+    if (deadzone4Btn) deadzone4Btn.classList.toggle('active', gpsDeadzone === 4);
+
+    if (showToast) {
+      const msg = (gpsDeadzone === 0)
+        ? '🛑 Стоп-фильтр: Выключен (0 км/ч)'
+        : `🛑 Стоп-фильтр: ${gpsDeadzone} км/ч (чистый холостой на светофорах)`;
+      showShiftNotification(msg);
+    }
+  }
+
+  if (deadzone0Btn) addTouchInstantListener(deadzone0Btn, () => applyGpsDeadzone(0, true));
+  if (deadzone2Btn) addTouchInstantListener(deadzone2Btn, () => applyGpsDeadzone(2, true));
+  if (deadzone4Btn) addTouchInstantListener(deadzone4Btn, () => applyGpsDeadzone(4, true));
+
+  // ==============================================================
+  // 4. EXHAUST FLAPS / CHARACTER (Заслонки выхлопа: Заводской / Прямоток)
+  // ==============================================================
+  const exhaustQuietBtn = document.getElementById('exhaustQuietBtn');
+  const exhaustOpenBtn = document.getElementById('exhaustOpenBtn');
+
+  let currentExhaustMode = 'open'; // Default to open straight pipe
+  try {
+    const savedExhaust = localStorage.getItem('tesla_exhaust_character');
+    if (savedExhaust === 'quiet' || savedExhaust === 'open') {
+      currentExhaustMode = savedExhaust;
+    }
+  } catch (e) {}
+
+  function applyExhaustMode(mode, showToast = false) {
+    currentExhaustMode = mode;
+    try {
+      localStorage.setItem('tesla_exhaust_character', mode);
+    } catch (e) {}
+
+    const charVal = (mode === 'quiet') ? 0.45 : 0.85;
+    if (audio) {
+      if (audio.setCharacter) audio.setCharacter(charVal);
+      if (audio.dspEngine) audio.dspEngine.character = charVal;
+    }
+
+    const characterSlider = document.getElementById('characterSlider');
+    const characterValText = document.getElementById('characterValText');
+    if (characterSlider) characterSlider.value = Math.round(charVal * 100);
+    if (characterValText) characterValText.textContent = `${Math.round(charVal * 100)}%`;
+
+    if (exhaustQuietBtn) exhaustQuietBtn.classList.toggle('active', mode === 'quiet');
+    if (exhaustOpenBtn) exhaustOpenBtn.classList.toggle('active', mode === 'open');
+
+    if (showToast) {
+      const msg = (mode === 'quiet')
+        ? '🤫 Заслонки: Заводской тихий глушитель'
+        : '🏁 Заслонки: Спортивный басистый прямоток';
+      showShiftNotification(msg);
+    }
+  }
+
+  if (exhaustQuietBtn) addTouchInstantListener(exhaustQuietBtn, () => applyExhaustMode('quiet', true));
+  if (exhaustOpenBtn) addTouchInstantListener(exhaustOpenBtn, () => applyExhaustMode('open', true));
+
+  // ==============================================================
+  // 5. COLLAPSIBLE TESLA CABIN ACOUSTICS PANEL
+  // ==============================================================
+  const teslaAcousticExpandBtn = document.getElementById('teslaAcousticExpandBtn');
+  const teslaAcousticHeader = document.getElementById('teslaAcousticHeader');
+  const teslaAcousticBody = document.getElementById('teslaAcousticBody');
+
+  let isAcousticExpanded = false;
+  function toggleAcousticDetails(e) {
+    if (e && e.target && e.target.closest('#v6ToggleBtn')) return;
+    isAcousticExpanded = !isAcousticExpanded;
+    if (teslaAcousticBody) {
+      teslaAcousticBody.style.display = isAcousticExpanded ? 'block' : 'none';
+    }
+    if (teslaAcousticExpandBtn) {
+      teslaAcousticExpandBtn.textContent = isAcousticExpanded ? '⚙️ Свернуть ▲' : '⚙️ Настройки ▼';
+    }
+  }
+
+  if (teslaAcousticExpandBtn) {
+    addTouchInstantListener(teslaAcousticExpandBtn, toggleAcousticDetails);
+  }
+  if (teslaAcousticHeader) {
+    teslaAcousticHeader.addEventListener('click', (e) => {
+      if (e.target !== teslaAcousticExpandBtn && !e.target.closest('#v6ToggleBtn')) {
+        toggleAcousticDetails(e);
+      }
+    });
+  }
+
+  // Initialize all 4 driving settings states immediately on page load
+  applyCrackleMode(currentCrackleIdx, false, false);
+  applyGpsSensitivity(currentSensId, false);
+  applyGpsDeadzone(gpsDeadzone, false);
+  applyExhaustMode(currentExhaustMode, false);
+
   // Mode Switcher & DSP Tuning Elements
   const modeDspBtn = document.getElementById('modeDspBtn');
   const modeSamplesBtn = document.getElementById('modeSamplesBtn');
@@ -883,6 +1125,10 @@ document.addEventListener('DOMContentLoaded', () => {
           if (isV6ProEnabled) {
             syncAcousticUIToAudio();
           }
+          // Re-apply user driving preferences to new car
+          applyCrackleMode(currentCrackleIdx, false, false);
+          applyGpsSensitivity(currentSensId, false);
+          applyExhaustMode(currentExhaustMode, false);
         } catch (err) {
           console.error('Error switching car:', err);
         }
@@ -1477,12 +1723,27 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   });
 
-  // 7. TELEMETRY & GPS UPDATES
+  // 7. TELEMETRY & GPS UPDATES (With Traffic Light Stop Filter / Deadzone)
   function handleTelemetryUpdate(data) {
-    hudSpeed.textContent = `${data.speed} км/ч`;
-    hudAccel.textContent = `${data.acceleration > 0 ? '+' : ''}${data.acceleration} м/с²`;
-    hudGForce.textContent = `${data.gForce} G`;
-    hudAccuracy.textContent = data.accuracy ? `±${data.accuracy} м` : '–';
+    const rawSpeed = (typeof data.speed === 'number' && !isNaN(data.speed)) ? data.speed : 0;
+    const isStationary = rawSpeed < (gpsDeadzone || 0);
+    const effectiveSpeed = isStationary ? 0 : rawSpeed;
+    const effectiveAccel = isStationary ? 0 : (data.acceleration || 0);
+    const filteredData = {
+      ...data,
+      speed: effectiveSpeed,
+      acceleration: effectiveAccel
+    };
+
+    hudSpeed.textContent = `${effectiveSpeed.toFixed(1)} км/ч`;
+    if (isStationary && rawSpeed > 0.2 && gpsDeadzone > 0) {
+      hudSpeed.title = `Фильтр светофора активен: GPS дрейф ${rawSpeed.toFixed(1)} км/ч подавлен`;
+    } else {
+      hudSpeed.title = '';
+    }
+    hudAccel.textContent = `${effectiveAccel > 0 ? '+' : ''}${effectiveAccel.toFixed(2)} м/с²`;
+    hudGForce.textContent = `${(data.gForce || 0).toFixed(2)} G`;
+    hudAccuracy.textContent = data.accuracy ? `±${Math.round(data.accuracy)} м` : '–';
     hudRate.textContent = data.hz > 0 ? `${data.hz} Гц` : 'GPS 1 Гц';
     if (data.latitude && data.longitude) {
       hudCoords.textContent = `${data.latitude.toFixed(5)}°, ${data.longitude.toFixed(5)}°`;
@@ -1505,19 +1766,18 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Feed into sound engine if GPS mode active
     if (activeTab === 'gps') {
-      audio.applyTelemetry(data);
+      audio.applyTelemetry(filteredData);
     }
 
     // If phone client, stream to Tesla host via P2P WebRTC
     if (p2p.role === 'client' && p2p.isConnected) {
-      p2p.sendTelemetry(data);
+      p2p.sendTelemetry(filteredData);
     }
   }
 
   function handleRemoteTelemetry(data) {
     // Received telemetry from connected smartphone
     handleTelemetryUpdate(data);
-    audio.applyTelemetry(data);
   }
 
   // Synchronize gear shifts across P2P (e.g. Steering wheel tilt on phone -> shifts on Tesla screen)
