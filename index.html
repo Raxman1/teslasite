@@ -12,14 +12,14 @@
   <!-- Top Navigation & Controls Bar -->
   <header>
     <div class="brand">
-      <span id="brandBadge" class="brand-badge">5.7L V10</span>
-      <span id="brandTitle" class="brand-title">Porsche Carrera GT</span>
+      <div class="engine-mode-switcher">
+        <button id="modeDspBtn" class="mode-tab-btn active" title="18 процедурных гиперкаров (как на teslasound.io)">⚡ DSP Синтез</button>
+        <button id="modeSamplesBtn" class="mode-tab-btn" title="Студийные записи Assetto Corsa (Carrera GT, 2JZ, AMG)">🏎️ Сэмплы HD</button>
+      </div>
+      <span id="brandBadge" class="brand-badge">9,000 RPM</span>
+      <span id="brandTitle" class="brand-title">Porsche 911 GT3</span>
       <select id="presetSelect" class="preset-dropdown">
-        <option value="carrera_gt" selected>🏎️ Porsche Carrera GT (V10)</option>
-        <option value="supra_2jz">🔰 Toyota Supra 2JZ-GTE (Turbo I6)</option>
-        <option value="amg_m177">🚀 Mercedes-AMG GT-R (Biturbo V8)</option>
-        <option value="bmw_z4_gt3">🏁 BMW Z4 GT3 (Race V8)</option>
-        <option value="dragster">💥 Top Fuel Dragster (Blown Nitro)</option>
+        <!-- Dynamically populated -->
       </select>
     </div>
     <div class="header-actions">
@@ -127,6 +127,24 @@
             <span id="bassLevelText" style="font-size: 12px; font-weight: 700; color: var(--accent-amber);">100%</span>
           </div>
           <input id="bassSlider" type="range" min="0" max="200" value="100" style="width: 100%; margin-top: 4px; accent-color: var(--accent-amber); cursor: pointer;">
+
+          <!-- DSP Tuning Controls (Character & Crackle as on teslasound.io) -->
+          <div id="dspTuningBox" style="margin-top: 12px; border-top: 1px solid var(--border-glass); padding-top: 10px;">
+            <div style="font-size: 11px; font-weight: 700; color: var(--accent-amber); margin-bottom: 6px; text-transform: uppercase;">
+              ⚡ Настройки синтеза DSP
+            </div>
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+              <span style="font-size: 11px; color: var(--text-muted);">Характер (Сток → Прямоток):</span>
+              <span id="characterValText" style="font-size: 11px; font-weight: 700; color: var(--accent-amber);">85%</span>
+            </div>
+            <input id="characterSlider" type="range" min="20" max="100" value="85" style="width: 100%; margin: 2px 0 8px 0; accent-color: var(--accent-amber); cursor: pointer;">
+
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+              <span style="font-size: 11px; color: var(--text-muted);">Отстрелы (Crackle & Pops):</span>
+              <span id="crackleValText" style="font-size: 11px; font-weight: 700; color: var(--accent-amber);">100%</span>
+            </div>
+            <input id="crackleSlider" type="range" min="0" max="150" value="100" style="width: 100%; margin: 2px 0 0 0; accent-color: var(--accent-amber); cursor: pointer;">
+          </div>
         </div>
       </div>
 
@@ -250,6 +268,11 @@
   <script src="js/peerjs.min.js"></script>
   <script src="js/qrcode.min.js"></script>
   <script src="js/sound-data.js"></script>
+  <!-- Procedural DSP Engine (from teslasound.io) -->
+  <script src="js/dsp/cars.js"></script>
+  <script src="js/dsp/engine-dsp.js"></script>
+  <script src="js/dsp/vehicle.js"></script>
+  <script src="js/dsp-audio.js"></script>
   <script src="js/audio-engine.js"></script>
   <script src="js/telemetry.js"></script>
   <script src="js/p2p.js"></script>

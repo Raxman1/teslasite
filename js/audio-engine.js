@@ -95,6 +95,10 @@ class AudioEngine {
     this.popsAggressiveness = 1.0;
     this.volume = 1.0;
 
+    // Dual sound engine mode: 'dsp' (Procedural TeslaSound Engine) vs 'samples' (Assetto Corsa)
+    this.soundMode = 'dsp';
+    this.dspEngine = null;
+
     // Immediately prepare context so preset buffers decode even before first touch
     this.ensureContext();
   }
@@ -140,11 +144,18 @@ class AudioEngine {
     this.compressor.connect(this.masterGain);
     this.masterGain.connect(this.ctx.destination);
 
+    // Initialize Procedural DSP engine sharing this.ctx and feeding into submixBus
+    if (window.DSPAudioEngine && !this.dspEngine) {
+      this.dspEngine = new window.DSPAudioEngine(this.ctx, this.submixBus);
+    }
+
     // Load initial preset
-    await this.loadPresetBuffers(this.currentPresetId);
+    if (this.soundMode === 'samples') {
+      await this.loadPresetBuffers(this.currentPresetId);
+    }
 
     this.isReady = true;
-    console.log('Tesla AudioEngine ready. Current preset:', this.currentPresetId);
+    console.log('Tesla AudioEngine ready. Current preset:', this.currentPresetId, 'Mode:', this.soundMode);
     return true;
   }
 
@@ -307,7 +318,24 @@ class AudioEngine {
       this.stop();
     }
 
-    await this.loadPresetBuffers(presetId);
+    if (presetId.startsWith('dsp:') || (window.MOTORSOUND_CARS && window.MOTORSOUND_CARS.some(c => c.id === presetId))) {
+      this.soundMode = 'dsp';
+      const carId = presetId.replace(/^dsp:/, '');
+      if (!this.dspEngine && this.ctx) {
+        this.dspEngine = new window.DSPAudioEngine(this.ctx, this.submixBus);
+      }
+      if (this.dspEngine) {
+        this.dspEngine.setCar(carId);
+        this.currentPresetId = presetId;
+        this.idleRpm = this.dspEngine.idleRpm;
+        this.redlineRpm = this.dspEngine.redlineRpm;
+        this.maxRpm = this.dspEngine.maxRpm;
+      }
+    } else {
+      this.soundMode = 'samples';
+      const sampleId = presetId.replace(/^sample:/, '');
+      await this.loadPresetBuffers(sampleId);
+    }
 
     if (wasPlaying) {
       await this.start();
@@ -324,6 +352,21 @@ class AudioEngine {
     }
 
     if (this.isPlaying) return;
+
+    if (this.soundMode === 'dsp') {
+      if (!this.dspEngine && this.ctx) {
+        this.dspEngine = new window.DSPAudioEngine(this.ctx, this.submixBus);
+      }
+      if (this.dspEngine) {
+        await this.dspEngine.start();
+        this.isPlaying = true;
+        this.rpm = this.dspEngine.rpm;
+        this.redlineRpm = this.dspEngine.redlineRpm;
+        this.maxRpm = this.dspEngine.maxRpm;
+        console.log(`Tesla DSP Engine running: ${this.dspEngine.car ? this.dspEngine.car.name : 'DSP'}`);
+      }
+      return;
+    }
 
     // Ensure buffers are loaded for current preset
     if (!this.presetBuffers[this.currentPresetId] || Object.keys(this.presetBuffers[this.currentPresetId]).length === 0) {
@@ -376,6 +419,13 @@ class AudioEngine {
 
   stop() {
     if (!this.isPlaying) return;
+    if (this.soundMode === 'dsp') {
+      if (this.dspEngine) {
+        this.dspEngine.stop();
+      }
+      this.isPlaying = false;
+      return;
+    }
     Object.values(this.sources).forEach(src => {
       try { src.stop(); } catch (e) {}
     });
@@ -434,6 +484,10 @@ class AudioEngine {
   }
 
   shiftUp() {
+    if (this.soundMode === 'dsp' && this.dspEngine) {
+      this.dspEngine.shiftUp();
+      return;
+    }
     if (this.gear < 6) {
       this.gear++;
       this.playOneShot('gearup', 0.9, 0.04, 'rear');
@@ -443,6 +497,10 @@ class AudioEngine {
   }
 
   shiftDown() {
+    if (this.soundMode === 'dsp' && this.dspEngine) {
+      this.dspEngine.shiftDown();
+      return;
+    }
     if (this.gear > 1) {
       this.gear--;
       this.playOneShot('geardn', 0.85, 0.04, 'center');
@@ -459,6 +517,25 @@ class AudioEngine {
   }
 
   updatePhysics(dt, controlMode = 'pedal') {
+    if (this.soundMode === 'dsp' && this.dspEngine) {
+      const isBrake = this.isBrakePressed || false;
+      this.dspEngine.updatePhysics(dt, controlMode, {
+        throttle: this.targetThrottle,
+        gearMode: this.gearMode,
+        isBrake: isBrake,
+        speed: this.speed,
+        accel: this.accel || 0
+      });
+      this.rpm = this.dspEngine.rpm;
+      this.speed = this.dspEngine.speed;
+      this.gear = this.dspEngine.gear;
+      this.redlineRpm = this.dspEngine.redlineRpm;
+      this.maxRpm = this.dspEngine.maxRpm;
+      this.throttle = this.dspEngine.throttle;
+      this.isRevLimiting = this.dspEngine.isRevLimiting;
+      return;
+    }
+
     const now = this.ctx ? this.ctx.currentTime : performance.now() / 1000;
 
     const throttleSpeed = this.targetThrottle > this.throttle ? 14.0 : 9.0;
@@ -597,8 +674,16 @@ class AudioEngine {
     if (typeof speed === 'number' && !isNaN(speed)) {
       this.speed = Math.max(0, speed);
     }
+    if (typeof acceleration === 'number') {
+      this.accel = acceleration;
+    }
+    if (typeof throttle === 'number') {
+      this.targetThrottle = throttle;
+    }
 
-    let targetGear = 1;
+    if (this.soundMode === 'dsp') {
+      return;
+    }
     for (let g = 1; g <= 6; g++) {
       if (this.speed <= this.gearMaxSpeeds[g]) {
         targetGear = g;

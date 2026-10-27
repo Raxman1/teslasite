@@ -42,11 +42,114 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
+  // Mode Switcher & DSP Tuning Elements
+  const modeDspBtn = document.getElementById('modeDspBtn');
+  const modeSamplesBtn = document.getElementById('modeSamplesBtn');
+  const dspTuningBox = document.getElementById('dspTuningBox');
+  const characterSlider = document.getElementById('characterSlider');
+  const characterValText = document.getElementById('characterValText');
+  const crackleSlider = document.getElementById('crackleSlider');
+  const crackleValText = document.getElementById('crackleValText');
+
   // Preset Selector Elements
   const presetSelect = document.getElementById('presetSelect');
   const brandBadge = document.getElementById('brandBadge');
   const brandTitle = document.getElementById('brandTitle');
   const pedalLogo = document.querySelector('.pedal-logo');
+
+  let currentEngineMode = 'dsp'; // 'dsp' | 'samples'
+
+  const DSP_PRESETS = [
+    { id: 'dsp:gt3', name: 'Porsche 911 GT3', badge: '9,000 RPM Flat-6' },
+    { id: 'dsp:porsche-911-gt3-rs-991', name: 'Porsche 911 GT3 RS', badge: '9,000 RPM PDK' },
+    { id: 'dsp:porsche-911-turbo-s', name: 'Porsche 911 Turbo S', badge: '3.7L Twin-Turbo' },
+    { id: 'dsp:ferrari-v12', name: 'Ferrari V12', badge: '6.5L V12 · 8,900 RPM' },
+    { id: 'dsp:ferrari-enzo', name: 'Ferrari Enzo', badge: '6.0L V12 · 8,200 RPM' },
+    { id: 'dsp:lamborghini-veneno', name: 'Lamborghini Veneno', badge: '6.5L V12 · 8,500 RPM' },
+    { id: 'dsp:lamborghini-urus', name: 'Lamborghini Urus', badge: '4.0L Biturbo V8' },
+    { id: 'dsp:bugatti-chiron', name: 'Bugatti Chiron', badge: '8.0L W16 Quad-Turbo' },
+    { id: 'dsp:hellcat', name: 'Dodge Hellcat', badge: '6.2L Supercharged V8' },
+    { id: 'dsp:v8-muscle', name: 'V8 Muscle', badge: '6.2L Crossplane V8' },
+    { id: 'dsp:audi-rs6', name: 'Audi RS 6 Avant', badge: '4.0L Twin-Turbo V8' },
+    { id: 'dsp:bmw-m3', name: 'BMW M3 Competition', badge: '3.0L Twin-Turbo I6' },
+    { id: 'dsp:nissan-gtr-nismo-r35', name: 'Nissan GT-R NISMO', badge: '3.8L Twin-Turbo V6' },
+    { id: 'dsp:slipstream', name: 'F1 Slipstream', badge: '1.6L Hybrid · 12,000 RPM' },
+    { id: 'dsp:city-shifter', name: 'Shift Maniac', badge: '10 Short Gears' },
+    { id: 'dsp:tesla-roadster-thrust', name: 'Tesla Roadster', badge: 'SpaceX Thrusters' },
+    { id: 'dsp:electric-zen', name: 'ElectricZen', badge: 'Sci-Fi Electric' },
+    { id: 'dsp:haunted-hearse', name: 'Haunted Hearse', badge: 'Ghost Choir' }
+  ];
+
+  const SAMPLE_PRESETS = [
+    { id: 'sample:carrera_gt', name: 'Porsche Carrera GT', badge: '5.7L V10' },
+    { id: 'sample:supra_2jz', name: 'Toyota Supra 2JZ', badge: 'Turbo I6 800HP' },
+    { id: 'sample:amg_m177', name: 'Mercedes-AMG GT-R', badge: 'Biturbo V8' },
+    { id: 'sample:bmw_z4_gt3', name: 'BMW Z4 GT3', badge: 'Race V8' },
+    { id: 'sample:dragster', name: 'Top Fuel Dragster', badge: 'Blown Nitro 10,000HP' }
+  ];
+
+  function updateBrandDisplay(name, badge) {
+    if (brandTitle) brandTitle.textContent = name;
+    if (brandBadge) brandBadge.textContent = badge;
+    if (pedalLogo) pedalLogo.textContent = name.toUpperCase();
+  }
+
+  function populatePresetDropdown(mode) {
+    if (!presetSelect) return;
+    presetSelect.innerHTML = '';
+    const list = mode === 'dsp' ? DSP_PRESETS : SAMPLE_PRESETS;
+    list.forEach(item => {
+      const opt = document.createElement('option');
+      opt.value = item.id;
+      opt.textContent = `${item.name} (${item.badge})`;
+      presetSelect.appendChild(opt);
+    });
+    const first = list[0];
+    presetSelect.value = first.id;
+    updateBrandDisplay(first.name, first.badge);
+    if (dspTuningBox) {
+      dspTuningBox.style.display = mode === 'dsp' ? 'block' : 'none';
+    }
+  }
+
+  if (modeDspBtn && modeSamplesBtn) {
+    modeDspBtn.addEventListener('click', async () => {
+      if (currentEngineMode === 'dsp') return;
+      currentEngineMode = 'dsp';
+      modeDspBtn.classList.add('active');
+      modeSamplesBtn.classList.remove('active');
+      populatePresetDropdown('dsp');
+      await audio.setPreset(presetSelect.value);
+    });
+
+    modeSamplesBtn.addEventListener('click', async () => {
+      if (currentEngineMode === 'samples') return;
+      currentEngineMode = 'samples';
+      modeSamplesBtn.classList.add('active');
+      modeDspBtn.classList.remove('active');
+      populatePresetDropdown('samples');
+      await audio.setPreset(presetSelect.value);
+    });
+  }
+
+  if (characterSlider) {
+    characterSlider.addEventListener('input', (e) => {
+      const val = parseInt(e.target.value, 10);
+      if (characterValText) characterValText.textContent = `${val}%`;
+      if (audio.dspEngine) audio.dspEngine.character = val / 100.0;
+    });
+  }
+
+  if (crackleSlider) {
+    crackleSlider.addEventListener('input', (e) => {
+      const val = parseInt(e.target.value, 10);
+      if (crackleValText) crackleValText.textContent = `${val}%`;
+      if (audio.dspEngine) audio.dspEngine.crackle = val / 100.0;
+    });
+  }
+
+  // Populate default mode (DSP)
+  populatePresetDropdown('dsp');
 
   // Tesla Audio Optimization Elements
   const stageBtns = document.querySelectorAll('.stage-btn');
@@ -118,11 +221,11 @@ document.addEventListener('DOMContentLoaded', () => {
   if (presetSelect) {
     presetSelect.addEventListener('change', async (e) => {
       const selectedId = e.target.value;
-      const presetInfo = window.CAR_PRESETS ? window.CAR_PRESETS[selectedId] : null;
+      const list = currentEngineMode === 'dsp' ? DSP_PRESETS : SAMPLE_PRESETS;
+      const presetInfo = list.find(item => item.id === selectedId);
       if (presetInfo) {
-        brandBadge.textContent = presetInfo.badge;
+        updateBrandDisplay(presetInfo.name, presetInfo.badge);
         brandTitle.textContent = `${presetInfo.name} ⏳`;
-        if (pedalLogo) pedalLogo.textContent = presetInfo.name.toUpperCase();
       }
       try {
         await audio.setPreset(selectedId);
@@ -144,6 +247,9 @@ document.addEventListener('DOMContentLoaded', () => {
     startBtn.textContent = 'ЗАПУСК...';
     startBtn.disabled = true;
     try {
+      if (presetSelect && presetSelect.value) {
+        await audio.setPreset(presetSelect.value);
+      }
       await audio.start();
       initTeslaMediaSession();
       startBtn.textContent = '⏹ ЗАГЛУШИТЬ';
@@ -299,11 +405,16 @@ document.addEventListener('DOMContentLoaded', () => {
   });
 
   brakeBtn.addEventListener('pointerdown', () => {
+    audio.isBrakePressed = true;
     setPedalPressure(0);
     audio.speed = Math.max(0, audio.speed - 45);
     if (audio.speed < 20 && audio.gear > 1) {
       audio.shiftDown();
     }
+  });
+
+  window.addEventListener('pointerup', () => {
+    audio.isBrakePressed = false;
   });
 
   // 6. KEYBOARD HOTKEYS
@@ -314,6 +425,7 @@ document.addEventListener('DOMContentLoaded', () => {
       setPedalPressure(1.0);
     } else if (e.code === 'KeyS' || e.code === 'ArrowDown') {
       e.preventDefault();
+      audio.isBrakePressed = true;
       setPedalPressure(0);
       audio.speed = Math.max(0, audio.speed - 30);
     } else if (e.code === 'KeyE') {
@@ -326,6 +438,8 @@ document.addEventListener('DOMContentLoaded', () => {
   window.addEventListener('keyup', (e) => {
     if (e.code === 'Space' || e.code === 'KeyW' || e.code === 'ArrowUp') {
       setPedalPressure(0);
+    } else if (e.code === 'KeyS' || e.code === 'ArrowDown') {
+      audio.isBrakePressed = false;
     }
   });
 
