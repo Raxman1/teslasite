@@ -210,15 +210,18 @@ class DSPAudioEngine {
     if (!this.vehicle) return;
 
     let input;
+    const gearMode = inputState.gearMode || 'A';
+    const isNeutral = (gearMode === 'N');
+
     if (controlMode === 'gps') {
       input = {
         source: 'gps',
+        gearMode: gearMode,
         speed: (inputState.speed || 0) / 3.6, // km/h to m/s
         accel: inputState.accel || 0
       };
     } else {
       // Manual / Virtual Gas & Brake Pedal mode
-      const isNeutral = inputState.gearMode === 'N';
       const rawThr = Math.max(0, Math.min(1, inputState.throttle || 0));
       
       // Throttle response curve
@@ -232,6 +235,7 @@ class DSPAudioEngine {
       const brk = Math.max(0, Math.min(1, inputState.brake !== undefined ? inputState.brake : (inputState.isBrake ? 1 : 0)));
       input = {
         source: 'demo',
+        gearMode: gearMode,
         gas: isNeutral ? 0 : thr,
         brake: brk,
         rev: isNeutral ? thr : 0,
@@ -270,6 +274,11 @@ class DSPAudioEngine {
 
   shiftUp() {
     if (!this.vehicle || !this.car) return;
+    if (this.vehicle.neutral) {
+      this.vehicle.neutral = false;
+      this.vehicle.gear = 1;
+      return;
+    }
     const maxGears = (this.car.vehicle && this.car.vehicle.ratios) ? this.car.vehicle.ratios.length : 6;
     if (this.vehicle.gear < maxGears) {
       this.vehicle._startShift(this.vehicle.gear + 1);
@@ -278,6 +287,7 @@ class DSPAudioEngine {
 
   shiftDown() {
     if (!this.vehicle) return;
+    if (this.vehicle.neutral) return;
     if (this.vehicle.gear > 1) {
       this.vehicle._startShift(this.vehicle.gear - 1);
     }
@@ -285,7 +295,7 @@ class DSPAudioEngine {
 
   get rpm() { return this.vehicle ? this.vehicle.rpm : 900; }
   get speed() { return this.vehicle ? this.vehicle.speed * 3.6 : 0; }
-  get gear() { return this.vehicle ? this.vehicle.gearLabel() : '1'; }
+  get gear() { return (this.vehicle && !this.vehicle.neutral) ? this.vehicle.gear : 0; }
   get redlineRpm() { return (this.car && this.car.engine) ? this.car.engine.redlineRpm : 8000; }
   get maxRpm() { return (this.car && this.car.engine) ? this.car.engine.limiterRpm * 1.05 : 9500; }
   get idleRpm() { return (this.car && this.car.engine) ? this.car.engine.idleRpm : 850; }

@@ -409,8 +409,16 @@ document.addEventListener('DOMContentLoaded', () => {
       audio.gearMode = mode;
       if (mode === 'N') {
         audio.gear = 0;
-      } else if (audio.gear === 0) {
-        audio.gear = 1;
+        if (audio.dspEngine && audio.dspEngine.vehicle) {
+          audio.dspEngine.vehicle.neutral = true;
+          audio.dspEngine.vehicle.holdSpeed = 0;
+        }
+      } else {
+        if (audio.gear === 0) audio.gear = 1;
+        if (audio.dspEngine && audio.dspEngine.vehicle) {
+          audio.dspEngine.vehicle.neutral = false;
+          if (audio.dspEngine.vehicle.gear < 1) audio.dspEngine.vehicle.gear = 1;
+        }
       }
     });
   });
@@ -613,9 +621,15 @@ document.addEventListener('DOMContentLoaded', () => {
         }, 35);
       }
     } else if (e.code === 'KeyE') {
+      audio.gearMode = 'M';
+      gearBtns.forEach(b => b.classList.toggle('active', b.dataset.mode === 'M'));
       audio.shiftUp();
+      showShiftNotification(`▲ ПЕРЕДАЧА ${audio.gear || 1} (+)`);
     } else if (e.code === 'KeyQ') {
+      audio.gearMode = 'M';
+      gearBtns.forEach(b => b.classList.toggle('active', b.dataset.mode === 'M'));
       audio.shiftDown();
+      showShiftNotification(`▼ ПЕРЕДАЧА ${audio.gear || 1} (-)`);
     }
   });
 
@@ -962,7 +976,14 @@ document.addEventListener('DOMContentLoaded', () => {
     const currentRpm = Math.round(audio.rpm);
     rpmNumeric.textContent = `${currentRpm} RPM`;
 
-    const gearText = audio.gear === 0 ? 'N' : audio.gear.toString();
+    let gearText = 'N';
+    if (audio.gearMode === 'N' || audio.gear === 0) {
+      gearText = 'N';
+    } else if (audio.gearMode === 'M') {
+      gearText = `M${audio.gear || 1}`;
+    } else {
+      gearText = (audio.gear || 1).toString();
+    }
     gearDisplay.textContent = gearText;
     speedDisplay.textContent = Math.round(audio.speed);
 

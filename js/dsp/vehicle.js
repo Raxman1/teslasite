@@ -124,7 +124,8 @@
       var fuel = clamp((e.limiterRpm - this.gearRpm(this.gear)) / LIMIT_BAND_RPM, 0, 1);
       force = this.torqueAt(this.rpm) * this.driveLoad * fuel * ratio * p.drivetrainEff / rWheel;
       if (this.throttle < 0.05 && v > 0.5) {
-        force -= e.engineBrakeNm * ratio / rWheel * clamp(this.rpm / e.redlineRpm, 0.2, 1);
+        var brakeTorque = Math.max(e.engineBrakeNm * 2.5, 200);
+        force -= brakeTorque * ratio / rWheel * clamp(this.rpm / e.redlineRpm, 0.25, 1.2);
       }
     }
     if (v > 0.05) force -= 0.5 * RHO * p.cdA * v * v + p.crr * p.massKg * G;
@@ -273,20 +274,24 @@
     }
 
     if (this.neutral) {
-      // Free revving: unloaded engine, quick to spin up, slower to fall.
+      // Free revving in Neutral: unloaded engine, quick to spin up, realistic mechanical decay to fall
       var pedal = this.revPedal;
-      // Aim past the limiter so the revs reach it and bounce off the cut (a
-      // hard cap still keeps them from going past it).
       var target = idle + pedal * (e.limiterRpm + (e.softLimiter ? 0 : 200) - idle);
       if (this.limiterCut) {
-        rpm -= 4500 * dt;
+        rpm -= 6500 * dt;
       } else if (rpm < target) {
-        rpm = Math.min(target, rpm + (2500 + 9000 * pedal) * dt);
+        // Snappy throttle response on rise
+        rpm = Math.min(target, rpm + (3500 + 15000 * pedal) * dt);
       } else {
-        rpm = Math.max(target, rpm - Math.max(1200, rpm * 0.9) * dt);
+        // Natural rotational inertia & manifold vacuum rev drop:
+        var delta = rpm - target;
+        var dropRate = 2800 + (delta / (e.redlineRpm - idle)) * 5200;
+        if (delta < 350) {
+          dropRate = Math.max(750, delta * 7.5);
+        }
+        rpm = Math.max(target, rpm - dropRate * dt);
       }
       if (e.hardCap || e.softLimiter) rpm = Math.min(rpm, e.limiterRpm);
-      // A soft limiter holds the revs at the limit instead of bouncing off a cut.
       if (rpm >= e.limiterRpm && !e.softLimiter) this.limiterCut = true;
       else if (rpm < e.limiterRpm - 250) this.limiterCut = false;
       this.rpm = rpm;
@@ -334,12 +339,18 @@
       if (this.shift.t >= this.shift.dur) this.shift = null;
     }
 
-    var demand, braking, wasNeutral = this.neutral;
+    var demand = 0, braking = input.brake || 0, wasNeutral = this.neutral;
+    var mode = input.gearMode || (this.neutral ? 'N' : 'A');
+    var isN = (mode === 'N');
+    var isM = (mode === 'M');
+
     if (input.source === 'demo') {
-      braking = input.brake || 0;
-      if (input.hold && !braking && (this.holdSpeed || this.speed >= HOLD_MIN_MPS)) {
-        // Hold the speed the car had when the hold began, on the light
-        // throttle steady cruising takes (the same as on GPS).
+      if (isN) {
+        this.neutral = true;
+        this.holdSpeed = 0;
+        demand = 0;
+        this._physics(dt, braking);
+      } else if (input.hold && !braking && (this.holdSpeed || this.speed >= HOLD_MIN_MPS)) {
         if (!this.holdSpeed) this.holdSpeed = this.speed;
         this.speed = this.holdSpeed;
         this.accel = 0;
@@ -348,7 +359,7 @@
       } else {
         this.holdSpeed = 0;
         demand = input.gas || 0;
-        this.neutral = this.speed < 0.5 && demand < 0.05;
+        this.neutral = false;
         this._physics(dt, braking);
       }
     } else {
@@ -356,22 +367,29 @@
       this.accel = input.accel;
       demand = this._estimateThrottle(this.speed, this.accel);
       braking = this.accel < -2.5 ? 1 : 0;
-      this.neutral = this.speed < 0.5;
+      this.neutral = isN || (this.speed < 0.5);
     }
-    // Manual: into first to pull away, back to neutral at a stop. Rate-limited,
-    // so creeping in traffic doesn't rattle the lever.
+
+    // Manual shift lever sound
     if (this.p.gearbox === 'manual' && this.neutral !== wasNeutral && this.time - this.leverT > 1.5) {
       this.leverT = this.time;
       this._lever(this.neutral ? 0.6 : 1);
     }
+
     this.throttle += (demand - this.throttle) * follow(dt, demand > this.throttle ? 0.12 : 0.25);
-    var rev = this.neutral && !this.electric ? (input.rev || 0) : 0;
-    this.revPedal += (rev - this.revPedal) * follow(dt, rev > this.revPedal ? 0.06 : 0.1);
+    var revTarget = this.neutral && !this.electric ? (input.rev || input.gas || 0) : 0;
+    this.revPedal += (revTarget - this.revPedal) * follow(dt, revTarget > this.revPedal ? 0.04 : 0.035);
+    if (revTarget === 0 && this.revPedal < 0.015) this.revPedal = 0;
 
     if (this.neutral) {
-      this.gear = 1;
       this.shift = null;
+    } else if (isM) {
+      // Manual Mode: DO NOT auto-shift! Retain driver-selected gear
+      if (this.speed < 0.8 && this.gear > 2 && !this.shift) {
+        this.gear = 1; // Anti-stall at dead stop
+      }
     } else {
+      // Automatic Mode: Auto-shift through gears
       this._autoShift(braking);
     }
 
