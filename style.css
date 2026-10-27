@@ -118,6 +118,32 @@ header {
   box-shadow: 0 0 10px rgba(255, 153, 0, 0.3);
 }
 
+/* Tesla Steering Wheel Shift Notification Overlay */
+.wheel-shift-badge {
+  position: fixed;
+  top: 18%;
+  left: 50%;
+  transform: translateX(-50%) scale(0.8);
+  background: rgba(14, 18, 26, 0.95);
+  border: 2px solid var(--accent-amber);
+  color: var(--accent-amber);
+  padding: 12px 28px;
+  border-radius: 30px;
+  font-size: 20px;
+  font-weight: 900;
+  letter-spacing: 1.5px;
+  box-shadow: 0 0 30px rgba(255, 153, 0, 0.6), inset 0 0 15px rgba(255, 153, 0, 0.3);
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.15s ease-out, transform 0.15s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+  z-index: 9999;
+}
+
+.wheel-shift-badge.show {
+  opacity: 1;
+  transform: translateX(-50%) scale(1.05);
+}
+
 .header-actions {
   display: flex;
   align-items: center;

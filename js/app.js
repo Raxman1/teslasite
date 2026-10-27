@@ -127,6 +127,7 @@ document.addEventListener('DOMContentLoaded', () => {
     startBtn.disabled = true;
     try {
       await audio.start();
+      initTeslaMediaSession();
       startBtn.textContent = '⏹ ЗАГЛУШИТЬ';
       startBtn.className = 'btn btn-danger';
       startBtn.disabled = false;
@@ -527,7 +528,119 @@ document.addEventListener('DOMContentLoaded', () => {
     ctx.stroke();
   }
 
-  // 11. MAIN ANIMATION LOOP (60 FPS)
+  // 12. TESLA STEERING WHEEL PADDLE SHIFT CONTROLLER
+  const mediaSessionKeeper = document.getElementById('mediaSessionKeeper');
+  const wheelShiftBadge = document.getElementById('wheelShiftBadge');
+  let shiftBadgeTimeout = null;
+
+  function showShiftNotification(text) {
+    if (!wheelShiftBadge) return;
+    wheelShiftBadge.textContent = text;
+    wheelShiftBadge.classList.add('show');
+    if (shiftBadgeTimeout) clearTimeout(shiftBadgeTimeout);
+    shiftBadgeTimeout = setTimeout(() => {
+      wheelShiftBadge.classList.remove('show');
+    }, 700);
+  }
+
+  function handleSteeringWheelShiftUp() {
+    ensureAudioActive();
+    if (audio.gear === 0) {
+      audio.gear = 1;
+      audio.gearMode = 'M';
+    } else {
+      audio.gearMode = 'M';
+      gearBtns.forEach(b => b.classList.toggle('active', b.dataset.mode === 'M'));
+      audio.shiftUp();
+    }
+    showShiftNotification(`▲ ПЕРЕДАЧА ${audio.gear} (+)`);
+  }
+
+  function handleSteeringWheelShiftDown() {
+    ensureAudioActive();
+    audio.gearMode = 'M';
+    gearBtns.forEach(b => b.classList.toggle('active', b.dataset.mode === 'M'));
+    audio.shiftDown();
+    showShiftNotification(`▼ ПЕРЕДАЧА ${audio.gear} (-)`);
+  }
+
+  // Register MediaSession hardware button handlers (Left scroll wheel on Tesla steering wheel)
+  function initTeslaMediaSession() {
+    if ('mediaSession' in navigator) {
+      try {
+        navigator.mediaSession.metadata = new MediaMetadata({
+          title: 'Tesla V10 Paddle Shifter Active',
+          artist: 'Tesla Steering Wheel Controller',
+          album: 'Left Scroll Wheel: Left/Right = Shift'
+        });
+
+        // 1. Tilt Left Wheel RIGHT -> Shift UP
+        navigator.mediaSession.setActionHandler('nexttrack', () => {
+          handleSteeringWheelShiftUp();
+        });
+
+        // 2. Tilt Left Wheel LEFT -> Shift DOWN
+        navigator.mediaSession.setActionHandler('previoustrack', () => {
+          handleSteeringWheelShiftDown();
+        });
+
+        // 3. Click Left Wheel IN (Pause/Play) -> Shift UP
+        navigator.mediaSession.setActionHandler('play', () => {
+          handleSteeringWheelShiftUp();
+        });
+        navigator.mediaSession.setActionHandler('pause', () => {
+          handleSteeringWheelShiftDown();
+        });
+
+        // 4. Seek buttons if fired
+        navigator.mediaSession.setActionHandler('seekforward', () => {
+          handleSteeringWheelShiftUp();
+        });
+        navigator.mediaSession.setActionHandler('seekbackward', () => {
+          handleSteeringWheelShiftDown();
+        });
+      } catch (err) {
+        console.warn('MediaSession handler warning:', err);
+      }
+    }
+
+    // Play silent keeper audio on user gesture to bind Tesla hardware media keys
+    if (mediaSessionKeeper) {
+      mediaSessionKeeper.volume = 0.01;
+      mediaSessionKeeper.play().catch(() => {});
+    }
+  }
+
+  // Intercept physical hardware media keys (Chrome on Tesla MCU fires these keydown events)
+  window.addEventListener('keydown', (e) => {
+    if (e.key === 'MediaTrackNext' || e.code === 'MediaTrackNext' || e.keyCode === 176) {
+      e.preventDefault();
+      handleSteeringWheelShiftUp();
+    } else if (e.key === 'MediaTrackPrevious' || e.code === 'MediaTrackPrevious' || e.keyCode === 177) {
+      e.preventDefault();
+      handleSteeringWheelShiftDown();
+    } else if (e.key === 'AudioVolumeMute' || e.key === 'MediaPlayPause' || e.keyCode === 179 || e.keyCode === 173) {
+      e.preventDefault();
+      handleSteeringWheelShiftUp();
+    }
+  });
+
+  // Mouse wheel / Tesla browser scroll wheel event
+  let lastWheelTime = 0;
+  window.addEventListener('wheel', (e) => {
+    const now = performance.now();
+    if (now - lastWheelTime > 280) { // debounce scroll clicks
+      if (e.deltaY < -15) {
+        lastWheelTime = now;
+        handleSteeringWheelShiftUp();
+      } else if (e.deltaY > 15) {
+        lastWheelTime = now;
+        handleSteeringWheelShiftDown();
+      }
+    }
+  }, { passive: true });
+
+  // 13. MAIN ANIMATION LOOP (60 FPS)
   function loop(currentTime) {
     const dt = Math.min(0.1, (currentTime - lastFrameTime) / 1000.0);
     lastFrameTime = currentTime;

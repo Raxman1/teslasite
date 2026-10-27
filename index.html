@@ -224,13 +224,20 @@
 
   <!-- Footer with Instructions -->
   <footer>
-    <div>Porsche Carrera GT Sound Mod v2.0 • Web Audio Engine & Sensor Fusion</div>
+    <div>Porsche Carrera GT & JDM / AMG V8 Sound Mod v3.0 • Tesla Model 3/Y Edition</div>
     <div class="footer-keybinds">
+      <span>🎮 <b>Колесико руля Tesla:</b> Влево/Вправо = Передачи, Клик = Shift</span>
       <span><kbd>Space</kbd> / <kbd>W</kbd> — Газ</span>
       <span><kbd>S</kbd> — Тормоз</span>
       <span><kbd>Q</kbd> / <kbd>E</kbd> — Передачи вниз / вверх</span>
     </div>
   </footer>
+
+  <!-- Hidden Silent Audio Element to bind Tesla Steering Wheel Media Buttons -->
+  <audio id="mediaSessionKeeper" loop playsinline src="data:audio/mp3;base64,//uQxAAAAAAAAAAAAAAAAAAAAAAAWGluZwAAAA8AAAACAAACcQCAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICA////////////////////////////////////////////////////////////////"></audio>
+
+  <!-- Steering Wheel Shift Notification Overlay -->
+  <div id="wheelShiftBadge" class="wheel-shift-badge">▲ ПЕРЕДАЧА 2</div>
 
   <!-- Scripts -->
   <script src="js/peerjs.min.js"></script>
