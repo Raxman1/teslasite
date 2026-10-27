@@ -29,6 +29,18 @@ function safeSetPannerPosition(panner, x, y, z, ctx) {
   }
 }
 
+// Safety clipper: exact smooth tanh waveshaper curve from teslasound.io
+const CLIP_KNEE = 0.9, CLIP_CEIL = 0.98, CLIP_RANGE = 4;
+function createClipCurve() {
+  const n = 4097, curve = new Float32Array(n), k = CLIP_CEIL - CLIP_KNEE;
+  for (let i = 0; i < n; i++) {
+    const x = (i / (n - 1) * 2 - 1) * CLIP_RANGE, a = Math.abs(x);
+    const y = a <= CLIP_KNEE ? a : CLIP_KNEE + k * Math.tanh((a - CLIP_KNEE) / k);
+    curve[i] = x < 0 ? -y : y;
+  }
+  return curve;
+}
+
 class AudioEngine {
   constructor() {
     this.ctx = null;
@@ -49,6 +61,8 @@ class AudioEngine {
     // Master nodes & Tesla Spatial Audio Network
     this.masterGain = null;
     this.compressor = null;
+    this.clipIn = null;
+    this.clip = null;
     this.submixBus = null;
     
     // Cabin Buses
@@ -162,6 +176,10 @@ class AudioEngine {
     return this.ctx;
   }
 
+  getEffectiveGain(v) {
+    return Math.pow(Math.max(0, Math.min(1.5, v)), 1.6) * 1.4;
+  }
+
   async init() {
     this.ensureContext();
     if (this.ctx && this.isReady) return true;
@@ -175,24 +193,33 @@ class AudioEngine {
       } catch (e) {}
     }
 
-    // High quality master dynamics compressor
+    // High quality master dynamics compressor (exact teslasound.io parameters)
     this.compressor = this.ctx.createDynamicsCompressor();
-    this.compressor.threshold.setValueAtTime(-14, this.ctx.currentTime);
-    this.compressor.knee.setValueAtTime(6, this.ctx.currentTime);
-    this.compressor.ratio.setValueAtTime(3.5, this.ctx.currentTime);
+    this.compressor.threshold.setValueAtTime(-12, this.ctx.currentTime);
+    this.compressor.knee.setValueAtTime(8, this.ctx.currentTime);
+    this.compressor.ratio.setValueAtTime(5, this.ctx.currentTime);
     this.compressor.attack.setValueAtTime(0.003, this.ctx.currentTime);
-    this.compressor.release.setValueAtTime(0.12, this.ctx.currentTime);
+    this.compressor.release.setValueAtTime(0.2, this.ctx.currentTime);
 
-    // Master Gain (Post-compressor for authentic linear volume scaling and silent mute)
+    // Master Gain (Post-compressor with authentic teslasound.io volume scaling)
     this.masterGain = this.ctx.createGain();
-    this.masterGain.gain.setValueAtTime(this.volume, this.ctx.currentTime);
+    this.masterGain.gain.setValueAtTime(this.getEffectiveGain(this.volume), this.ctx.currentTime);
+
+    // Safety Clipper WaveShaper (exact teslasound.io analog tube curve)
+    this.clipIn = this.ctx.createGain();
+    this.clipIn.gain.setValueAtTime(1 / CLIP_RANGE, this.ctx.currentTime);
+    this.clip = this.ctx.createWaveShaper();
+    this.clip.curve = createClipCurve();
+    this.clip.oversample = 'none';
 
     // Build Tesla Model 3 / Y Spatial Audio Buses
     this.buildTeslaSpatialAcoustics();
 
-    // Signal chain: Submix -> Compressor -> Master Gain -> Destination
+    // Signal chain: Compressor -> Master Gain -> ClipIn -> Clip -> Destination
     this.compressor.connect(this.masterGain);
-    this.masterGain.connect(this.ctx.destination);
+    this.masterGain.connect(this.clipIn);
+    this.clipIn.connect(this.clip);
+    this.clip.connect(this.ctx.destination);
 
     // Initialize Procedural DSP engine sharing this.ctx and feeding into dspSplitterBus
     if (window.DSPAudioEngine && !this.dspEngine) {
@@ -221,11 +248,12 @@ class AudioEngine {
       this.submixBus = this.ctx.createGain();
       this.submixBus.gain.setValueAtTime(1.0, this.ctx.currentTime);
 
-      // Master Low-Shelf Bass Filter (110 Hz) - Allows real cutting of sub rumble so Tesla clips don't rattle!
+      // Master Sub-Bass Filter (60 Hz lowshelf) - allows sub rumble trimming only when slider < 100%
+      // At 100% (default), gain is exactly 0.0 dB (100% transparent straight wire, zero filtering!)
       this.masterBassFilter = this.ctx.createBiquadFilter();
       this.masterBassFilter.type = 'lowshelf';
-      this.masterBassFilter.frequency.setValueAtTime(110, this.ctx.currentTime);
-      const initBassDb = this.bassShakeLevel < 1.0 ? (this.bassShakeLevel - 1.0) * 28.0 : (this.bassShakeLevel - 1.0) * 8.0;
+      this.masterBassFilter.frequency.setValueAtTime(60, this.ctx.currentTime);
+      const initBassDb = (this.bassShakeLevel < 0.98) ? (this.bassShakeLevel - 1.0) * 16.0 : (this.bassShakeLevel > 1.02 ? (this.bassShakeLevel - 1.0) * 6.0 : 0.0);
       this.masterBassFilter.gain.setValueAtTime(initBassDb, this.ctx.currentTime);
 
       this.submixBus.connect(this.masterBassFilter);
@@ -238,9 +266,9 @@ class AudioEngine {
       this.frontPresenceFilter = this.ctx.createBiquadFilter();
       this.frontPresenceFilter.type = 'peaking';
       this.frontPresenceFilter.frequency.setValueAtTime(3600, this.ctx.currentTime);
-      this.frontPresenceFilter.Q.setValueAtTime(1.1, this.ctx.currentTime);
+      this.frontPresenceFilter.Q.setValueAtTime(0.9, this.ctx.currentTime);
       // If v6.0 PRO is off, 0 dB (completely flat wire, NO equalizer)
-      this.frontPresenceFilter.gain.setValueAtTime(this.v6ProEnabled ? 3.2 : 0.0, this.ctx.currentTime);
+      this.frontPresenceFilter.gain.setValueAtTime(this.v6ProEnabled ? 1.8 : 0.0, this.ctx.currentTime);
 
       this.frontBus.connect(this.frontPresenceFilter);
       this.frontPresenceFilter.connect(this.submixBus);
@@ -256,13 +284,13 @@ class AudioEngine {
 
       this.rearWarmthFilter = this.ctx.createBiquadFilter();
       this.rearWarmthFilter.type = 'lowshelf';
-      this.rearWarmthFilter.frequency.setValueAtTime(260, this.ctx.currentTime);
+      this.rearWarmthFilter.frequency.setValueAtTime(220, this.ctx.currentTime);
       // If v6.0 PRO is off, 0 dB (completely flat wire, NO equalizer)
-      this.rearWarmthFilter.gain.setValueAtTime(this.v6ProEnabled ? 3.5 : 0.0, this.ctx.currentTime);
+      this.rearWarmthFilter.gain.setValueAtTime(this.v6ProEnabled ? 1.8 : 0.0, this.ctx.currentTime);
 
-      // Acoustic distance delay (0 ms if v6.0 PRO is off - perfectly aligned)
+      // In-phase acoustic spatial bus (0 ms delay by default to eliminate comb filtering)
       this.rearDelay = this.ctx.createDelay(0.1);
-      this.rearDelay.delayTime.setValueAtTime(this.v6ProEnabled ? (this.exhaustDelayMs / 1000.0) : 0.0, this.ctx.currentTime);
+      this.rearDelay.delayTime.setValueAtTime(0.0, this.ctx.currentTime);
 
       this.rearBus.connect(this.rearWarmthFilter);
       this.rearWarmthFilter.connect(this.rearDelay);
@@ -304,14 +332,14 @@ class AudioEngine {
       this.dspSplitterBus = this.ctx.createGain();
       this.dspSplitterBus.gain.setValueAtTime(1.0, this.ctx.currentTime);
 
-      // Direct clean wire straight into submixBus (EXACT 100% v5.0 sound path when v6.0 PRO is off)
+      // Direct clean wire straight into masterBassFilter -> compressor -> masterGain -> clipper (100% teslasound.io path)
       this.dspDirectGain = this.ctx.createGain();
-      this.dspDirectGain.gain.setValueAtTime(this.v6ProEnabled ? 0.0 : 1.0, this.ctx.currentTime);
+      this.dspDirectGain.gain.setValueAtTime(this.v6ProEnabled ? 0.0 : this.exhaustVolumeLevel, this.ctx.currentTime);
       this.dspSplitterBus.connect(this.dspDirectGain);
-      this.dspDirectGain.connect(this.submixBus);
+      this.dspDirectGain.connect(this.masterBassFilter);
 
       this.dspFrontGain = this.ctx.createGain();
-      this.dspFrontGain.gain.setValueAtTime(this.v6ProEnabled ? 0.85 : 0.0, this.ctx.currentTime);
+      this.dspFrontGain.gain.setValueAtTime(this.v6ProEnabled ? 1.0 : 0.0, this.ctx.currentTime);
       this.dspSplitterBus.connect(this.dspFrontGain);
       this.dspFrontGain.connect(this.frontBus);
 
@@ -321,7 +349,7 @@ class AudioEngine {
       this.dspRearGain.connect(this.rearBus);
 
       this.dspSubGain = this.ctx.createGain();
-      this.dspSubGain.gain.setValueAtTime(this.v6ProEnabled ? 0.9 : 0.0, this.ctx.currentTime);
+      this.dspSubGain.gain.setValueAtTime(this.v6ProEnabled ? 0.8 : 0.0, this.ctx.currentTime);
       this.dspSplitterBus.connect(this.dspSubGain);
       this.dspSubGain.connect(this.subBus);
 
@@ -424,12 +452,12 @@ class AudioEngine {
 
     if (!this.v6ProEnabled) {
       // ==============================================================
-      // CLASSIC MODE: 100% ТОЧНЫЙ ЧИСТЫЙ ЗВУК v5.0 (ПРЯМОЙ ПРОВОД)
-      // Никаких делителей, фильтров, фазовых сдвигов и задержек!
+      // CLASSIC DIRECT MODE (100% TESLASOUND.IO OPEN WIRE)
+      // Direct straight wire into master compressor & safety clipper!
+      // Zero delay, zero comb filtering, zero frequency muffling!
       // ==============================================================
-      // 1. Направляем процедурный движок напрямую в submixBus (ровно как в v5.0)
       if (this.dspDirectGain) {
-        this.dspDirectGain.gain.setTargetAtTime(1.0, now, smooth);
+        this.dspDirectGain.gain.setTargetAtTime(this.exhaustVolumeLevel, now, smooth);
       }
       if (this.dspFrontGain) {
         this.dspFrontGain.gain.setTargetAtTime(0.0, now, smooth);
@@ -440,67 +468,54 @@ class AudioEngine {
       if (this.dspSubGain) {
         this.dspSubGain.gain.setTargetAtTime(0.0, now, smooth);
       }
-      // 2. Отключаем peaking фильтр на капоте (0 dB = чистый провод)
+      // Completely flat acoustic filters (0 dB = straight wire)
       if (this.frontPresenceFilter) {
         this.frontPresenceFilter.gain.setTargetAtTime(0.0, now, smooth);
       }
-      // 3. Отключаем lowshelf фильтр на выхлопе (0 dB = чистый провод)
       if (this.rearWarmthFilter) {
         this.rearWarmthFilter.gain.setTargetAtTime(0.0, now, smooth);
       }
-      // 4. Отключаем задержку выхлопа (0 мс = синфазный звук)
       if (this.rearDelay) {
         this.rearDelay.delayTime.setTargetAtTime(0.0, now, smooth);
       }
-      // 5. Ровные шины впуска и выхлопа
       if (this.frontBus) {
         this.frontBus.gain.setTargetAtTime(1.0, now, smooth);
       }
       if (this.rearBus) {
         this.rearBus.gain.setTargetAtTime(1.0, now, smooth);
       }
-      // 6. Исходный сабвуфер v5.0 (80 Гц / 45 Гц)
-      if (this.subwooferFilter) {
-        this.subwooferFilter.frequency.setTargetAtTime(80, now, smooth);
-        this.subwooferFilter.Q.setTargetAtTime(1.8, now, smooth);
-      }
-      if (this.subwooferBooster) {
-        this.subwooferBooster.frequency.setTargetAtTime(45, now, smooth);
-        this.subwooferBooster.Q.setTargetAtTime(1.2, now, smooth);
-        const boostDb = (this.bassShakeLevel - 1.0) * 8.0;
-        this.subwooferBooster.gain.setTargetAtTime(boostDb, now, smooth);
-      }
       if (this.subwooferGain) {
-        this.subwooferGain.gain.setTargetAtTime(this.bassShakeLevel * 1.2, now, smooth);
+        this.subwooferGain.gain.setTargetAtTime(0.0, now, smooth);
       }
       this.applyClassicSoundstage(this.soundstageMode);
     } else {
       // ==============================================================
-      // PRO v6.0 MODE: ПОЛНЫЙ ПРОЦЕССОР И РАССТАНОВКА ПО САЛОНУ
+      // PRO v6.0 SPATIAL MODE (In-Phase Wide Stereo, ZERO Comb-Filtering)
       // ==============================================================
       if (this.dspDirectGain) {
         this.dspDirectGain.gain.setTargetAtTime(0.0, now, smooth);
       }
       if (this.dspFrontGain) {
-        this.dspFrontGain.gain.setTargetAtTime(0.85, now, smooth);
+        this.dspFrontGain.gain.setTargetAtTime(1.0, now, smooth);
       }
       if (this.dspRearGain) {
         this.dspRearGain.gain.setTargetAtTime(1.0, now, smooth);
       }
       if (this.dspSubGain) {
-        this.dspSubGain.gain.setTargetAtTime(0.9, now, smooth);
+        this.dspSubGain.gain.setTargetAtTime(0.8, now, smooth);
       }
       if (this.frontPresenceFilter) {
-        this.frontPresenceFilter.gain.setTargetAtTime(3.2, now, smooth);
+        this.frontPresenceFilter.gain.setTargetAtTime(1.8, now, smooth);
       }
       if (this.rearWarmthFilter) {
-        this.rearWarmthFilter.gain.setTargetAtTime(3.5, now, smooth);
+        this.rearWarmthFilter.gain.setTargetAtTime(1.8, now, smooth);
       }
+      // Crucial: 0.0 ms delay between front and rear eliminates comb filtering entirely!
       if (this.rearDelay) {
-        this.rearDelay.delayTime.setTargetAtTime(this.exhaustDelayMs / 1000.0, now, smooth);
+        this.rearDelay.delayTime.setTargetAtTime(0.0, now, smooth);
       }
       if (this.exhaustBus) {
-        this.exhaustBus.gain.setTargetAtTime(1.0, now, smooth);
+        this.exhaustBus.gain.setTargetAtTime(this.exhaustVolumeLevel, now, smooth);
       }
       if (this.intakeBus) {
         this.intakeBus.gain.setTargetAtTime(1.0, now, smooth);
@@ -640,23 +655,25 @@ class AudioEngine {
     this.bassShakeLevel = Math.max(0, Math.min(2.5, level));
     const now = this.ctx ? this.ctx.currentTime : 0;
 
-    // Master Low-Shelf Filter: real sub-bass control for BOTH DSP and samples
-    // When level < 1.0, cuts low frequencies down to -28 dB so Tesla door clips and trim don't rattle!
+    // Master Low-Shelf Filter (60 Hz): cuts deep sub rumble (<60 Hz) so Tesla door clips don't rattle!
+    // At 1.0 (100%), bassDb = 0 dB (completely flat transparent straight wire!)
     if (this.masterBassFilter && this.ctx) {
       let bassDb = 0;
-      if (this.bassShakeLevel < 1.0) {
-        bassDb = (this.bassShakeLevel - 1.0) * 28.0; // level 0 -> -28 dB, level 0.5 -> -14 dB
+      if (this.bassShakeLevel < 0.98) {
+        bassDb = (this.bassShakeLevel - 1.0) * 16.0; // level 0.5 -> -8 dB sub cut
+      } else if (this.bassShakeLevel > 1.02) {
+        bassDb = (this.bassShakeLevel - 1.0) * 6.0;  // level 1.5 -> +3 dB sub boost
       } else {
-        bassDb = (this.bassShakeLevel - 1.0) * 8.0;  // level 1.5 -> +4 dB, level 2.0 -> +8 dB
+        bassDb = 0.0; // 100% on slider = 0 dB untouched!
       }
       this.masterBassFilter.gain.setTargetAtTime(bassDb, now, 0.03);
     }
 
     if (this.subwooferGain && this.ctx) {
-      this.subwooferGain.gain.setTargetAtTime(this.bassShakeLevel * 1.2, now, 0.04);
+      this.subwooferGain.gain.setTargetAtTime(this.bassShakeLevel * 1.0, now, 0.04);
     }
     if (this.subwooferBooster && this.ctx) {
-      const boostDb = (this.bassShakeLevel - 1.0) * 8.0;
+      const boostDb = (this.bassShakeLevel - 1.0) * 6.0;
       this.subwooferBooster.gain.setTargetAtTime(boostDb, now, 0.04);
     }
   }
@@ -667,8 +684,9 @@ class AudioEngine {
     if (this.exhaustBus && this.ctx) {
       this.exhaustBus.gain.setTargetAtTime(this.exhaustVolumeLevel, now, 0.04);
     }
-    if (this.dspEngine) {
-      this.dspEngine.character = Math.max(0.15, Math.min(1.0, this.exhaustVolumeLevel * 0.85));
+    // In DSP mode, exhaustVolumeLevel controls direct engine volume cleanly WITHOUT choking dspEngine.character!
+    if (this.dspDirectGain && this.ctx && !this.v6ProEnabled) {
+      this.dspDirectGain.gain.setTargetAtTime(this.exhaustVolumeLevel, now, 0.03);
     }
   }
 
@@ -880,12 +898,12 @@ class AudioEngine {
   }
 
   setVolume(val) {
-    this.volume = Math.max(0, Math.min(1, val));
+    this.volume = Math.max(0, Math.min(1.5, val));
     if (this.masterGain && this.ctx) {
       try {
-        this.masterGain.gain.setValueAtTime(this.volume, this.ctx.currentTime);
+        this.masterGain.gain.setTargetAtTime(this.getEffectiveGain(this.volume), this.ctx.currentTime, 0.04);
       } catch (e) {
-        this.masterGain.gain.value = this.volume;
+        this.masterGain.gain.value = this.getEffectiveGain(this.volume);
       }
     }
   }

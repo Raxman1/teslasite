@@ -24,7 +24,7 @@ class DSPAudioEngine {
     // Adjustable tuning parameters (as on teslasound.io)
     this.character = 0.85; // 0.15 (quiet stock) .. 1.0 (aggressive open straight pipes)
     this.crackle = 1.0;    // 0.0 .. 1.5 (afterfire pops & bangs)
-    this.whineLevel = 1.0; // 0.0 .. 2.0 (turbo/supercharger whine volume)
+    this.whineLevel = 0.6; // 0.0 .. 2.0 (turbo/supercharger whine volume)
     this.whinePitch = 1.0; // 0.5 .. 1.8 (whine pitch multiplier)
     this.idleRpmOffset = 0;// -150 .. +350 RPM (idle lope)
     this.limiterMode = 'hard'; // 'hard' (2-step aggressive) | 'soft' (smooth bounce)

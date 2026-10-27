@@ -36,12 +36,12 @@ window.MOTORSOUND_CARS = [
         pipeReflection: -0.52,
         pipeDamping: 0.32,
         formants: [
-          { hz: 78, q: 1.0, gain: 1.25 },
-          { hz: 185, q: 1.2, gain: 1.15 },
-          { hz: 390, q: 1.4, gain: 1.05 },
-          { hz: 880, q: 1.6, gain: 0.85 },
-          { hz: 1550, q: 2.0, gain: 0.6 },
-          { hz: 2600, q: 2.2, gain: 0.35 }
+          { hz: 85, q: 1.0, gain: 1.05 },
+          { hz: 200, q: 1.1, gain: 1.0 },
+          { hz: 420, q: 1.3, gain: 0.95 },
+          { hz: 950, q: 1.5, gain: 0.85 },
+          { hz: 1750, q: 1.8, gain: 0.7 },
+          { hz: 3200, q: 2.0, gain: 0.55 }
         ],
         formantDry: 0.36,
         pulseMsIdle: 5.2,
@@ -50,17 +50,17 @@ window.MOTORSOUND_CARS = [
         jitter: 0.08,
         cylinderTrim: 0.12,
         lope: 0.28,
-        mufflerHz: [600, 7200],
-        bodyHz: 68,
-        bodyDb: 8.5,
+        mufflerHz: [1200, 7800],
+        bodyHz: 75,
+        bodyDb: 3.8,
         intake: 0.28,
         intakeHz: 680,
         whine: 0.04,
         whineRatio: 5.8,
         crackle: 0.85,
         popGain: 0.55,
-        drive: 4.8,
-        gain: 0.42
+        drive: 3.4,
+        gain: 0.56
       }
     },
     vehicle: {
@@ -101,12 +101,12 @@ window.MOTORSOUND_CARS = [
         pipeReflection: -0.58,
         pipeDamping: 0.28,
         formants: [
-          { hz: 58, q: 0.9, gain: 1.45 },
-          { hz: 140, q: 1.1, gain: 1.25 },
-          { hz: 360, q: 1.3, gain: 1.1 },
-          { hz: 920, q: 1.5, gain: 0.95 },
-          { hz: 1800, q: 1.8, gain: 0.7 },
-          { hz: 3200, q: 2.0, gain: 0.4 }
+          { hz: 70, q: 1.0, gain: 1.1 },
+          { hz: 160, q: 1.1, gain: 1.05 },
+          { hz: 380, q: 1.3, gain: 0.95 },
+          { hz: 920, q: 1.5, gain: 0.9 },
+          { hz: 1800, q: 1.8, gain: 0.75 },
+          { hz: 3200, q: 2.0, gain: 0.5 }
         ],
         formantDry: 0.38,
         pulseMsIdle: 5.8,
@@ -115,17 +115,17 @@ window.MOTORSOUND_CARS = [
         jitter: 0.09,
         cylinderTrim: 0.14,
         lope: 0.32,
-        mufflerHz: [750, 8500],
-        bodyHz: 52,
-        bodyDb: 11.0,
+        mufflerHz: [1150, 8200],
+        bodyHz: 62,
+        bodyDb: 4.5,
         intake: 0.35,
         intakeHz: 580,
         whine: 0.03,
         whineRatio: 5.2,
         crackle: 1.15,
         popGain: 0.7,
-        drive: 5.5,
-        gain: 0.48
+        drive: 3.6,
+        gain: 0.55
       }
     },
     vehicle: {

@@ -64,10 +64,10 @@ document.addEventListener('DOMContentLoaded', () => {
   function updateAllExhaustSliders(val) {
     if (quickExhaustSlider) quickExhaustSlider.value = val;
     if (quickExhaustText) quickExhaustText.textContent = `${val}%`;
-    const characterSlider = document.getElementById('characterSlider');
-    const characterValText = document.getElementById('characterValText');
-    if (characterSlider) characterSlider.value = val;
-    if (characterValText) characterValText.textContent = `${val}%`;
+    const exhaustSlider = document.getElementById('exhaustSlider');
+    const exhaustLevelText = document.getElementById('exhaustLevelText');
+    if (exhaustSlider) exhaustSlider.value = val;
+    if (exhaustLevelText) exhaustLevelText.textContent = `${val}%`;
     audio.setExhaustVolume(val / 100.0);
   }
 
@@ -216,7 +216,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
   if (characterSlider) {
     characterSlider.addEventListener('input', (e) => {
-      updateAllExhaustSliders(parseInt(e.target.value, 10));
+      const val = parseInt(e.target.value, 10);
+      if (characterValText) characterValText.textContent = `${val}%`;
+      if (audio.dspEngine) audio.dspEngine.character = val / 100.0;
     });
   }
 
