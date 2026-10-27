@@ -21,8 +21,8 @@ class DSPAudioEngine {
     this.crackle = 1.0;    // 0.0 .. 1.5 (afterfire pops & bangs)
     this.whineLevel = 1.0;
 
-    // Default car: Porsche 911 GT3
-    this.setCar('gt3');
+    // Default car: Mercedes CLS 63 AMG «Банан»
+    this.setCar('cls63-amg');
   }
 
   setCar(carId) {

@@ -60,6 +60,10 @@ document.addEventListener('DOMContentLoaded', () => {
   let currentEngineMode = 'dsp'; // 'dsp' | 'samples'
 
   const DSP_PRESETS = [
+    { id: 'dsp:cls63-amg', name: 'Mercedes CLS 63 AMG «Банан»', badge: '5.5L BiTurbo V8 · 585 HP' },
+    { id: 'dsp:g63-amg', name: 'Mercedes-AMG G 63 «Гелик»', badge: '4.0L V8 · Side Pipes' },
+    { id: 'dsp:c63-amg-w204', name: 'Mercedes C 63 AMG (W204)', badge: '6.2L V8 NA · 507 HP' },
+    { id: 'dsp:sls-amg', name: 'Mercedes SLS AMG', badge: '6.2L V8 Gullwing' },
     { id: 'dsp:gt3', name: 'Porsche 911 GT3', badge: '9,000 RPM Flat-6' },
     { id: 'dsp:porsche-911-gt3-rs-991', name: 'Porsche 911 GT3 RS', badge: '9,000 RPM PDK' },
     { id: 'dsp:porsche-911-turbo-s', name: 'Porsche 911 Turbo S', badge: '3.7L Twin-Turbo' },

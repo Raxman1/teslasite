@@ -11,6 +11,265 @@
  */
 window.MOTORSOUND_CARS = [
   {
+    id: 'cls63-amg',
+    name: 'Mercedes-Benz CLS 63 AMG «Банан»',
+    tagline: '5.5 L BiTurbo V8 · 585 HP · AMG MCT 7-speed · Crossplane Burble',
+    engine: {
+      idleRpm: 650,
+      redlineRpm: 6600,
+      limiterRpm: 6800,
+      launchRpm: 3200,
+      peakTorqueNm: 800,
+      peakTorqueRpm: 3500,
+      engineBrakeNm: 85,
+      // Mercedes M157 90° Crossplane V8 firing order 1-5-4-2-6-3-7-8
+      // Cylinders 1-4 on bank 0 (right), 5-8 on bank 1 (left)
+      firing: [
+        [0, 1, 0], [90, 5, 1], [180, 4, 0], [270, 2, 0],
+        [360, 6, 1], [450, 3, 0], [540, 7, 1], [630, 8, 1]
+      ],
+      sound: {
+        banks: [
+          { pipeMs: 5.6, pan: -0.55, tune: 1.0 },
+          { pipeMs: 6.9, pan: 0.55, tune: 1.07 }
+        ],
+        pipeReflection: -0.52,
+        pipeDamping: 0.32,
+        formants: [
+          { hz: 78, q: 1.0, gain: 1.25 },
+          { hz: 185, q: 1.2, gain: 1.15 },
+          { hz: 390, q: 1.4, gain: 1.05 },
+          { hz: 880, q: 1.6, gain: 0.85 },
+          { hz: 1550, q: 2.0, gain: 0.6 },
+          { hz: 2600, q: 2.2, gain: 0.35 }
+        ],
+        formantDry: 0.36,
+        pulseMsIdle: 5.2,
+        pulseMsRedline: 0.72,
+        noise: 1.55,
+        jitter: 0.08,
+        cylinderTrim: 0.12,
+        lope: 0.28,
+        mufflerHz: [600, 7200],
+        bodyHz: 68,
+        bodyDb: 8.5,
+        intake: 0.28,
+        intakeHz: 680,
+        whine: 0.04,
+        whineRatio: 5.8,
+        crackle: 0.85,
+        popGain: 0.55,
+        drive: 4.8,
+        gain: 0.42
+      }
+    },
+    vehicle: {
+      massKg: 1870,
+      cdA: 0.68,
+      crr: 0.012,
+      maxAccel: 9.2,
+      peakPowerKw: 430,
+      drivetrainEff: 0.86,
+      ratios: [4.38, 2.86, 1.92, 1.37, 1.00, 0.82, 0.73],
+      finalDrive: 2.65,
+      tireCircumferenceM: 2.08,
+      maxSpeedKmh: 315
+    }
+  },
+  {
+    id: 'g63-amg',
+    name: 'Mercedes-AMG G 63 «Гелик»',
+    tagline: '4.0 L Biturbo V8 · 585 HP · Side Pipes · Earthshaker Sub-Bass',
+    engine: {
+      idleRpm: 680,
+      redlineRpm: 7000,
+      limiterRpm: 7150,
+      launchRpm: 3400,
+      peakTorqueNm: 850,
+      peakTorqueRpm: 3000,
+      engineBrakeNm: 95,
+      // Mercedes M177 4.0L V8 Biturbo firing order 1-5-4-2-6-3-7-8
+      firing: [
+        [0, 1, 0], [90, 5, 1], [180, 4, 0], [270, 2, 0],
+        [360, 6, 1], [450, 3, 0], [540, 7, 1], [630, 8, 1]
+      ],
+      sound: {
+        banks: [
+          { pipeMs: 2.6, pan: -0.65, tune: 1.0 },
+          { pipeMs: 3.4, pan: 0.65, tune: 1.08 }
+        ],
+        pipeReflection: -0.58,
+        pipeDamping: 0.28,
+        formants: [
+          { hz: 58, q: 0.9, gain: 1.45 },
+          { hz: 140, q: 1.1, gain: 1.25 },
+          { hz: 360, q: 1.3, gain: 1.1 },
+          { hz: 920, q: 1.5, gain: 0.95 },
+          { hz: 1800, q: 1.8, gain: 0.7 },
+          { hz: 3200, q: 2.0, gain: 0.4 }
+        ],
+        formantDry: 0.38,
+        pulseMsIdle: 5.8,
+        pulseMsRedline: 0.62,
+        noise: 1.85,
+        jitter: 0.09,
+        cylinderTrim: 0.14,
+        lope: 0.32,
+        mufflerHz: [750, 8500],
+        bodyHz: 52,
+        bodyDb: 11.0,
+        intake: 0.35,
+        intakeHz: 580,
+        whine: 0.03,
+        whineRatio: 5.2,
+        crackle: 1.15,
+        popGain: 0.7,
+        drive: 5.5,
+        gain: 0.48
+      }
+    },
+    vehicle: {
+      massKg: 2560,
+      cdA: 1.45,
+      crr: 0.015,
+      maxAccel: 8.0,
+      peakPowerKw: 430,
+      drivetrainEff: 0.82,
+      ratios: [5.35, 3.24, 2.25, 1.64, 1.21, 1.00, 0.86, 0.72, 0.60],
+      finalDrive: 3.27,
+      tireCircumferenceM: 2.45,
+      maxSpeedKmh: 240
+    }
+  },
+  {
+    id: 'c63-amg-w204',
+    name: 'Mercedes-Benz C 63 AMG (W204)',
+    tagline: '6.2 L Atmospheric V8 (M156) · 507 HP · High-Revving AMG Roar',
+    engine: {
+      idleRpm: 740,
+      redlineRpm: 7200,
+      limiterRpm: 7350,
+      launchRpm: 3500,
+      peakTorqueNm: 610,
+      peakTorqueRpm: 5200,
+      engineBrakeNm: 80,
+      // Mercedes M156 6.2L Atmospheric V8 firing order 1-5-4-2-6-3-7-8
+      firing: [
+        [0, 1, 0], [90, 5, 1], [180, 4, 0], [270, 2, 0],
+        [360, 6, 1], [450, 3, 0], [540, 7, 1], [630, 8, 1]
+      ],
+      sound: {
+        banks: [
+          { pipeMs: 4.8, pan: -0.55, tune: 1.0 },
+          { pipeMs: 5.7, pan: 0.55, tune: 1.05 }
+        ],
+        pipeReflection: -0.5,
+        pipeDamping: 0.25,
+        formants: [
+          { hz: 95, q: 1.1, gain: 1.1 },
+          { hz: 240, q: 1.3, gain: 1.15 },
+          { hz: 580, q: 1.5, gain: 1.2 },
+          { hz: 1250, q: 1.8, gain: 1.1 },
+          { hz: 2200, q: 2.2, gain: 0.75 },
+          { hz: 3600, q: 2.5, gain: 0.45 }
+        ],
+        formantDry: 0.35,
+        pulseMsIdle: 4.2,
+        pulseMsRedline: 0.55,
+        noise: 1.2,
+        jitter: 0.05,
+        cylinderTrim: 0.09,
+        lope: 0.20,
+        mufflerHz: [800, 9200],
+        bodyHz: 74,
+        bodyDb: 6.5,
+        intake: 0.45,
+        intakeHz: 950,
+        whine: 0,
+        crackle: 0.75,
+        popGain: 0.5,
+        drive: 4.5,
+        gain: 0.52
+      }
+    },
+    vehicle: {
+      massKg: 1730,
+      cdA: 0.65,
+      crr: 0.011,
+      maxAccel: 9.0,
+      peakPowerKw: 373,
+      drivetrainEff: 0.88,
+      ratios: [4.38, 2.86, 1.92, 1.37, 1.00, 0.82, 0.73],
+      finalDrive: 2.82,
+      tireCircumferenceM: 2.05,
+      maxSpeedKmh: 287
+    }
+  },
+  {
+    id: 'sls-amg',
+    name: 'Mercedes-Benz SLS AMG',
+    tagline: '6.2 L V8 Dry-Sump (M159) · 591 HP · 7-Speed Dual-Clutch Supercar',
+    engine: {
+      idleRpm: 800,
+      redlineRpm: 7500,
+      limiterRpm: 7650,
+      launchRpm: 4000,
+      peakTorqueNm: 650,
+      peakTorqueRpm: 4750,
+      engineBrakeNm: 75,
+      // Mercedes M159 6.2L V8 firing order 1-5-4-2-6-3-7-8
+      firing: [
+        [0, 1, 0], [90, 5, 1], [180, 4, 0], [270, 2, 0],
+        [360, 6, 1], [450, 3, 0], [540, 7, 1], [630, 8, 1]
+      ],
+      sound: {
+        banks: [
+          { pipeMs: 3.8, pan: -0.6, tune: 1.0 },
+          { pipeMs: 4.4, pan: 0.6, tune: 1.06 }
+        ],
+        pipeReflection: -0.48,
+        pipeDamping: 0.24,
+        formants: [
+          { hz: 88, q: 1.0, gain: 1.15 },
+          { hz: 210, q: 1.2, gain: 1.2 },
+          { hz: 480, q: 1.4, gain: 1.1 },
+          { hz: 1100, q: 1.7, gain: 1.0 },
+          { hz: 2400, q: 2.1, gain: 0.8 },
+          { hz: 3800, q: 2.4, gain: 0.5 }
+        ],
+        formantDry: 0.36,
+        pulseMsIdle: 3.8,
+        pulseMsRedline: 0.48,
+        noise: 1.35,
+        jitter: 0.04,
+        cylinderTrim: 0.08,
+        lope: 0.18,
+        mufflerHz: [850, 9800],
+        bodyHz: 70,
+        bodyDb: 7.0,
+        intake: 0.5,
+        intakeHz: 1100,
+        whine: 0,
+        crackle: 0.9,
+        popGain: 0.6,
+        drive: 4.6,
+        gain: 0.5
+      }
+    },
+    vehicle: {
+      massKg: 1620,
+      cdA: 0.61,
+      crr: 0.011,
+      maxAccel: 9.8,
+      peakPowerKw: 435,
+      drivetrainEff: 0.90,
+      ratios: [3.40, 2.19, 1.63, 1.29, 1.03, 0.84, 0.72],
+      finalDrive: 3.67,
+      tireCircumferenceM: 2.14,
+      maxSpeedKmh: 320
+    }
+  },
+  {
     id: 'tesla-roadster-thrust',
     name: 'Tesla Roadster',
     tagline: 'Four cold-gas thrusters · 80+ kN · two rear motors, 1 MW',
