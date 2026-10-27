@@ -63,7 +63,8 @@ class AudioEngine {
     this.subwooferGain = null;
     this.bassShakeLevel = 1.0;
 
-    // Tesla Model 3 / Y Spatial Soundstage & Acoustic Fader
+    // Tesla Model 3 / Y / S / Cybertruck Audio Trim & Spatial Fader
+    this.teslaTrim = 'm3_premium'; // 'm3_premium' | 'm3_standard' | 'ms_plaid' | 'cybertruck' | 'custom_stereo'
     this.soundstageMode = 'tesla_front';
     this.frontRearFader = 0.0;     // -1.0 (All Front) .. 0.0 (Balanced 50/50) .. +1.0 (All Rear)
     this.frontVolumeLevel = 1.0;   // 0.0 .. 1.5
@@ -414,6 +415,73 @@ class AudioEngine {
     this.exhaustDelayMs = 18;
     this.stereoWidthLevel = 1.3;
     this.popsAggressiveness = 1.0;
+    this.updateSpatialGains();
+  }
+
+  setTeslaTrim(trimId) {
+    this.teslaTrim = trimId;
+    if (!this.ctx) return;
+    const now = this.ctx.currentTime;
+    const smooth = 0.05;
+
+    if (trimId === 'm3_standard') {
+      // Tesla Model 3 / Y Standard RWD (7-9 speakers, NO physical subwoofer)
+      // Re-route and tune low frequencies into front/rear door woofers (75 Hz punch)
+      if (this.subwooferFilter) {
+        this.subwooferFilter.frequency.setTargetAtTime(125, now, smooth);
+        this.subwooferFilter.Q.setTargetAtTime(1.4, now, smooth);
+      }
+      if (this.subwooferBooster) {
+        this.subwooferBooster.frequency.setTargetAtTime(75, now, smooth);
+        this.subwooferBooster.gain.setTargetAtTime(9.0, now, smooth); // Door woofer punch
+      }
+      this.stereoWidthLevel = 1.15;
+    } else if (trimId === 'ms_plaid') {
+      // Tesla Model S / X Plaid (22 speakers, 960W Dual Subwoofer)
+      if (this.subwooferFilter) {
+        this.subwooferFilter.frequency.setTargetAtTime(68, now, smooth);
+        this.subwooferFilter.Q.setTargetAtTime(2.2, now, smooth);
+      }
+      if (this.subwooferBooster) {
+        this.subwooferBooster.frequency.setTargetAtTime(36, now, smooth);
+        this.subwooferBooster.gain.setTargetAtTime(9.5, now, smooth);
+      }
+      this.stereoWidthLevel = 1.70; // Ultra 3D immersion
+    } else if (trimId === 'cybertruck') {
+      // Cybertruck (15 speakers, Dual Subs under seats)
+      if (this.subwooferFilter) {
+        this.subwooferFilter.frequency.setTargetAtTime(82, now, smooth);
+        this.subwooferFilter.Q.setTargetAtTime(2.0, now, smooth);
+      }
+      if (this.subwooferBooster) {
+        this.subwooferBooster.frequency.setTargetAtTime(45, now, smooth);
+        this.subwooferBooster.gain.setTargetAtTime(9.5, now, smooth);
+      }
+      this.stereoWidthLevel = 1.45;
+    } else if (trimId === 'custom_stereo') {
+      // Smartphone / Portable Bluetooth / Generic car
+      if (this.subwooferFilter) {
+        this.subwooferFilter.frequency.setTargetAtTime(120, now, smooth);
+        this.subwooferFilter.Q.setTargetAtTime(1.2, now, smooth);
+      }
+      if (this.subwooferBooster) {
+        this.subwooferBooster.frequency.setTargetAtTime(90, now, smooth);
+        this.subwooferBooster.gain.setTargetAtTime(5.0, now, smooth);
+      }
+      this.stereoWidthLevel = 1.0;
+    } else {
+      // Default: m3_premium (Tesla Model 3 / Y Premium 14 speakers + Subwoofer)
+      this.teslaTrim = 'm3_premium';
+      if (this.subwooferFilter) {
+        this.subwooferFilter.frequency.setTargetAtTime(78, now, smooth);
+        this.subwooferFilter.Q.setTargetAtTime(2.0, now, smooth);
+      }
+      if (this.subwooferBooster) {
+        this.subwooferBooster.frequency.setTargetAtTime(42, now, smooth);
+        this.subwooferBooster.gain.setTargetAtTime(7.0, now, smooth);
+      }
+      this.stereoWidthLevel = 1.30;
+    }
     this.updateSpatialGains();
   }
 

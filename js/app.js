@@ -251,6 +251,57 @@ document.addEventListener('DOMContentLoaded', () => {
   // Tesla Model 3 / Y Cabin Acoustic Controls & Spatial Fader
   // -------------------------------------------------------------
   const stageBtns = document.querySelectorAll('.stage-btn');
+  const teslaTrimSelect = document.getElementById('teslaTrimSelect');
+  const teslaTrimBadge = document.getElementById('teslaTrimBadge');
+  const teslaTrimDesc = document.getElementById('teslaTrimDesc');
+  const subNodeText = document.getElementById('subNodeText');
+  const bassSliderLabel = document.getElementById('bassSliderLabel');
+
+  const TRIM_INFO = {
+    m3_premium: {
+      badge: '14 динамиков + Саб',
+      desc: 'Long Range / Performance: Полный 3D-охват, твитеры в стойках и 8" сабвуфер в правом крыле багажника.',
+      subLabel: '🔊 САБВУФЕР',
+      bassSliderText: '🔊 Вибрация сабвуфера (Бас-шейкер)'
+    },
+    m3_standard: {
+      badge: '7-9 колонок (Без саба)',
+      desc: 'Standard Range / RWD: Твитеры отключены, сабвуфера нет. Активирован виртуальный сабвуфер — мощный панч 75 Гц через передние дверные мидбасы!',
+      subLabel: '🚪 МИДБАС ДВЕРЕЙ',
+      bassSliderText: '🔊 Виртуальный саб (Панч дверей)'
+    },
+    ms_plaid: {
+      badge: '22 динамика · 960 Вт',
+      desc: 'Tesla Model S / X Plaid: Флагманская 3D-сцена 170%, динамики в подголовниках и ультра-глубокий суб-бас 36 Гц.',
+      subLabel: '👑 DUAL SUB 960W',
+      bassSliderText: '🔊 Мощность сабвуфера Plaid (960 Вт)'
+    },
+    cybertruck: {
+      badge: '15 динамиков · Cyber Audio',
+      desc: 'Cybertruck: Брутальный звук, двойные сабвуферы под задними сиденьями и жесткий плотный бас 45 Гц.',
+      subLabel: '📐 ПОД СИДЕНЬЯМИ',
+      bassSliderText: '🔊 Сабвуферы Cybertruck (Под сиденьями)'
+    },
+    custom_stereo: {
+      badge: 'Стерео Bluetooth',
+      desc: 'Смартфон / Наушники / Другое авто: Балансировка под портативные динамики и стандартное стерео.',
+      subLabel: '📱 СТЕРЕО',
+      bassSliderText: '🔊 Басовый буст смартфона'
+    }
+  };
+
+  if (teslaTrimSelect) {
+    teslaTrimSelect.addEventListener('change', (e) => {
+      const trimId = e.target.value;
+      audio.setTeslaTrim(trimId);
+      const info = TRIM_INFO[trimId] || TRIM_INFO.m3_premium;
+      if (teslaTrimBadge) teslaTrimBadge.textContent = info.badge;
+      if (teslaTrimDesc) teslaTrimDesc.textContent = info.desc;
+      if (subNodeText) subNodeText.textContent = info.subLabel;
+      if (bassSliderLabel) bassSliderLabel.textContent = info.bassSliderText;
+      syncAcousticUIToAudio();
+    });
+  }
   const faderSlider = document.getElementById('faderSlider');
   const faderValText = document.getElementById('faderValText');
   const frontVolSlider = document.getElementById('frontVolSlider');
