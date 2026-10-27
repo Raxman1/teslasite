@@ -104,10 +104,27 @@ document.addEventListener('DOMContentLoaded', () => {
     { id: 'sample:dragster', name: 'Top Fuel Dragster', badge: 'Blown Nitro 10,000HP' }
   ];
 
+  function getShortBrandLogo(fullName) {
+    if (!fullName) return 'SPORT';
+    const n = fullName.toUpperCase();
+    if (n.includes('CLS 63') || n.includes('G 63') || n.includes('C 63') || n.includes('SLS') || n.includes('AMG') || n.includes('MERCEDES')) return 'AMG';
+    if (n.includes('PORSCHE') || n.includes('GT3') || n.includes('CARRERA')) return 'PORSCHE';
+    if (n.includes('FERRARI') || n.includes('ENZO')) return 'FERRARI';
+    if (n.includes('LAMBORGHINI') || n.includes('VENENO') || n.includes('URUS')) return 'LAMBO';
+    if (n.includes('BUGATTI') || n.includes('CHIRON')) return 'BUGATTI';
+    if (n.includes('DODGE') || n.includes('HELLCAT')) return 'HELLCAT';
+    if (n.includes('AUDI') || n.includes('RS6') || n.includes('RS 6')) return 'AUDI';
+    if (n.includes('BMW') || n.includes('M3') || n.includes('Z4')) return 'BMW M';
+    if (n.includes('GT-R') || n.includes('GTR') || n.includes('NISMO')) return 'GT-R';
+    if (n.includes('SUPRA') || n.includes('2JZ')) return 'SUPRA';
+    if (n.includes('TESLA') || n.includes('ROADSTER')) return 'TESLA';
+    return fullName.split(' ')[0].toUpperCase().substring(0, 6);
+  }
+
   function updateBrandDisplay(name, badge) {
     if (brandTitle) brandTitle.textContent = name;
     if (brandBadge) brandBadge.textContent = badge;
-    if (pedalLogo) pedalLogo.textContent = name.toUpperCase();
+    if (pedalLogo) pedalLogo.textContent = getShortBrandLogo(name);
   }
 
   function populatePresetDropdown(mode) {
@@ -304,8 +321,8 @@ document.addEventListener('DOMContentLoaded', () => {
   const tabBtns = document.querySelectorAll('.tab-btn');
   const gearBtns = document.querySelectorAll('.gear-mode-btn');
 
-  // Set Canvas resolution - safe version (no ctx.scale compound)
-  let _canvasCssW = 380, _canvasCssH = 380;
+  // Set Canvas resolution - safe version (strictly 1:1 circular ratio)
+  let _canvasCssSide = 380;
   function resizeCanvas() {
     try {
       const dpr = window.devicePixelRatio || 1;
@@ -314,12 +331,11 @@ document.addEventListener('DOMContentLoaded', () => {
                  : (canvas.offsetWidth > 80 ? canvas.offsetWidth : 380);
       const cssH = (rect && rect.height > 80) ? rect.height
                  : (canvas.offsetHeight > 80 ? canvas.offsetHeight : 380);
-      const newW = Math.round(cssW * dpr);
-      const newH = Math.round(cssH * dpr);
-      _canvasCssW = cssW;
-      _canvasCssH = cssH;
-      canvas.width  = newW;
-      canvas.height = newH;
+      const side = Math.min(cssW, cssH);
+      _canvasCssSide = side;
+      const newSide = Math.round(side * dpr);
+      canvas.width  = newSide;
+      canvas.height = newSide;
       ctx.setTransform(dpr, 0, 0, dpr, 0, 0); // reset + scale in one call, no compounding
     } catch (e) {
       console.warn('resizeCanvas error:', e);
@@ -935,19 +951,17 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // 10. CANVAS TACHOMETER GAUGE RENDERER (60 FPS)
   function drawGauge(rpm) {
-    // CSS-pixel dimensions for drawing (ctx transform already set by resizeCanvas)
-    const w = _canvasCssW > 80 ? _canvasCssW : (canvas.offsetWidth > 80 ? canvas.offsetWidth : 380);
-    const h = _canvasCssH > 80 ? _canvasCssH : (canvas.offsetHeight > 80 ? canvas.offsetHeight : 380);
-
-    const cx = w / 2;
-    const cy = h / 2;
-    const radius = Math.max(30, Math.min(cx, cy) - 18);
+    // Strictly square dimensions for perfect circular dial
+    const s = _canvasCssSide > 80 ? _canvasCssSide : 320;
+    const cx = s / 2;
+    const cy = s / 2;
+    const radius = Math.max(30, s / 2 - 16);
 
     const rawMaxRpm = audio.maxRpm || 10000;
     const maxRpm = Math.max(7000, Math.ceil(rawMaxRpm / 1000) * 1000);
     const redlineRpm = audio.redlineRpm || 8400;
 
-    ctx.clearRect(0, 0, w, h);
+    ctx.clearRect(0, 0, s, s);
 
     const startAngle = 0.75 * Math.PI;
     const endAngle = 2.25 * Math.PI;

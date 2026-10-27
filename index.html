@@ -7,7 +7,7 @@
   <meta http-equiv="Pragma" content="no-cache">
   <meta http-equiv="Expires" content="0">
   <title>Tesla V10 Sound Simulator | Carrera GT</title>
-  <link rel="stylesheet" href="style.css?v=4.1">
+  <link rel="stylesheet" href="style.css?v=4.2">
   <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🏎️</text></svg>">
 </head>
 <body>
@@ -16,8 +16,8 @@
   <header>
     <div class="brand">
       <div class="engine-mode-switcher">
-        <button id="modeDspBtn" class="mode-tab-btn active" title="18 процедурных гиперкаров (как на teslasound.io)">⚡ DSP Синтез</button>
-        <button id="modeSamplesBtn" class="mode-tab-btn" title="Студийные записи Assetto Corsa (Carrera GT, 2JZ, AMG)">🏎️ Сэмплы HD</button>
+        <button id="modeDspBtn" class="mode-tab-btn active" title="18 процедурных гиперкаров (как на teslasound.io)"><span class="mode-text-full">⚡ DSP Синтез</span><span class="mode-text-short">⚡ DSP</span></button>
+        <button id="modeSamplesBtn" class="mode-tab-btn" title="Студийные записи Assetto Corsa (Carrera GT, 2JZ, AMG)"><span class="mode-text-full">🏎️ Сэмплы HD</span><span class="mode-text-short">🏎️ Сэмплы</span></button>
       </div>
       <span id="brandBadge" class="brand-badge">9,000 RPM</span>
       <span id="brandTitle" class="brand-title">Porsche 911 GT3</span>
@@ -33,8 +33,8 @@
         <input id="engineVolumeSlider" type="range" min="0" max="100" value="100" class="vol-slider">
         <span id="engineVolumeText" class="vol-value">100%</span>
       </div>
-      <button id="p2pModalBtn" class="btn">📱 Связка с телефоном</button>
-      <button id="fullscreenBtn" class="btn">⛶ Полный экран</button>
+      <button id="p2pModalBtn" class="btn btn-icon-only" title="Связка с телефоном"><span class="btn-icon">📱</span><span class="btn-text">Связка</span></button>
+      <button id="fullscreenBtn" class="btn btn-icon-only" title="Полный экран"><span class="btn-icon">⛶</span><span class="btn-text">Экран</span></button>
       <button id="startBtn" class="btn btn-primary">START ENGINE</button>
     </div>
   </header>
@@ -58,9 +58,9 @@
   <!-- Mode Selector Tabs -->
   <div class="tabs-container">
     <div class="tabs">
-      <button class="tab-btn active" data-tab="pedal">🕹️ Тест-Педаль (Симулятор)</button>
-      <button class="tab-btn" data-tab="gps">🛰️ GPS Сенсор (Макс. точность)</button>
-      <button class="tab-btn" data-tab="p2p">📱 P2P Линк с телефоном</button>
+      <button class="tab-btn active" data-tab="pedal"><span class="tab-text-full">🕹️ Тест-Педаль (Симулятор)</span><span class="tab-text-short">🕹️ Педаль</span></button>
+      <button class="tab-btn" data-tab="gps"><span class="tab-text-full">🛰️ GPS Сенсор (Макс. точность)</span><span class="tab-text-short">🛰️ GPS</span></button>
+      <button class="tab-btn" data-tab="p2p"><span class="tab-text-full">📱 P2P Линк с телефоном</span><span class="tab-text-short">📱 P2P</span></button>
     </div>
   </div>
 
@@ -359,15 +359,15 @@
   <!-- Scripts -->
   <script src="js/peerjs.min.js"></script>
   <script src="js/qrcode.min.js"></script>
-  <script src="js/sound-data.js?v=4.1"></script>
+  <script src="js/sound-data.js?v=4.2"></script>
   <!-- Procedural DSP Engine (from teslasound.io) -->
-  <script src="js/dsp/cars.js?v=4.1"></script>
-  <script src="js/dsp/engine-dsp.js?v=4.1"></script>
-  <script src="js/dsp/vehicle.js?v=4.1"></script>
-  <script src="js/dsp-audio.js?v=4.1"></script>
-  <script src="js/audio-engine.js?v=4.1"></script>
-  <script src="js/telemetry.js?v=4.1"></script>
-  <script src="js/p2p.js?v=4.1"></script>
-  <script src="js/app.js?v=4.1"></script>
+  <script src="js/dsp/cars.js?v=4.2"></script>
+  <script src="js/dsp/engine-dsp.js?v=4.2"></script>
+  <script src="js/dsp/vehicle.js?v=4.2"></script>
+  <script src="js/dsp-audio.js?v=4.2"></script>
+  <script src="js/audio-engine.js?v=4.2"></script>
+  <script src="js/telemetry.js?v=4.2"></script>
+  <script src="js/p2p.js?v=4.2"></script>
+  <script src="js/app.js?v=4.2"></script>
 </body>
 </html>
