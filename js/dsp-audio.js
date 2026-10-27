@@ -30,6 +30,7 @@ class DSPAudioEngine {
     this.limiterMode = 'hard'; // 'hard' (2-step aggressive) | 'soft' (smooth bounce)
     this.throttleResponse = 'sport'; // 'linear' | 'sport' | 'race'
     this.shiftProfile = 'comfort'; // 'comfort' (обычные / пониженные) | 'sport' (спорт / повышенные)
+    this.rpmMultiplier = 1.0;      // 1.0x (норма) | 2.0x (спорт) | 3.0x (экстрим)
 
     // Default car: Mercedes CLS 63 AMG «Банан»
     this.setCar('cls63-amg');
@@ -337,16 +338,30 @@ class DSPAudioEngine {
   }
 
   setRpmMultiplier(mult) {
-    this.rpmMultiplier = mult;
+    this.rpmMultiplier = Math.max(0.5, Math.min(5.0, parseFloat(mult) || 1.0));
     if (this.vehicle) {
-      this.vehicle.rpmMultiplier = mult;
+      this.vehicle.rpmMultiplier = this.rpmMultiplier;
+      if (this.vehicle.running && this.rpmMultiplier > 1.0) {
+        this.vehicle.blip = 0.22;
+        if (this.vehicle.neutral) {
+          this.vehicle.revPedal = Math.min(0.65, (this.vehicle.revPedal || 0) + 0.35);
+        }
+      }
     }
   }
 
   setShiftProfile(profile) {
-    this.shiftProfile = profile;
+    this.shiftProfile = (profile === 'sport') ? 'sport' : 'comfort';
     if (this.vehicle) {
-      this.vehicle.shiftProfile = profile;
+      this.vehicle.shiftProfile = this.shiftProfile;
+      if (this.vehicle.running && this.shiftProfile === 'sport') {
+        this.vehicle.blip = 0.22;
+        if (this.vehicle.neutral) {
+          this.vehicle.revPedal = Math.min(0.65, (this.vehicle.revPedal || 0) + 0.35);
+        } else if (this.vehicle.gear > 1) {
+          this.vehicle._startShift(Math.max(1, this.vehicle.gear - 1));
+        }
+      }
     }
   }
 

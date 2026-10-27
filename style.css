@@ -2052,6 +2052,14 @@ kbd {
   font-weight: 900;
   text-shadow: 0 1px 2px rgba(0, 0, 0, 0.8);
 }
+.btn-shift-profile.extreme {
+  background: linear-gradient(135deg, #7c4dff, #d500f9);
+  border-color: #e040fb;
+  color: #fff;
+  box-shadow: 0 0 16px rgba(213, 0, 249, 0.85);
+  font-weight: 900;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.8);
+}
 
 .btn-rpm-mult {
   background: rgba(255, 153, 0, 0.12);

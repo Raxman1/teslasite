@@ -225,6 +225,8 @@ class AudioEngine {
     // Initialize Procedural DSP engine sharing this.ctx and feeding into dspSplitterBus
     if (window.DSPAudioEngine && !this.dspEngine) {
       this.dspEngine = new window.DSPAudioEngine(this.ctx, () => this.dspSplitterBus || this.submixBus || this.masterGain || this.ctx.destination);
+      if (this.rpmMultiplier) this.dspEngine.setRpmMultiplier(this.rpmMultiplier);
+      if (this.shiftProfile) this.dspEngine.setShiftProfile(this.shiftProfile);
     }
 
     // Initialize Universal Turbo Sound Synthesizer feeding into intakeBus or submixBus
@@ -446,6 +448,8 @@ class AudioEngine {
     const now = this.ctx.currentTime;
     const smooth = 0.03;
 
+    const effectiveExhaust = (this.exhaustVolumeLevel <= 0.005) ? 0.0 : Math.pow(this.exhaustVolumeLevel, 1.45);
+
     if (!this.v6ProEnabled) {
       // ==============================================================
       // CLASSIC DIRECT MODE (100% TESLASOUND.IO OPEN WIRE)
@@ -453,7 +457,7 @@ class AudioEngine {
       // Zero delay, zero comb filtering, zero frequency muffling!
       // ==============================================================
       if (this.dspDirectGain) {
-        this.dspDirectGain.gain.setTargetAtTime(this.exhaustVolumeLevel, now, smooth);
+        this.dspDirectGain.gain.setTargetAtTime(effectiveExhaust, now, smooth);
       }
       if (this.dspFrontGain) {
         this.dspFrontGain.gain.setTargetAtTime(0.0, now, smooth);
@@ -492,13 +496,14 @@ class AudioEngine {
         this.dspDirectGain.gain.setTargetAtTime(0.0, now, smooth);
       }
       if (this.dspFrontGain) {
-        this.dspFrontGain.gain.setTargetAtTime(1.0, now, smooth);
+        const frontScale = (effectiveExhaust < 0.5) ? Math.max(0.0, effectiveExhaust * 2.0) : 1.0;
+        this.dspFrontGain.gain.setTargetAtTime(frontScale, now, smooth);
       }
       if (this.dspRearGain) {
-        this.dspRearGain.gain.setTargetAtTime(1.0, now, smooth);
+        this.dspRearGain.gain.setTargetAtTime(effectiveExhaust, now, smooth);
       }
       if (this.dspSubGain) {
-        this.dspSubGain.gain.setTargetAtTime(0.8, now, smooth);
+        this.dspSubGain.gain.setTargetAtTime(Math.min(0.8, effectiveExhaust), now, smooth);
       }
       if (this.frontPresenceFilter) {
         this.frontPresenceFilter.gain.setTargetAtTime(1.8, now, smooth);
@@ -511,7 +516,7 @@ class AudioEngine {
         this.rearDelay.delayTime.setTargetAtTime(0.0, now, smooth);
       }
       if (this.exhaustBus) {
-        this.exhaustBus.gain.setTargetAtTime(this.exhaustVolumeLevel, now, smooth);
+        this.exhaustBus.gain.setTargetAtTime(effectiveExhaust, now, smooth);
       }
       if (this.intakeBus) {
         this.intakeBus.gain.setTargetAtTime(1.0, now, smooth);
@@ -655,8 +660,10 @@ class AudioEngine {
     // At 1.0 (100%), bassDb = 0 dB (completely flat transparent straight wire!)
     if (this.masterBassFilter && this.ctx) {
       let bassDb = 0;
-      if (this.bassShakeLevel < 0.98) {
-        bassDb = (this.bassShakeLevel - 1.0) * 16.0; // level 0.5 -> -8 dB sub cut
+      if (this.bassShakeLevel <= 0.02) {
+        bassDb = -36.0; // Complete sub cut at 0%
+      } else if (this.bassShakeLevel < 0.98) {
+        bassDb = (this.bassShakeLevel - 1.0) * 22.0; // steep cut down to -22 dB
       } else if (this.bassShakeLevel > 1.02) {
         bassDb = (this.bassShakeLevel - 1.0) * 6.0;  // level 1.5 -> +3 dB sub boost
       } else {
@@ -666,7 +673,8 @@ class AudioEngine {
     }
 
     if (this.subwooferGain && this.ctx) {
-      this.subwooferGain.gain.setTargetAtTime(this.bassShakeLevel * 1.0, now, 0.04);
+      const subGain = (this.bassShakeLevel <= 0.02) ? 0.0 : Math.pow(this.bassShakeLevel, 1.4);
+      this.subwooferGain.gain.setTargetAtTime(subGain, now, 0.04);
     }
     if (this.subwooferBooster && this.ctx) {
       const boostDb = (this.bassShakeLevel - 1.0) * 6.0;
@@ -675,14 +683,45 @@ class AudioEngine {
   }
 
   setExhaustVolume(vol) {
-    this.exhaustVolumeLevel = Math.max(0.1, Math.min(2.0, vol));
+    this.exhaustVolumeLevel = Math.max(0.0, Math.min(2.0, parseFloat(vol) || 0));
     const now = this.ctx ? this.ctx.currentTime : 0;
+
+    // Perceptual audio taper: at 0% -> 0.0, at 5% -> 0.013 (-38 dB whisper), at 10% -> 0.035 (-29 dB), at 100% -> 1.0, at 150% -> 1.76
+    const effectiveGain = (this.exhaustVolumeLevel <= 0.005) 
+      ? 0.0 
+      : Math.pow(this.exhaustVolumeLevel, 1.45);
+
     if (this.exhaustBus && this.ctx) {
-      this.exhaustBus.gain.setTargetAtTime(this.exhaustVolumeLevel, now, 0.04);
+      this.exhaustBus.gain.setTargetAtTime(effectiveGain, now, 0.03);
     }
-    // In DSP mode, exhaustVolumeLevel controls direct engine volume cleanly WITHOUT choking dspEngine.character!
-    if (this.dspDirectGain && this.ctx && !this.v6ProEnabled) {
-      this.dspDirectGain.gain.setTargetAtTime(this.exhaustVolumeLevel, now, 0.03);
+
+    // Direct / Classic Mode
+    if (this.dspDirectGain && this.ctx) {
+      this.dspDirectGain.gain.setTargetAtTime(this.v6ProEnabled ? 0.0 : effectiveGain, now, 0.03);
+    }
+
+    // Pro v6.0 Spatial Mode: controls rear exhaust bus and balances vehicle presence
+    if (this.v6ProEnabled && this.ctx) {
+      if (this.dspRearGain) {
+        this.dspRearGain.gain.setTargetAtTime(effectiveGain, now, 0.03);
+      }
+      if (this.rearBus) {
+        this.rearBus.gain.setTargetAtTime(effectiveGain * (this.rearVolumeLevel || 1.0), now, 0.03);
+      }
+      // If exhaust is pulled down below 50%, smoothly scale front bus down as well so car clips don't vibrate
+      if (this.dspFrontGain) {
+        const frontScale = (effectiveGain < 0.5) ? Math.max(0.0, effectiveGain * 2.0) : 1.0;
+        this.dspFrontGain.gain.setTargetAtTime(frontScale, now, 0.03);
+      }
+    }
+
+    // Also update DSP synthesizer fader directly if at 0
+    if (this.dspEngine && this.dspEngine.fader && this.ctx) {
+      if (this.exhaustVolumeLevel <= 0.005) {
+        this.dspEngine.fader.gain.setTargetAtTime(0.0, now, 0.03);
+      } else {
+        this.dspEngine.fader.gain.setTargetAtTime(1.0, now, 0.03);
+      }
     }
   }
 
@@ -762,6 +801,8 @@ class AudioEngine {
     const carId = presetId.replace(/^dsp:/, '').replace(/^sample:/, '');
     if (!this.dspEngine && this.ctx) {
       this.dspEngine = new window.DSPAudioEngine(this.ctx, () => this.dspSplitterBus || this.submixBus || this.masterGain || this.ctx.destination);
+      if (this.rpmMultiplier) this.dspEngine.setRpmMultiplier(this.rpmMultiplier);
+      if (this.shiftProfile) this.dspEngine.setShiftProfile(this.shiftProfile);
     }
     if (this.dspEngine) {
       this.dspEngine.setCar(carId);
@@ -794,6 +835,8 @@ class AudioEngine {
     if (this.soundMode === 'dsp') {
       if (!this.dspEngine && this.ctx) {
         this.dspEngine = new window.DSPAudioEngine(this.ctx, () => this.dspSplitterBus || this.submixBus || this.masterGain || this.ctx.destination);
+        if (this.rpmMultiplier) this.dspEngine.setRpmMultiplier(this.rpmMultiplier);
+        if (this.shiftProfile) this.dspEngine.setShiftProfile(this.shiftProfile);
       }
       if (this.dspEngine) {
         await this.dspEngine.start();

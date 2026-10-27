@@ -83,49 +83,77 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
-  // Shift Profile: Comfort (D / Пониженные обороты) vs Sport (S / Повышенные обороты)
+  // Unified Dynamic RPM & Shift Profile Modes
+  // Mode 1: ⚙️ Обороты: Обычные (1x) — 20 км/ч = ~2,000 RPM, ранние плавные переключения (Comfort)
+  // Mode 2: 🔥 Обороты: СПОРТ (2x)   — 20 км/ч = ~4,000 RPM, держит высокие передачи, сочный бас (Sport)
+  // Mode 3: ⚡ Обороты: ТРЕК (3x)    — 20 км/ч = ~6,000 RPM, максимальная спортивная динамика (Race)
   const shiftProfileBtn = document.getElementById('shiftProfileBtn');
-  let currentShiftProfile = 'comfort'; // 'comfort' | 'sport'
+  const headerRpmMultBtn = document.getElementById('headerRpmMultBtn');
+  const rpmMultiplierBtn = document.getElementById('rpmMultiplierBtn');
+
+  const RPM_MODES = [
+    { mult: 1.0, profile: 'comfort', label: '⚙️ Обороты: Обычные (1x)', notify: '⚙️ Обычные обороты (1x: D — 20 км/ч = 2k RPM)', cls: 'comfort' },
+    { mult: 2.0, profile: 'sport',   label: '🔥 Обороты: СПОРТ (2x)',   notify: '🔥 СПОРТ: Повышенные (2x: S — 20 км/ч = 4,000 RPM)', cls: 'sport' },
+    { mult: 3.0, profile: 'sport',   label: '⚡ Обороты: ТРЕК (3x)',    notify: '⚡ ТРЕК: Экстрим (3x: Race — 20 км/ч = 6,000 RPM)', cls: 'extreme' }
+  ];
+
+  let currentRpmModeIdx = 0;
   try {
-    const savedProf = localStorage.getItem('tesla_shift_profile');
-    if (savedProf === 'sport' || savedProf === 'comfort') {
-      currentShiftProfile = savedProf;
-    }
+    const savedMult = parseFloat(localStorage.getItem('tesla_rpm_multiplier')) || 1.0;
+    const foundIdx = RPM_MODES.findIndex(m => Math.abs(m.mult - savedMult) < 0.2);
+    if (foundIdx >= 0) currentRpmModeIdx = foundIdx;
   } catch (e) {}
 
-  function updateShiftProfileUI(profile, sendP2p = true) {
-    currentShiftProfile = (profile === 'sport') ? 'sport' : 'comfort';
+  function applyRpmMode(idx, broadcast = true, showToast = true) {
+    currentRpmModeIdx = ((idx % RPM_MODES.length) + RPM_MODES.length) % RPM_MODES.length;
+    const mode = RPM_MODES[currentRpmModeIdx];
+
     try {
-      localStorage.setItem('tesla_shift_profile', currentShiftProfile);
+      localStorage.setItem('tesla_rpm_multiplier', mode.mult);
+      localStorage.setItem('tesla_shift_profile', mode.profile);
     } catch (e) {}
 
     if (audio) {
-      audio.setShiftProfile(currentShiftProfile);
+      audio.setRpmMultiplier(mode.mult);
+      audio.setShiftProfile(mode.profile);
     }
 
     if (shiftProfileBtn) {
-      const isSport = (currentShiftProfile === 'sport');
-      shiftProfileBtn.classList.toggle('sport', isSport);
-      shiftProfileBtn.textContent = isSport ? '🔥 Обороты: СПОРТ (S)' : '⚙️ Обороты: Обычный (D)';
+      shiftProfileBtn.textContent = mode.label;
+      shiftProfileBtn.className = `btn-shift-profile ${mode.cls}`;
+    }
+    if (rpmMultiplierBtn) {
+      rpmMultiplierBtn.textContent = `⚡ Динамика: x${mode.mult}`;
+      rpmMultiplierBtn.classList.toggle('boosted', mode.mult > 1.0);
+    }
+    if (headerRpmMultBtn) {
+      headerRpmMultBtn.textContent = `⚡ x${mode.mult}`;
+      headerRpmMultBtn.classList.toggle('boosted', mode.mult > 1.0);
     }
 
-    if (sendP2p && p2p && p2p.sendShiftProfile) {
-      p2p.sendShiftProfile(currentShiftProfile);
+    if (showToast) {
+      showShiftNotification(mode.notify);
     }
+
+    if (broadcast && typeof p2p !== 'undefined' && p2p.isConnected) {
+      p2p.sendRpmMultiplier(mode.mult);
+      p2p.sendShiftProfile(mode.profile);
+    }
+  }
+
+  function cycleRpmMode() {
+    ensureAudioActive();
+    applyRpmMode(currentRpmModeIdx + 1, true, true);
   }
 
   if (shiftProfileBtn) {
-    shiftProfileBtn.addEventListener('click', () => {
-      const next = (currentShiftProfile === 'comfort') ? 'sport' : 'comfort';
-      updateShiftProfileUI(next, true);
-    });
+    shiftProfileBtn.addEventListener('click', cycleRpmMode);
   }
 
   window.syncShiftProfileFromP2p = (prof) => {
-    updateShiftProfileUI(prof, false);
+    const idx = (prof === 'sport') ? (currentRpmModeIdx === 0 ? 1 : currentRpmModeIdx) : 0;
+    applyRpmMode(idx, false, false);
   };
-
-  updateShiftProfileUI(currentShiftProfile, false);
 
   // Mode Switcher & DSP Tuning Elements
   const modeDspBtn = document.getElementById('modeDspBtn');
@@ -1051,8 +1079,6 @@ document.addEventListener('DOMContentLoaded', () => {
   const shiftUpBtn = document.getElementById('shiftUpBtn');
   const shiftDownBtn = document.getElementById('shiftDownBtn');
   const gearNumBtns = document.querySelectorAll('.gear-num-btn');
-  const rpmMultiplierBtn = document.getElementById('rpmMultiplierBtn');
-  const headerRpmMultBtn = document.getElementById('headerRpmMultBtn');
 
   function switchToManualAndShift(action, broadcast = true) {
     ensureAudioActive();
@@ -1125,44 +1151,10 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   });
 
-  // RPM Multiplier Controls (1x, 1.5x, 2x, 3x for dynamic revs at low speeds: e.g. 20 km/h = 4,000 RPM)
-  const RPM_MULTIPLIERS = [1.0, 1.5, 2.0, 3.0];
-  let currentRpmMultiplier = parseFloat(localStorage.getItem('tesla_rpm_multiplier')) || 1.0;
-  if (!RPM_MULTIPLIERS.includes(currentRpmMultiplier)) currentRpmMultiplier = 1.0;
-
-  function updateRpmMultiplierUI() {
-    const textLabel = currentRpmMultiplier === 1.0 ? 'x1' : (currentRpmMultiplier === 1.5 ? 'x1.5' : (currentRpmMultiplier === 2.0 ? 'x2' : 'x3'));
-    if (rpmMultiplierBtn) {
-      rpmMultiplierBtn.textContent = `⚡ Динамика: ${textLabel}`;
-      rpmMultiplierBtn.classList.toggle('boosted', currentRpmMultiplier > 1.0);
-    }
-    if (headerRpmMultBtn) {
-      headerRpmMultBtn.textContent = `⚡ ${textLabel}`;
-      headerRpmMultBtn.classList.toggle('boosted', currentRpmMultiplier > 1.0);
-    }
-    audio.setRpmMultiplier(currentRpmMultiplier);
-  }
-
-  function cycleRpmMultiplier(broadcast = true) {
-    ensureAudioActive();
-    const curIdx = RPM_MULTIPLIERS.indexOf(currentRpmMultiplier);
-    const nextIdx = (curIdx + 1) % RPM_MULTIPLIERS.length;
-    currentRpmMultiplier = RPM_MULTIPLIERS[nextIdx];
-    localStorage.setItem('tesla_rpm_multiplier', currentRpmMultiplier);
-    updateRpmMultiplierUI();
-    const rpmDesc = currentRpmMultiplier === 1.0 
-      ? 'Стандарт (1x)' 
-      : (currentRpmMultiplier === 1.5 ? 'Sport (x1.5: 20 км/ч = 3,000 RPM)' : (currentRpmMultiplier === 2.0 ? 'Race (x2: 20 км/ч = 4,000 RPM)' : 'Beast (x3: 20 км/ч = 6,000 RPM)'));
-    showShiftNotification(`⚡ Обороты: ${rpmDesc}`);
-
-    if (broadcast && typeof p2p !== 'undefined' && p2p.isConnected) {
-      p2p.sendRpmMultiplier(currentRpmMultiplier);
-    }
-  }
-
-  if (rpmMultiplierBtn) addTouchInstantListener(rpmMultiplierBtn, cycleRpmMultiplier);
-  if (headerRpmMultBtn) addTouchInstantListener(headerRpmMultBtn, cycleRpmMultiplier);
-  updateRpmMultiplierUI();
+  // Unified RPM Multiplier & Shift Profile hooks
+  if (rpmMultiplierBtn) addTouchInstantListener(rpmMultiplierBtn, cycleRpmMode);
+  if (headerRpmMultBtn) addTouchInstantListener(headerRpmMultBtn, cycleRpmMode);
+  applyRpmMode(currentRpmModeIdx, false, false);
 
   // 5. INTERACTIVE DUAL SPORTS PEDALS (Continuous Pressure & 3D Tilt Dragging)
   function setPedalPressure(val) {
@@ -1531,11 +1523,14 @@ document.addEventListener('DOMContentLoaded', () => {
     switchToManualAndShift(action, false);
   };
   p2p.onRpmMultiplierReceived = (mult) => {
-    currentRpmMultiplier = mult;
-    updateRpmMultiplierUI();
+    const foundIdx = RPM_MODES.findIndex(m => Math.abs(m.mult - mult) < 0.2);
+    if (foundIdx >= 0) {
+      applyRpmMode(foundIdx, false, true);
+    }
   };
   p2p.onShiftProfileReceived = (profile) => {
-    updateShiftProfileUI(profile, false);
+    const targetIdx = (profile === 'sport') ? (currentRpmModeIdx === 0 ? 1 : currentRpmModeIdx) : 0;
+    applyRpmMode(targetIdx, false, false);
   };
 
   function handleTelemetryError(err) {
