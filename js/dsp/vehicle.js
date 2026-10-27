@@ -384,10 +384,7 @@
     if (this.neutral) {
       this.shift = null;
     } else if (isM) {
-      // Manual Mode: DO NOT auto-shift! Retain driver-selected gear
-      if (this.speed < 0.8 && this.gear > 2 && !this.shift) {
-        this.gear = 1; // Anti-stall at dead stop
-      }
+      // Manual Mode: DO NOT auto-shift! Driver has 100% manual control over gears
     } else {
       // Automatic Mode: Auto-shift through gears
       this._autoShift(braking);

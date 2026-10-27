@@ -293,6 +293,14 @@ class DSPAudioEngine {
     }
   }
 
+  setGear(g) {
+    if (!this.vehicle || !this.car) return;
+    const maxGears = (this.car.vehicle && this.car.vehicle.ratios) ? this.car.vehicle.ratios.length : 7;
+    const target = Math.max(1, Math.min(maxGears, parseInt(g, 10)));
+    this.vehicle.neutral = false;
+    this.vehicle._startShift(target);
+  }
+
   get rpm() { return this.vehicle ? this.vehicle.rpm : 900; }
   get speed() { return this.vehicle ? this.vehicle.speed * 3.6 : 0; }
   get gear() { return (this.vehicle && !this.vehicle.neutral) ? this.vehicle.gear : 0; }

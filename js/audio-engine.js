@@ -532,6 +532,17 @@ class AudioEngine {
     }
   }
 
+  setGear(g) {
+    const target = parseInt(g, 10);
+    if (this.soundMode === 'dsp' && this.dspEngine) {
+      this.dspEngine.setGear(target);
+      this.gear = target;
+      return;
+    }
+    this.gear = Math.max(1, Math.min(6, target));
+    this.triggerRandomPop(0.8);
+  }
+
   calcGain(rpm, min, peak1, peak2, max) {
     if (rpm <= min || rpm >= max) return 0.0001;
     if (rpm >= peak1 && rpm <= peak2) return 1.0;

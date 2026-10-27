@@ -401,6 +401,38 @@ document.addEventListener('DOMContentLoaded', () => {
   });
 
   // 4. GEAR SELECTOR (N / D / M)
+  const shiftUpBtn = document.getElementById('shiftUpBtn');
+  const shiftDownBtn = document.getElementById('shiftDownBtn');
+  const gearNumBtns = document.querySelectorAll('.gear-num-btn');
+
+  function switchToManualAndShift(action) {
+    ensureAudioActive();
+    audio.gearMode = 'M';
+    gearBtns.forEach(b => b.classList.toggle('active', b.dataset.mode === 'M'));
+    if (audio.dspEngine && audio.dspEngine.vehicle) {
+      audio.dspEngine.vehicle.neutral = false;
+      if (audio.dspEngine.vehicle.gear < 1) audio.dspEngine.vehicle.gear = 1;
+    }
+    if (action === 'up') {
+      audio.shiftUp();
+    } else if (action === 'down') {
+      audio.shiftDown();
+    } else if (typeof action === 'number') {
+      audio.setGear(action);
+    }
+    showShiftNotification(`▲ ПЕРЕДАЧА ${audio.gear || 1}`);
+  }
+
+  if (shiftUpBtn) shiftUpBtn.addEventListener('click', () => switchToManualAndShift('up'));
+  if (shiftDownBtn) shiftDownBtn.addEventListener('click', () => switchToManualAndShift('down'));
+
+  gearNumBtns.forEach(btn => {
+    btn.addEventListener('click', () => {
+      const g = parseInt(btn.dataset.gear, 10);
+      switchToManualAndShift(g);
+    });
+  });
+
   gearBtns.forEach(btn => {
     btn.addEventListener('click', () => {
       gearBtns.forEach(b => b.classList.remove('active'));
@@ -413,7 +445,14 @@ document.addEventListener('DOMContentLoaded', () => {
           audio.dspEngine.vehicle.neutral = true;
           audio.dspEngine.vehicle.holdSpeed = 0;
         }
+      } else if (mode === 'M') {
+        if (audio.gear === 0) audio.gear = 1;
+        if (audio.dspEngine && audio.dspEngine.vehicle) {
+          audio.dspEngine.vehicle.neutral = false;
+          if (audio.dspEngine.vehicle.gear < 1) audio.dspEngine.vehicle.gear = 1;
+        }
       } else {
+        // D (Auto)
         if (audio.gear === 0) audio.gear = 1;
         if (audio.dspEngine && audio.dspEngine.vehicle) {
           audio.dspEngine.vehicle.neutral = false;
@@ -986,6 +1025,13 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     gearDisplay.textContent = gearText;
     speedDisplay.textContent = Math.round(audio.speed);
+
+    // Highlight active gear pill
+    const curG = audio.gear || 0;
+    gearNumBtns.forEach(b => {
+      const g = parseInt(b.dataset.gear, 10);
+      b.classList.toggle('active', g === curG && audio.gearMode !== 'N');
+    });
 
     // Render Canvas & Shift Lights
     drawGauge(currentRpm);
