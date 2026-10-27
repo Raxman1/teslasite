@@ -267,6 +267,19 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   } catch (e) {}
 
+  function syncSoundstageButtons(stage) {
+    if (classicStageBtns) {
+      classicStageBtns.forEach(btn => {
+        btn.classList.toggle('active', btn.dataset.stage === stage);
+      });
+    }
+    if (stageBtns) {
+      stageBtns.forEach(btn => {
+        btn.classList.toggle('active', btn.dataset.stage === stage);
+      });
+    }
+  }
+
   function setV6ProState(enabled, applyAudio = true) {
     isV6ProEnabled = enabled;
     try {
@@ -286,14 +299,15 @@ document.addEventListener('DOMContentLoaded', () => {
       proAcousticView.style.display = enabled ? 'block' : 'none';
     }
 
-    // Only touch audio engine when it is already running
-    if (applyAudio && audio.isReady) {
-      if (!enabled) {
-        // Classic mode: balanced rear soundstage
-        audio.setTeslaSoundstage('tesla_mid');
-      } else {
-        syncAcousticUIToAudio();
-      }
+    // Switch AudioEngine processing mode (disables EQ and delay when false)
+    if (applyAudio && audio) {
+      audio.setV6ProEnabled(enabled);
+    }
+
+    if (enabled) {
+      syncAcousticUIToAudio();
+    } else {
+      syncSoundstageButtons(audio.soundstageMode || 'tesla_mid');
     }
   }
 
@@ -307,9 +321,9 @@ document.addEventListener('DOMContentLoaded', () => {
   if (classicStageBtns) {
     classicStageBtns.forEach(btn => {
       btn.addEventListener('click', () => {
-        classicStageBtns.forEach(b => b.classList.remove('active'));
-        btn.classList.add('active');
-        audio.setTeslaSoundstage(btn.dataset.stage);
+        const stage = btn.dataset.stage;
+        audio.setTeslaSoundstage(stage);
+        syncSoundstageButtons(stage);
       });
     });
   }
@@ -449,10 +463,9 @@ document.addEventListener('DOMContentLoaded', () => {
   if (stageBtns) {
     stageBtns.forEach(btn => {
       btn.addEventListener('click', () => {
-        stageBtns.forEach(b => b.classList.remove('active'));
-        btn.classList.add('active');
         const mode = btn.dataset.stage;
         audio.setTeslaSoundstage(mode);
+        syncSoundstageButtons(mode);
         syncAcousticUIToAudio();
       });
     });
@@ -732,6 +745,10 @@ document.addEventListener('DOMContentLoaded', () => {
       }
       try {
         await audio.setPreset(selectedId);
+        syncSoundstageButtons(audio.soundstageMode);
+        if (isV6ProEnabled) {
+          syncAcousticUIToAudio();
+        }
       } catch (err) {
         console.error('Error switching preset:', err);
       }

@@ -74,6 +74,14 @@ class AudioEngine {
     this.stereoWidthLevel = 1.3;   // 0.5 .. 1.8 (130% Tesla 3D immersion)
     this.popsAggressiveness = 1.0; // 0.0 .. 2.0
 
+    let v6Saved = true;
+    try {
+      if (typeof localStorage !== 'undefined' && localStorage.getItem('tesla_v6_pro_enabled') === '0') {
+        v6Saved = false;
+      }
+    } catch (e) {}
+    this.v6ProEnabled = v6Saved;
+
     // Spatial Cabin Network Nodes
     this.frontBus = null;
     this.frontPresenceFilter = null;
@@ -218,7 +226,8 @@ class AudioEngine {
       this.frontPresenceFilter.type = 'peaking';
       this.frontPresenceFilter.frequency.setValueAtTime(3600, this.ctx.currentTime);
       this.frontPresenceFilter.Q.setValueAtTime(1.1, this.ctx.currentTime);
-      this.frontPresenceFilter.gain.setValueAtTime(3.2, this.ctx.currentTime);
+      // If v6.0 PRO is off, 0 dB (completely flat wire, NO equalizer)
+      this.frontPresenceFilter.gain.setValueAtTime(this.v6ProEnabled ? 3.2 : 0.0, this.ctx.currentTime);
 
       this.frontBus.connect(this.frontPresenceFilter);
       this.frontPresenceFilter.connect(this.submixBus);
@@ -235,11 +244,12 @@ class AudioEngine {
       this.rearWarmthFilter = this.ctx.createBiquadFilter();
       this.rearWarmthFilter.type = 'lowshelf';
       this.rearWarmthFilter.frequency.setValueAtTime(260, this.ctx.currentTime);
-      this.rearWarmthFilter.gain.setValueAtTime(3.5, this.ctx.currentTime);
+      // If v6.0 PRO is off, 0 dB (completely flat wire, NO equalizer)
+      this.rearWarmthFilter.gain.setValueAtTime(this.v6ProEnabled ? 3.5 : 0.0, this.ctx.currentTime);
 
-      // 18ms acoustic distance delay (sound traveling 4.7m from rear pipes to driver's ears)
+      // Acoustic distance delay (0 ms if v6.0 PRO is off - perfectly aligned)
       this.rearDelay = this.ctx.createDelay(0.1);
-      this.rearDelay.delayTime.setValueAtTime(this.exhaustDelayMs / 1000.0, this.ctx.currentTime);
+      this.rearDelay.delayTime.setValueAtTime(this.v6ProEnabled ? (this.exhaustDelayMs / 1000.0) : 0.0, this.ctx.currentTime);
 
       this.rearBus.connect(this.rearWarmthFilter);
       this.rearWarmthFilter.connect(this.rearDelay);
@@ -258,14 +268,15 @@ class AudioEngine {
       // 4. Tesla Model 3 / Y Subwoofer Bass Shaker Network
       this.subwooferFilter = this.ctx.createBiquadFilter();
       this.subwooferFilter.type = 'lowpass';
-      this.subwooferFilter.frequency.setValueAtTime(78, this.ctx.currentTime);
-      this.subwooferFilter.Q.setValueAtTime(2.0, this.ctx.currentTime);
+      this.subwooferFilter.frequency.setValueAtTime(80, this.ctx.currentTime);
+      this.subwooferFilter.Q.setValueAtTime(1.8, this.ctx.currentTime);
 
       this.subwooferBooster = this.ctx.createBiquadFilter();
       this.subwooferBooster.type = 'peaking';
-      this.subwooferBooster.frequency.setValueAtTime(42, this.ctx.currentTime);
-      this.subwooferBooster.gain.setValueAtTime(7.0, this.ctx.currentTime);
-      this.subwooferBooster.Q.setValueAtTime(1.4, this.ctx.currentTime);
+      this.subwooferBooster.frequency.setValueAtTime(45, this.ctx.currentTime);
+      const initBoost = (this.bassShakeLevel - 1.0) * 8.0;
+      this.subwooferBooster.gain.setValueAtTime(initBoost, this.ctx.currentTime);
+      this.subwooferBooster.Q.setValueAtTime(1.2, this.ctx.currentTime);
 
       this.subwooferGain = this.ctx.createGain();
       this.subwooferGain.gain.setValueAtTime(this.bassShakeLevel * 1.2, this.ctx.currentTime);
@@ -281,22 +292,26 @@ class AudioEngine {
       this.dspSplitterBus.gain.setValueAtTime(1.0, this.ctx.currentTime);
 
       this.dspFrontGain = this.ctx.createGain();
-      this.dspFrontGain.gain.setValueAtTime(0.85, this.ctx.currentTime);
+      this.dspFrontGain.gain.setValueAtTime(this.v6ProEnabled ? 0.85 : 0.50, this.ctx.currentTime);
       this.dspSplitterBus.connect(this.dspFrontGain);
       this.dspFrontGain.connect(this.frontBus);
 
       this.dspRearGain = this.ctx.createGain();
-      this.dspRearGain.gain.setValueAtTime(1.0, this.ctx.currentTime);
+      this.dspRearGain.gain.setValueAtTime(this.v6ProEnabled ? 1.0 : 0.50, this.ctx.currentTime);
       this.dspSplitterBus.connect(this.dspRearGain);
       this.dspRearGain.connect(this.rearBus);
 
       this.dspSubGain = this.ctx.createGain();
-      this.dspSubGain.gain.setValueAtTime(0.9, this.ctx.currentTime);
+      this.dspSubGain.gain.setValueAtTime(this.v6ProEnabled ? 0.9 : 0.9, this.ctx.currentTime);
       this.dspSplitterBus.connect(this.dspSubGain);
       this.dspSubGain.connect(this.subBus);
 
       // Apply initial acoustic gains
-      this.updateSpatialGains();
+      if (!this.v6ProEnabled) {
+        this.applyClassicSoundstage(this.soundstageMode);
+      } else {
+        this.updateSpatialGains();
+      }
 
     } catch (err) {
       console.warn('buildTeslaSpatialAcoustics warning:', err);
@@ -364,7 +379,121 @@ class AudioEngine {
     }
   }
 
+  applyClassicSoundstage(mode) {
+    if (!this.ctx) return;
+    const now = this.ctx.currentTime;
+    const smooth = 0.04;
+
+    if (mode === 'tesla_mid') {
+      // 🏎️ Задний выхлоп: чистый акцент на задние динамики без эквалайзера
+      if (this.exhaustBus) this.exhaustBus.gain.setTargetAtTime(1.15, now, smooth);
+      if (this.intakeBus) this.intakeBus.gain.setTargetAtTime(0.70, now, smooth);
+      if (this.dspFrontGain) this.dspFrontGain.gain.setTargetAtTime(0.35, now, smooth);
+      if (this.dspRearGain) this.dspRearGain.gain.setTargetAtTime(0.65, now, smooth);
+      if (this.dspSubGain) this.dspSubGain.gain.setTargetAtTime(1.0, now, smooth);
+    } else if (mode === 'tesla_front') {
+      // 🏁 Впуск/Выхлоп: чистый акцент на передние динамики (лобовое стекло)
+      if (this.exhaustBus) this.exhaustBus.gain.setTargetAtTime(0.75, now, smooth);
+      if (this.intakeBus) this.intakeBus.gain.setTargetAtTime(1.15, now, smooth);
+      if (this.dspFrontGain) this.dspFrontGain.gain.setTargetAtTime(0.65, now, smooth);
+      if (this.dspRearGain) this.dspRearGain.gain.setTargetAtTime(0.35, now, smooth);
+      if (this.dspSubGain) this.dspSubGain.gain.setTargetAtTime(1.0, now, smooth);
+    } else {
+      // 🎧 3D Окружение: 50/50 ровный чистый стерео-баланс
+      if (this.exhaustBus) this.exhaustBus.gain.setTargetAtTime(1.0, now, smooth);
+      if (this.intakeBus) this.intakeBus.gain.setTargetAtTime(1.0, now, smooth);
+      if (this.dspFrontGain) this.dspFrontGain.gain.setTargetAtTime(0.50, now, smooth);
+      if (this.dspRearGain) this.dspRearGain.gain.setTargetAtTime(0.50, now, smooth);
+      if (this.dspSubGain) this.dspSubGain.gain.setTargetAtTime(0.9, now, smooth);
+    }
+  }
+
+  setV6ProEnabled(enabled) {
+    this.v6ProEnabled = !!enabled;
+    if (!this.ctx) return;
+    const now = this.ctx.currentTime;
+    const smooth = 0.04;
+
+    if (!this.v6ProEnabled) {
+      // ==============================================================
+      // CLASSIC MODE ("как до было"):
+      // ПОЛНОСТЬЮ ОТКЛЮЧАЕМ ЭКВАЛАЙЗЕР И ЗАДЕРЖКИ!
+      // ==============================================================
+      // 1. Отключаем peaking фильтр на капоте (0 dB = чистый провод без окраса)
+      if (this.frontPresenceFilter) {
+        this.frontPresenceFilter.gain.setTargetAtTime(0.0, now, smooth);
+      }
+      // 2. Отключаем lowshelf фильтр на выхлопе (0 dB = чистый провод без окраса)
+      if (this.rearWarmthFilter) {
+        this.rearWarmthFilter.gain.setTargetAtTime(0.0, now, smooth);
+      }
+      // 3. Отключаем задержку выхлопа (0 мс = синфазный звук без искажений)
+      if (this.rearDelay) {
+        this.rearDelay.delayTime.setTargetAtTime(0.0, now, smooth);
+      }
+      // 4. Сбрасываем шины на ровные 1.0
+      if (this.frontBus) {
+        this.frontBus.gain.setTargetAtTime(1.0, now, smooth);
+      }
+      if (this.rearBus) {
+        this.rearBus.gain.setTargetAtTime(1.0, now, smooth);
+      }
+      // 5. Возвращаем оригинальный сабвуфер v5.0 (80 Гц / 45 Гц)
+      if (this.subwooferFilter) {
+        this.subwooferFilter.frequency.setTargetAtTime(80, now, smooth);
+        this.subwooferFilter.Q.setTargetAtTime(1.8, now, smooth);
+      }
+      if (this.subwooferBooster) {
+        this.subwooferBooster.frequency.setTargetAtTime(45, now, smooth);
+        this.subwooferBooster.Q.setTargetAtTime(1.2, now, smooth);
+        const boostDb = (this.bassShakeLevel - 1.0) * 8.0;
+        this.subwooferBooster.gain.setTargetAtTime(boostDb, now, smooth);
+      }
+      if (this.subwooferGain) {
+        this.subwooferGain.gain.setTargetAtTime(this.bassShakeLevel * 1.2, now, smooth);
+      }
+      // 6. Применяем классическое распределение звука (mid / front / 3d)
+      this.applyClassicSoundstage(this.soundstageMode);
+    } else {
+      // ==============================================================
+      // PRO v6.0 MODE:
+      // Включение продвинутого пространственного процессора
+      // ==============================================================
+      if (this.frontPresenceFilter) {
+        this.frontPresenceFilter.gain.setTargetAtTime(3.2, now, smooth);
+      }
+      if (this.rearWarmthFilter) {
+        this.rearWarmthFilter.gain.setTargetAtTime(3.5, now, smooth);
+      }
+      if (this.rearDelay) {
+        this.rearDelay.delayTime.setTargetAtTime(this.exhaustDelayMs / 1000.0, now, smooth);
+      }
+      if (this.exhaustBus) {
+        this.exhaustBus.gain.setTargetAtTime(1.0, now, smooth);
+      }
+      if (this.intakeBus) {
+        this.intakeBus.gain.setTargetAtTime(1.0, now, smooth);
+      }
+      if (this.dspFrontGain) {
+        this.dspFrontGain.gain.setTargetAtTime(0.85, now, smooth);
+      }
+      if (this.dspRearGain) {
+        this.dspRearGain.gain.setTargetAtTime(1.0, now, smooth);
+      }
+      if (this.dspSubGain) {
+        this.dspSubGain.gain.setTargetAtTime(0.9, now, smooth);
+      }
+      this.setTeslaTrim(this.teslaTrim);
+      this.updateSpatialGains();
+    }
+  }
+
   setTeslaSoundstage(mode) {
+    this.soundstageMode = mode;
+    if (!this.v6ProEnabled) {
+      this.applyClassicSoundstage(mode);
+      return;
+    }
     this.soundstageMode = mode;
     if (mode === 'tesla_front') {
       // 🏎️ Спорткар: Мотор на лобовом стекле, Выхлоп сзади
@@ -420,7 +549,7 @@ class AudioEngine {
 
   setTeslaTrim(trimId) {
     this.teslaTrim = trimId;
-    if (!this.ctx) return;
+    if (!this.v6ProEnabled || !this.ctx) return;
     const now = this.ctx.currentTime;
     const smooth = 0.05;
 
@@ -553,15 +682,7 @@ class AudioEngine {
     }
 
     // Auto-set soundstage profile based on vehicle layout
-    if (presetId === 'carrera_gt') {
-      this.setTeslaSoundstage('tesla_mid', 0.35, 1.1);
-    } else if (presetId === 'supra_2jz' || presetId === 'amg_m177') {
-      this.setTeslaSoundstage('tesla_front', 0.15, 1.25);
-    } else if (presetId === 'bmw_z4_gt3') {
-      this.setTeslaSoundstage('tesla_front', 0.20, 1.3);
-    } else {
-      this.setTeslaSoundstage('tesla_3d', 0.25, 1.4);
-    }
+    this.applyPresetSoundstage(presetId);
   }
 
   async setPreset(presetId) {
@@ -580,7 +701,7 @@ class AudioEngine {
       this.soundMode = 'dsp';
       const carId = presetId.replace(/^dsp:/, '');
       if (!this.dspEngine && this.ctx) {
-        this.dspEngine = new window.DSPAudioEngine(this.ctx, () => this.submixBus || this.masterGain || this.ctx.destination);
+        this.dspEngine = new window.DSPAudioEngine(this.ctx, () => this.dspSplitterBus || this.submixBus || this.masterGain || this.ctx.destination);
       }
       if (this.dspEngine) {
         this.dspEngine.setCar(carId);
@@ -589,6 +710,7 @@ class AudioEngine {
         this.redlineRpm = this.dspEngine.redlineRpm;
         this.maxRpm = this.dspEngine.maxRpm;
       }
+      this.applyPresetSoundstage(carId);
     } else {
       this.soundMode = 'samples';
       const sampleId = presetId.replace(/^sample:/, '');
@@ -616,7 +738,7 @@ class AudioEngine {
 
     if (this.soundMode === 'dsp') {
       if (!this.dspEngine && this.ctx) {
-        this.dspEngine = new window.DSPAudioEngine(this.ctx, () => this.submixBus || this.masterGain || this.ctx.destination);
+        this.dspEngine = new window.DSPAudioEngine(this.ctx, () => this.dspSplitterBus || this.submixBus || this.masterGain || this.ctx.destination);
       }
       if (this.dspEngine) {
         await this.dspEngine.start();
@@ -1025,3 +1147,21 @@ class AudioEngine {
 }
 
 window.AudioEngine = AudioEngine;
+
+
+  applyPresetSoundstage(id) {
+    if (!id) return;
+    const lower = id.toLowerCase();
+    const midRearCars = [
+      'carrera_gt', 'porsche_911', '911_gt3', 'ferrari_458', 'lamborghini',
+      'gallardo', 'audi_r8', 'corvette_c8', 'gt3_rs', 'f40', 'enzo'
+    ];
+    const isMidRear = midRearCars.some(c => lower.includes(c));
+    if (isMidRear) {
+      this.setTeslaSoundstage('tesla_mid');
+    } else if (lower.includes('supra') || lower.includes('amg') || lower.includes('bmw') || lower.includes('viper') || lower.includes('lfa') || lower.includes('mustang') || lower.includes('gtr')) {
+      this.setTeslaSoundstage('tesla_front');
+    } else {
+      this.setTeslaSoundstage('tesla_3d');
+    }
+  }
