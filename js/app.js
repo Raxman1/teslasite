@@ -977,12 +977,12 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   function handleTelemetryError(err) {
-    if (hudAccuracy) hudAccuracy.textContent = 'Нет GPS';
+    if (hudAccuracy) hudAccuracy.textContent = 'Ожидание';
     if (hudCoords) {
       if (err.message && err.message.includes('запретил')) {
-        hudCoords.textContent = 'Геопозиция запрещена (Настройки -> Safari -> Геопозиция -> Разрешить)';
+        hudCoords.textContent = 'Геопозиция запрещена (Нажмите «Разрешить» в строке браузера)';
       } else {
-        hudCoords.textContent = 'В Tesla нет GPS — подключите телефон через «📲 P2P Связка»';
+        hudCoords.textContent = 'Поиск спутников GPS... Выезжайте из подземной парковки';
       }
     }
     console.warn('Telemetry error:', err.message);

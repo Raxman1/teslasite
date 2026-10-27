@@ -81,9 +81,39 @@ class TelemetryTracker {
       timeout: 12000             // Reliable timeout for background execution & tunnels
     };
 
+    // Prompt permission and obtain initial position immediately (works directly on Tesla & Safari)
+    navigator.geolocation.getCurrentPosition(
+      (pos) => this.handleGeoUpdate(pos),
+      (err) => {
+        console.warn('Initial GPS warm-up notice:', err.message);
+        if (err.code === 3) {
+          navigator.geolocation.getCurrentPosition(
+            (p) => this.handleGeoUpdate(p),
+            () => {},
+            { enableHighAccuracy: false, timeout: 10000 }
+          );
+        }
+      },
+      geoOptions
+    );
+
     this.watchId = navigator.geolocation.watchPosition(
       (pos) => this.handleGeoUpdate(pos),
-      (err) => this.handleGeoError(err),
+      (err) => {
+        if (err.code === 3) {
+          console.warn('GPS high-accuracy timeout, falling back to standard accuracy...');
+          if (this.watchId !== null) {
+            navigator.geolocation.clearWatch(this.watchId);
+            this.watchId = navigator.geolocation.watchPosition(
+              (p) => this.handleGeoUpdate(p),
+              (e) => this.handleGeoError(e),
+              { enableHighAccuracy: false, maximumAge: 1000, timeout: 15000 }
+            );
+          }
+          return;
+        }
+        this.handleGeoError(err);
+      },
       geoOptions
     );
 
