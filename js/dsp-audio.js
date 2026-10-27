@@ -134,21 +134,33 @@ class DSPAudioEngine {
         if (!this.workletPromise) {
           this.workletPromise = this.ctx.audioWorklet.addModule(DSP_URL);
         }
-        await this.workletPromise;
+        await Promise.race([
+          this.workletPromise,
+          new Promise((_, reject) => setTimeout(() => reject(new Error('Worklet timeout')), 350))
+        ]);
 
         const node = new AudioWorkletNode(this.ctx, 'engine-processor', {
-          numberOfInputs: 0,
+          numberOfInputs: 1,
           numberOfOutputs: 1,
           outputChannelCount: [2],
           processorOptions: { config: engineCfg, seed: seed }
         });
+
+        // WebKit AudioWorklet wake-up dummy connection
+        try {
+          const dummy = this.ctx.createBufferSource();
+          dummy.buffer = this.ctx.createBuffer(1, 1, this.ctx.sampleRate);
+          dummy.loop = true;
+          dummy.connect(node);
+          dummy.start(0);
+        } catch (e) {}
 
         return {
           node: node,
           post: (msg) => node.port.postMessage(msg)
         };
       } catch (err) {
-        console.warn('AudioWorklet unavailable, using ScriptProcessor fallback:', err);
+        console.warn('AudioWorklet unavailable or timed out, using ScriptProcessor fallback:', err);
       }
     }
 
@@ -159,6 +171,16 @@ class DSPAudioEngine {
       const out = e.outputBuffer;
       dsp.process(out.getChannelData(0), out.getChannelData(1), out.length);
     };
+
+    // WebKit / iOS Safari ScriptProcessor wake-up dummy connection
+    try {
+      const dummy = this.ctx.createBufferSource();
+      dummy.buffer = this.ctx.createBuffer(1, 1, this.ctx.sampleRate);
+      dummy.loop = true;
+      dummy.connect(node);
+      dummy.start(0);
+    } catch (e) {}
+
     return {
       node: node,
       post: (msg) => dsp.message(msg)

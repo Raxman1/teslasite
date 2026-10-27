@@ -54,15 +54,17 @@ class TelemetryTracker {
     if (this.isTracking) return true;
 
     // 1. DeviceMotionEvent permission (required for iOS 13+ and modern Safari)
+    // Non-blocking so Geolocation prompt appears immediately without waiting
     if (typeof DeviceMotionEvent !== 'undefined' && typeof DeviceMotionEvent.requestPermission === 'function') {
       try {
-        const response = await DeviceMotionEvent.requestPermission();
-        if (response === 'granted') {
-          this.bindMotionEvents();
-        }
-      } catch (err) {
-        console.warn('DeviceMotionEvent permission error:', err);
-      }
+        DeviceMotionEvent.requestPermission().then(response => {
+          if (response === 'granted') {
+            this.bindMotionEvents();
+          }
+        }).catch(err => {
+          console.warn('DeviceMotionEvent permission error:', err);
+        });
+      } catch (err) {}
     } else if (typeof window !== 'undefined' && 'ondevicemotion' in window) {
       this.bindMotionEvents();
     }

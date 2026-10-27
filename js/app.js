@@ -143,6 +143,9 @@ document.addEventListener('DOMContentLoaded', () => {
     if (dspTuningBox) {
       dspTuningBox.style.display = mode === 'dsp' ? 'block' : 'none';
     }
+    if (audio) {
+      audio.setPreset(first.id).catch(() => {});
+    }
   }
 
   if (modeDspBtn && modeSamplesBtn) {
@@ -468,9 +471,15 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   // Pre-unlock on first user interaction anywhere
-  window.addEventListener('touchstart', unlockSafariAndTeslaAudio, { once: true, passive: true });
-  window.addEventListener('pointerdown', unlockSafariAndTeslaAudio, { once: true, passive: true });
-  window.addEventListener('click', unlockSafariAndTeslaAudio, { once: true });
+  function handleGlobalUnlock() {
+    unlockSafariAndTeslaAudio();
+    if (!audio.isPlaying && !isStartingAudio) {
+      unlockAndStartEngine();
+    }
+  }
+  window.addEventListener('touchstart', handleGlobalUnlock, { once: true, passive: true });
+  window.addEventListener('pointerdown', handleGlobalUnlock, { once: true, passive: true });
+  window.addEventListener('click', handleGlobalUnlock, { once: true });
 
   // 1. ENGINE START / STOP BUTTON & AUTO-UNLOCK
   let isStartingAudio = false;
@@ -484,7 +493,7 @@ document.addEventListener('DOMContentLoaded', () => {
     unlockSafariAndTeslaAudio();
 
     try {
-      if (presetSelect && presetSelect.value) {
+      if (presetSelect && presetSelect.value && audio.currentPresetId !== presetSelect.value) {
         await audio.setPreset(presetSelect.value);
       }
       await audio.start();
@@ -964,7 +973,14 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   function handleTelemetryError(err) {
-    hudAccuracy.textContent = 'Ошибка';
+    if (hudAccuracy) hudAccuracy.textContent = 'Нет GPS';
+    if (hudCoords) {
+      if (err.message && err.message.includes('запретил')) {
+        hudCoords.textContent = 'Геопозиция запрещена (Настройки -> Safari -> Геопозиция -> Разрешить)';
+      } else {
+        hudCoords.textContent = 'В Tesla нет GPS — подключите телефон через «📲 P2P Связка»';
+      }
+    }
     console.warn('Telemetry error:', err.message);
   }
 
