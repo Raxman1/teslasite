@@ -708,11 +708,77 @@ main {
   margin-top: 14px;
 }
 
+/* Universal Tesla Dark Sliders (Overrides all browser defaults) */
+input[type="range"],
+.tesla-slider {
+  -webkit-appearance: none !important;
+  appearance: none !important;
+  width: 100% !important;
+  height: 5px !important;
+  background: rgba(255, 255, 255, 0.12) !important;
+  border-radius: 3px !important;
+  outline: none !important;
+  border: none !important;
+  cursor: pointer !important;
+  margin: 5px 0 !important;
+  padding: 0 !important;
+}
+
+input[type="range"]::-webkit-slider-runnable-track,
+.tesla-slider::-webkit-slider-runnable-track {
+  height: 5px !important;
+  background: rgba(255, 255, 255, 0.12) !important;
+  border-radius: 3px !important;
+  border: none !important;
+}
+
+input[type="range"]::-webkit-slider-thumb,
+.tesla-slider::-webkit-slider-thumb {
+  -webkit-appearance: none !important;
+  appearance: none !important;
+  width: 15px !important;
+  height: 15px !important;
+  border-radius: 50% !important;
+  background: #ff9900 !important;
+  box-shadow: 0 0 8px rgba(255, 153, 0, 0.8) !important;
+  cursor: pointer !important;
+  border: 2px solid #14171d !important;
+  margin-top: -5px !important;
+  transition: transform 0.1s, box-shadow 0.1s !important;
+}
+
+input[type="range"]::-webkit-slider-thumb:hover,
+input[type="range"]::-webkit-slider-thumb:active,
+.tesla-slider::-webkit-slider-thumb:hover,
+.tesla-slider::-webkit-slider-thumb:active {
+  transform: scale(1.2) !important;
+  box-shadow: 0 0 14px rgba(255, 153, 0, 1) !important;
+}
+
+input[type="range"]::-moz-range-track,
+.tesla-slider::-moz-range-track {
+  height: 5px !important;
+  background: rgba(255, 255, 255, 0.12) !important;
+  border-radius: 3px !important;
+  border: none !important;
+}
+
+input[type="range"]::-moz-range-thumb,
+.tesla-slider::-moz-range-thumb {
+  width: 15px !important;
+  height: 15px !important;
+  border-radius: 50% !important;
+  background: #ff9900 !important;
+  box-shadow: 0 0 8px rgba(255, 153, 0, 0.8) !important;
+  cursor: pointer !important;
+  border: 2px solid #14171d !important;
+}
+
 /* DSP Tuning Control Box */
 .dsp-tuning-container {
-  margin-top: 12px;
+  margin-top: 14px;
   border-top: 1px solid var(--border-glass);
-  padding-top: 10px;
+  padding-top: 12px;
 }
 
 .dsp-tuning-header {
@@ -722,48 +788,101 @@ main {
   margin-bottom: 8px;
   text-transform: uppercase;
   letter-spacing: 0.5px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.btn-adv-toggle {
+  font-size: 10px;
+  font-weight: 700;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid var(--border-glass);
+  color: var(--text-muted);
+  border-radius: 6px;
+  padding: 3px 8px;
+  cursor: pointer;
+  transition: all 0.2s;
+  -webkit-appearance: none;
+}
+.btn-adv-toggle:hover, .btn-adv-toggle.active {
+  background: rgba(255, 153, 0, 0.2);
+  border-color: var(--accent-amber);
+  color: var(--accent-amber);
 }
 
 .slider-row {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-top: 6px;
+  margin-top: 8px;
 }
 
 .slider-label {
   font-size: 11px;
   color: var(--text-muted);
+  white-space: nowrap;
 }
 
 .slider-value {
   font-size: 11px;
   font-weight: 700;
   color: var(--accent-amber);
+  white-space: nowrap;
 }
 
-.slider-input {
-  width: 100%;
-  margin: 3px 0 6px 0;
-  accent-color: var(--accent-amber);
-  cursor: pointer;
+.adv-dsp-content {
+  margin-top: 10px;
+  padding: 10px;
+  background: rgba(0, 0, 0, 0.25);
+  border: 1px solid var(--border-glass);
+  border-radius: 10px;
+  transition: all 0.3s ease;
 }
 
-.btn-tuning-toggle {
+/* Tesla Segmented Pill Controls */
+.segmented-control-group {
+  margin-top: 10px;
+}
+
+.segmented-label {
+  font-size: 10px;
+  color: var(--text-muted);
+  margin-bottom: 4px;
+}
+
+.segmented-pills {
+  display: flex;
+  background: rgba(0, 0, 0, 0.45);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 8px;
+  padding: 2px;
+  gap: 2px;
+}
+
+.segmented-btn {
   flex: 1;
   font-size: 10px;
-  padding: 6px 4px;
-  background: rgba(255, 255, 255, 0.05);
-  border: 1px solid var(--border-glass);
+  font-weight: 600;
+  padding: 6px 3px;
+  text-align: center;
+  border: 1px solid transparent;
+  background: transparent;
   color: var(--text-muted);
   border-radius: 6px;
   cursor: pointer;
   transition: all 0.2s;
+  user-select: none;
+  -webkit-appearance: none;
+  font-family: inherit;
 }
-.btn-tuning-toggle.active {
-  background: rgba(255, 153, 0, 0.2);
-  border-color: var(--accent-amber);
+.segmented-btn:hover {
+  color: #fff;
+}
+.segmented-btn.active {
+  background: rgba(255, 153, 0, 0.22);
   color: var(--accent-amber);
+  border-color: rgba(255, 153, 0, 0.4);
   font-weight: 700;
 }
 

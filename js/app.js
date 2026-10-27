@@ -46,6 +46,8 @@ document.addEventListener('DOMContentLoaded', () => {
   const modeDspBtn = document.getElementById('modeDspBtn');
   const modeSamplesBtn = document.getElementById('modeSamplesBtn');
   const dspTuningBox = document.getElementById('dspTuningBox');
+  const toggleAdvDspBtn = document.getElementById('toggleAdvDspBtn');
+  const advDspBox = document.getElementById('advDspBox');
   const characterSlider = document.getElementById('characterSlider');
   const characterValText = document.getElementById('characterValText');
   const crackleSlider = document.getElementById('crackleSlider');
@@ -54,8 +56,6 @@ document.addEventListener('DOMContentLoaded', () => {
   const whineLevelValText = document.getElementById('whineLevelValText');
   const whinePitchSlider = document.getElementById('whinePitchSlider');
   const whinePitchValText = document.getElementById('whinePitchValText');
-  const subBassSlider = document.getElementById('subBassSlider');
-  const subBassValText = document.getElementById('subBassValText');
   const idleOffsetSlider = document.getElementById('idleOffsetSlider');
   const idleOffsetValText = document.getElementById('idleOffsetValText');
   const limiterHardBtn = document.getElementById('limiterHardBtn');
@@ -181,12 +181,12 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
-  if (subBassSlider) {
-    subBassSlider.addEventListener('input', (e) => {
-      const val = parseInt(e.target.value, 10);
-      const db = Math.round((val - 100) / 12);
-      if (subBassValText) subBassValText.textContent = `${db >= 0 ? '+' : ''}${db} dB`;
-      audio.setSubwooferBoost(val / 100.0);
+  if (toggleAdvDspBtn && advDspBox) {
+    toggleAdvDspBtn.addEventListener('click', () => {
+      const isOpen = advDspBox.style.display !== 'none';
+      advDspBox.style.display = isOpen ? 'none' : 'block';
+      toggleAdvDspBtn.classList.toggle('active', !isOpen);
+      toggleAdvDspBtn.textContent = isOpen ? '⚙️ Опции' : '✕ Скрыть';
     });
   }
 
