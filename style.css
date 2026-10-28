@@ -1871,26 +1871,26 @@ kbd {
 
 /* Scrollable Left Column on Desktop / Tesla Screen */
 @media (min-width: 1051px) {
-  .telemetry-card {
+  .cockpit-left-col {
     max-height: calc(100vh - 100px);
     overflow-y: auto;
     overflow-x: hidden;
     -webkit-overflow-scrolling: touch;
     scrollbar-width: thin;
     scrollbar-color: rgba(255, 153, 0, 0.4) transparent;
-    padding-right: 12px;
+    padding-right: 8px;
   }
-  .telemetry-card::-webkit-scrollbar {
+  .cockpit-left-col::-webkit-scrollbar {
     width: 6px;
   }
-  .telemetry-card::-webkit-scrollbar-track {
+  .cockpit-left-col::-webkit-scrollbar-track {
     background: transparent;
   }
-  .telemetry-card::-webkit-scrollbar-thumb {
+  .cockpit-left-col::-webkit-scrollbar-thumb {
     background: rgba(255, 153, 0, 0.35);
     border-radius: 4px;
   }
-  .telemetry-card::-webkit-scrollbar-thumb:hover {
+  .cockpit-left-col::-webkit-scrollbar-thumb:hover {
     background: rgba(255, 153, 0, 0.6);
   }
 }
@@ -2530,5 +2530,189 @@ kbd {
   .hud-title {
     font-size: 13px !important;
     margin-bottom: 10px;
+  }
+}
+/* Open Live Telemetry & Sensors Dashboard (Cockpit Gauge Dock, ZERO Scroll) */
+.cluster-telemetry-card {
+  width: 100%;
+  max-width: 480px;
+  margin-top: 8px;
+  background: var(--bg-card);
+  border: 1px solid var(--border-glass);
+  border-radius: 16px;
+  padding: 10px 12px;
+  backdrop-filter: blur(16px);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+  box-sizing: border-box;
+  overflow: hidden;
+}
+
+.cluster-panel {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  position: relative;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.cluster-telemetry-card .hud-title {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+  font-size: 12.5px;
+  font-weight: 700;
+  letter-spacing: 0.3px;
+  color: rgba(255, 255, 255, 0.95);
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.hud-rate-badge {
+  color: var(--accent-green);
+  font-size: 11px;
+  font-weight: 700;
+  background: rgba(0, 230, 118, 0.12);
+  border: 1px solid rgba(0, 230, 118, 0.28);
+  padding: 2px 8px;
+  border-radius: 12px;
+  flex-shrink: 0;
+}
+
+.cluster-telemetry-card .hud-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 8px;
+  margin-bottom: 8px;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.cluster-telemetry-card .hud-item {
+  background: rgba(0, 0, 0, 0.35);
+  padding: 6px 4px;
+  border-radius: 10px;
+  border: 1px solid var(--border-glass);
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  min-width: 0;
+  box-sizing: border-box;
+}
+
+.cluster-telemetry-card .hud-label {
+  font-size: 10.5px;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.65);
+  margin-bottom: 2px;
+  white-space: nowrap;
+}
+
+.cluster-telemetry-card .hud-value {
+  font-size: 15px;
+  font-weight: 800;
+  font-family: monospace;
+  color: #fff;
+  white-space: nowrap;
+}
+
+.cluster-telemetry-card .hud-value.highlight {
+  color: var(--accent-amber);
+  font-size: 17px;
+  text-shadow: 0 0 10px rgba(255, 153, 0, 0.4);
+}
+
+.hud-bottom-row {
+  display: flex;
+  gap: 8px;
+  align-items: stretch;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.hud-coords-group {
+  flex: 1 1 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+  overflow: hidden;
+}
+
+.cluster-telemetry-card .hud-coords-box {
+  margin-bottom: 0;
+  cursor: pointer;
+  text-align: left;
+  padding: 6px 8px;
+  display: block;
+  min-width: 0;
+  overflow: hidden;
+  box-sizing: border-box;
+}
+
+.cluster-telemetry-card .hud-coords-val {
+  font-size: 11.5px !important;
+  font-family: monospace;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  text-align: left;
+  display: block;
+}
+
+.cluster-telemetry-card .bg-notice-pill {
+  margin-bottom: 0;
+  padding: 4px 6px;
+  font-size: 10px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  box-sizing: border-box;
+}
+
+.cluster-telemetry-card .g-meter-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 4px 8px;
+  background: rgba(0, 0, 0, 0.3);
+  border: 1px solid var(--border-glass);
+  border-radius: 10px;
+  margin-top: 0;
+  flex-shrink: 0;
+  width: 68px;
+  box-sizing: border-box;
+}
+
+.cluster-telemetry-card .g-circle {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  border: 1px dashed rgba(255, 255, 255, 0.22);
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.cluster-telemetry-card .g-meter-caption {
+  font-size: 8px;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  color: rgba(255, 255, 255, 0.5);
+  margin-top: 2px;
+}
+
+@media (max-width: 580px) {
+  .cluster-telemetry-card .hud-grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 6px;
+  }
+  .cluster-telemetry-card .hud-item {
+    padding: 6px 4px;
   }
 }

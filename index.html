@@ -7,7 +7,7 @@
   <meta http-equiv="Pragma" content="no-cache">
   <meta http-equiv="Expires" content="0">
   <title>Tesla V10 Sound Simulator | Carrera GT</title>
-  <link rel="stylesheet" href="style.css?v=7.6">
+  <link rel="stylesheet" href="style.css?v=7.7">
   <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🏎️</text></svg>">
   <script>
     (function() {
@@ -106,53 +106,7 @@
       <!-- LEFT COLUMN: Sensors, Driving Settings & Acoustics -->
       <div class="cockpit-left-col">
 
-        <!-- LEFT 1: Telemetry & Precision GPS HUD -->
-      <div class="card telemetry-card">
-        <div class="hud-title">
-          <span>Сенсоры и Телеметрия</span>
-          <span id="hudRate" style="color: var(--accent-green); font-size: 13px;">GPS 1 Гц</span>
-        </div>
-
-        <div id="bgNotice" class="bg-notice-pill">
-          <span>🔒</span>
-          <span>Фон активен: звук и GPS работают при блокировке экрана</span>
-        </div>
-
-        <div class="hud-grid">
-          <div class="hud-item">
-            <div class="hud-label">GPS Скорость</div>
-            <div id="hudSpeed" class="hud-value highlight">0.0 км/ч</div>
-          </div>
-          <div class="hud-item">
-            <div class="hud-label">Ускорение</div>
-            <div id="hudAccel" class="hud-value">0.00 м/с²</div>
-          </div>
-          <div class="hud-item">
-            <div class="hud-label">Перегрузка (G)</div>
-            <div id="hudGForce" class="hud-value">0.00 G</div>
-          </div>
-          <div class="hud-item">
-            <div class="hud-label">Точность GPS</div>
-            <div id="hudAccuracy" class="hud-value">–</div>
-          </div>
-        </div>
-
-        <div class="hud-item" id="hudCoordsBox" style="margin-bottom: 12px; cursor: pointer;" title="Нажмите для активации GPS">
-          <div class="hud-label" style="display: flex; justify-content: space-between; align-items: center;">
-            <span>Координаты GNSS</span>
-            <span id="gnssStatusBadge" style="font-size: 12px; color: var(--accent-amber);">Ожидание GPS</span>
-          </div>
-          <div id="hudCoords" class="hud-value" style="font-size: 13.5px;">🛰️ Нажмите сюда или вкладку 📡 GPS</div>
-        </div>
-
-        <div class="g-meter-container">
-          <div class="g-circle">
-            <div id="gDot" class="g-dot"></div>
-          </div>
-        </div>
-      </div>
-
-      <!-- LEFT 2: Driving Dynamics & Exhaust Controls (Лаконично, органично, понятно) -->
+      <!-- LEFT 1: Driving Dynamics & Exhaust Controls (Лаконично, органично, понятно) -->
       <div class="card driving-settings-card">
         <div class="hud-title" style="margin-bottom: 6px;">
           <span>🏎️ Настройки вождения и выхлопа</span>
@@ -503,7 +457,7 @@
 
       </div> <!-- Close cockpit-left-col -->
 
-      <!-- CENTER: Carrera GT Tachometer & Gear Display -->
+      <!-- CENTER: Carrera GT Tachometer & Speedometer + Live Telemetry Cockpit -->
       <div class="cluster-panel">
         <div class="tachometer-container">
           <canvas id="gaugeCanvas"></canvas>
@@ -512,6 +466,57 @@
             <div id="speedDisplay" class="speed-display">0</div>
             <div class="speed-unit">KM/H</div>
             <div id="rpmNumeric" class="rpm-numeric">920 RPM</div>
+          </div>
+        </div>
+
+        <!-- Integrated Open Telemetry & Sensors Dashboard (Right below / beside speedometer, ZERO scroll) -->
+        <div class="card telemetry-card cluster-telemetry-card">
+          <div class="hud-title">
+            <span class="hud-main-title">🛰️ Сенсоры и Телеметрия GNSS</span>
+            <span id="hudRate" class="hud-rate-badge">GPS 1 Гц</span>
+          </div>
+
+          <div class="hud-grid">
+            <div class="hud-item">
+              <div class="hud-label">GPS Скорость</div>
+              <div id="hudSpeed" class="hud-value highlight">0.0 км/ч</div>
+            </div>
+            <div class="hud-item">
+              <div class="hud-label">Ускорение</div>
+              <div id="hudAccel" class="hud-value">0.00 м/с²</div>
+            </div>
+            <div class="hud-item">
+              <div class="hud-label">Перегрузка (G)</div>
+              <div id="hudGForce" class="hud-value">0.00 G</div>
+            </div>
+            <div class="hud-item">
+              <div class="hud-label">Точность GPS</div>
+              <div id="hudAccuracy" class="hud-value">–</div>
+            </div>
+          </div>
+
+          <div class="hud-bottom-row">
+            <div class="hud-coords-group">
+              <div class="hud-item hud-coords-box" id="hudCoordsBox" title="Нажмите для активации GPS">
+                <div class="hud-label" style="display: flex; justify-content: space-between; align-items: center; gap: 6px;">
+                  <span>Координаты GNSS</span>
+                  <span id="gnssStatusBadge" style="font-size: 11px; color: var(--accent-amber);">Ожидание GPS</span>
+                </div>
+                <div id="hudCoords" class="hud-value hud-coords-val">🛰️ Нажмите сюда или вкладку 📡 GPS</div>
+              </div>
+
+              <div id="bgNotice" class="bg-notice-pill">
+                <span>🔒</span>
+                <span>Фон активен: звук и GPS работают при блокировке экрана</span>
+              </div>
+            </div>
+
+            <div class="g-meter-container">
+              <div class="g-circle">
+                <div id="gDot" class="g-dot"></div>
+              </div>
+              <span class="g-meter-caption">G-FORCE</span>
+            </div>
           </div>
         </div>
       </div>
@@ -688,15 +693,15 @@
   <script src="js/peerjs.min.js"></script>
   <script src="js/qrcode.min.js"></script>
   <!-- Procedural DSP Engine (from teslasound.io) -->
-  <script src="js/dsp/cars.js?v=7.6"></script>
-  <script src="js/dsp/engine-dsp.js?v=7.6"></script>
-  <script src="js/dsp/vehicle.js?v=7.6"></script>
-  <script src="js/dsp-audio.js?v=7.6"></script>
-  <script src="js/bov-sound.js?v=7.6"></script>
-  <script src="js/turbo-sound.js?v=7.6"></script>
-  <script src="js/audio-engine.js?v=7.6"></script>
-  <script src="js/telemetry.js?v=7.6"></script>
-  <script src="js/p2p.js?v=7.6"></script>
-  <script src="js/app.js?v=7.6"></script>
+  <script src="js/dsp/cars.js?v=7.7"></script>
+  <script src="js/dsp/engine-dsp.js?v=7.7"></script>
+  <script src="js/dsp/vehicle.js?v=7.7"></script>
+  <script src="js/dsp-audio.js?v=7.7"></script>
+  <script src="js/bov-sound.js?v=7.7"></script>
+  <script src="js/turbo-sound.js?v=7.7"></script>
+  <script src="js/audio-engine.js?v=7.7"></script>
+  <script src="js/telemetry.js?v=7.7"></script>
+  <script src="js/p2p.js?v=7.7"></script>
+  <script src="js/app.js?v=7.7"></script>
 </body>
 </html>
