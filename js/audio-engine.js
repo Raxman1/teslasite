@@ -148,6 +148,10 @@ class AudioEngine {
     this.soundMode = 'dsp';
     this.dspEngine = null;
     this.turboEngine = null;
+    this.currentAspiration = 'turbo';
+    this.isTurboWhineUserActive = true;
+    this.isBovUserActive = true;
+    this.lastWhineVolume = 1.0;
 
     // Immediately prepare context so preset buffers decode even before first touch
     this.ensureContext();
@@ -242,6 +246,7 @@ class AudioEngine {
       this.turboEngine.init();
       this.turboEngine.setEnabled(true);
     }
+    this.applyAspirationAcoustics(this.currentPresetId);
 
     this.isReady = true;
     console.log('Tesla AudioEngine ready. Current preset:', this.currentPresetId, 'Mode:', this.soundMode);
@@ -494,7 +499,11 @@ class AudioEngine {
         this.submixBus.gain.setTargetAtTime(0.0, now, smooth);
       }
       if (this.turboEngine) {
-        this.turboEngine.setEnabled(true);
+        if (this.currentAspiration === 'turbo') {
+          this.turboEngine.setEnabled(this.isTurboWhineUserActive !== false);
+        } else {
+          this.turboEngine.setEnabled(false);
+        }
       }
       // Completely flat acoustic filters (0 dB = straight wire)
       if (this.frontPresenceFilter) {
@@ -527,7 +536,11 @@ class AudioEngine {
         this.submixBus.gain.setTargetAtTime(1.0, now, smooth);
       }
       if (this.turboEngine) {
-        this.turboEngine.setEnabled(true);
+        if (this.currentAspiration === 'turbo') {
+          this.turboEngine.setEnabled(this.isTurboWhineUserActive !== false);
+        } else {
+          this.turboEngine.setEnabled(false);
+        }
       }
       if (this.dspFrontGain) {
         const frontScale = (effectiveExhaust < 0.5) ? Math.max(0.0, effectiveExhaust * 2.0) : 1.0;
@@ -817,6 +830,7 @@ class AudioEngine {
 
     // Auto-set soundstage profile based on vehicle layout
     this.applyPresetSoundstage(presetId);
+    this.applyAspirationAcoustics(presetId);
   }
 
   async setPreset(presetId) {
@@ -846,6 +860,7 @@ class AudioEngine {
       this.maxRpm = this.dspEngine.maxRpm;
     }
     this.applyPresetSoundstage(carId);
+    this.applyAspirationAcoustics(carId);
 
     if (wasPlaying) {
       await this.start();
@@ -953,15 +968,52 @@ class AudioEngine {
   }
 
   setTurboWhine(enabled) {
-    if (this.turboEngine) this.turboEngine.setEnabled(enabled);
+    this.isTurboWhineUserActive = !!enabled;
+    if (this.currentAspiration === 'supercharged') {
+      if (this.turboEngine) this.turboEngine.setEnabled(false);
+      if (this.dspEngine) {
+        this.dspEngine.whineLevel = enabled ? (this.lastWhineVolume * 1.35) : 0.0;
+      }
+    } else if (this.currentAspiration === 'turbo') {
+      if (this.turboEngine) this.turboEngine.setEnabled(enabled);
+      if (this.dspEngine) {
+        this.dspEngine.whineLevel = enabled ? (this.lastWhineVolume * 0.85) : 0.0;
+      }
+    } else {
+      if (this.turboEngine) this.turboEngine.setEnabled(false);
+      if (this.dspEngine) {
+        this.dspEngine.whineLevel = 0.0;
+      }
+    }
   }
 
   setTurboVolume(vol) {
-    if (this.turboEngine) this.turboEngine.setVolume(vol);
+    const num = typeof vol === 'number' ? vol : 100;
+    const norm = Math.max(0, Math.min(1.5, num / 100.0));
+    this.lastWhineVolume = norm;
+    if (this.currentAspiration === 'supercharged') {
+      if (this.turboEngine) this.turboEngine.setVolume(0);
+      if (this.dspEngine) {
+        this.dspEngine.whineLevel = (this.isTurboWhineUserActive !== false) ? (norm * 1.35) : 0.0;
+      }
+    } else if (this.currentAspiration === 'turbo') {
+      if (this.turboEngine) this.turboEngine.setVolume(vol);
+      if (this.dspEngine) {
+        this.dspEngine.whineLevel = (this.isTurboWhineUserActive !== false) ? (norm * 0.85) : 0.0;
+      }
+    } else {
+      if (this.turboEngine) this.turboEngine.setVolume(0);
+      if (this.dspEngine) this.dspEngine.whineLevel = 0.0;
+    }
   }
 
   setTurboBlowOff(enabled) {
-    if (this.turboEngine) this.turboEngine.setBovEnabled(enabled);
+    this.isBovUserActive = !!enabled;
+    if (this.currentAspiration === 'supercharged' || this.currentAspiration === 'na' || this.currentAspiration === 'special') {
+      if (this.turboEngine) this.turboEngine.setBovEnabled(false);
+    } else {
+      if (this.turboEngine) this.turboEngine.setBovEnabled(enabled);
+    }
   }
 
   setVolume(val) {
@@ -1311,6 +1363,70 @@ class AudioEngine {
       this.setTeslaSoundstage('tesla_front');
     } else {
       this.setTeslaSoundstage('tesla_3d');
+    }
+  }
+
+  getAspirationType(carId) {
+    const id = (carId || this.currentPresetId || '').replace(/^dsp:/, '').replace(/^sample:/, '').trim().toLowerCase();
+    const carList = window.MOTORSOUND_CARS || [];
+    const car = carList.find(c => c.id === id);
+    if (id === 'hellcat' || (car && car.engine && car.engine.sound && car.engine.sound.blower)) {
+      return 'supercharged';
+    }
+    if (car && car.tagline && /supercharg|компрессор/i.test(car.tagline)) {
+      return 'supercharged';
+    }
+    if (car && car.tagline && /turbo|biturbo|твин-турбо|турбо/i.test(car.tagline)) {
+      return 'turbo';
+    }
+    if (car && car.engine && car.engine.sound && car.engine.sound.turbo) {
+      return 'turbo';
+    }
+    if (car && (car.engine && car.engine.type === 'electric' || /thrust|zen|hearse/i.test(id))) {
+      return 'special';
+    }
+    const turboKeywords = ['cls63', 'g63', 'rs6', 'gtr', 'chiron', 'm3', 'urus', 'slipstream', '911-turbo'];
+    if (turboKeywords.some(k => id.includes(k))) {
+      return 'turbo';
+    }
+    return 'na';
+  }
+
+  applyAspirationAcoustics(carId) {
+    const asp = this.getAspirationType(carId);
+    this.currentAspiration = asp;
+    console.log(`[AudioEngine] Aspiration acoustics set to: ${asp} for car: ${carId}`);
+
+    if (asp === 'supercharged') {
+      // Supercharged (Hellcat etc.):
+      // Mute turbo aerodynamic whistle and eliminate blow-off flutter ('вутуту').
+      // Authentic mechanical supercharger whine comes directly from EngineDSP blower series.
+      if (this.turboEngine) {
+        this.turboEngine.setEnabled(false);
+        this.turboEngine.setBovEnabled(false);
+      }
+      if (this.dspEngine) {
+        this.dspEngine.whineLevel = (this.isTurboWhineUserActive !== false) ? (this.lastWhineVolume * 1.35) : 0.0;
+      }
+    } else if (asp === 'turbo') {
+      // Turbocharged: Enable aerodynamic spool whistle and authentic blow-off flutter ('вутуту')
+      if (this.turboEngine) {
+        this.turboEngine.setEnabled(this.isTurboWhineUserActive !== false);
+        this.turboEngine.setBovEnabled(this.isBovUserActive !== false);
+        this.turboEngine.setVolume(this.lastWhineVolume * 100);
+      }
+      if (this.dspEngine) {
+        this.dspEngine.whineLevel = (this.isTurboWhineUserActive !== false) ? (this.lastWhineVolume * 0.85) : 0.0;
+      }
+    } else {
+      // Naturally Aspirated / Atmospheric: Mute turbo and blow-off
+      if (this.turboEngine) {
+        this.turboEngine.setEnabled(false);
+        this.turboEngine.setBovEnabled(false);
+      }
+      if (this.dspEngine) {
+        this.dspEngine.whineLevel = 0.0;
+      }
     }
   }
 }

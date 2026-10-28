@@ -683,14 +683,14 @@ window.MOTORSOUND_CARS = [
         // Supercharger whine: a bright harmonic series, the 2nd harmonic as
         // strong as the 1st (as in reference recordings), with pitch and level
         // tuned by ear: 21.3 × crank speed (2,130 Hz at 6,000 rpm).
-        whine: 0.089,
+        whine: 0.145,
         whineRatio: 21.3,
         // Belt-driven supercharger: skips the muffler and whines only under
         // boost, coming in between 20 % and 70 % throttle, so not at idle,
         // cruising or coasting. Three voices a fraction of a percent apart
         // beat unevenly, a few times a second.
         blower: {
-          boostLoad: [0.2, 0.7],
+          boostLoad: [0.15, 0.65],
           harmonics: [1, 0.87, 0.44, 0.32, 0.28],
           voices: [[1, 1], [1.0022, 0.85], [0.9963, 0.6]]
         },

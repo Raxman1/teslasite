@@ -911,10 +911,17 @@ document.addEventListener('DOMContentLoaded', () => {
 
   function updateTurboWhineUI(enabled, vol) {
     isTurboWhineActive = enabled;
+    const currentAsp = (audio && audio.currentAspiration) ? audio.currentAspiration : 'turbo';
     
     // 1. Dedicated Turbo Box UI
     if (turboStateBadge) {
-      turboStateBadge.textContent = enabled ? 'ВКЛ' : 'ВЫКЛ';
+      if (currentAsp === 'supercharged') {
+        turboStateBadge.textContent = enabled ? 'КОМПРЕССОР' : 'ВЫКЛ';
+      } else if (currentAsp === 'turbo') {
+        turboStateBadge.textContent = enabled ? 'ТУРБО' : 'ВЫКЛ';
+      } else {
+        turboStateBadge.textContent = enabled ? 'АТМО' : 'ВЫКЛ';
+      }
       turboStateBadge.classList.toggle('active', enabled);
     }
     if (turboToggleBtn) {
@@ -941,10 +948,102 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // 3. Audio Engines
-    audio.setTurboWhine(enabled);
-    audio.setTurboVolume(vol);
-    if (audio.dspEngine) {
-      audio.dspEngine.whineLevel = enabled ? (vol / 100.0) : 0;
+    if (audio) {
+      audio.setTurboWhine(enabled);
+      audio.setTurboVolume(vol);
+    }
+  }
+
+  function updateAspirationUI(carId) {
+    if (!audio) return;
+    const asp = audio.getAspirationType ? audio.getAspirationType(carId) : 'turbo';
+    const turboTitleEl = document.querySelector('#turboControlBox .turbo-title');
+    const bovLabelEl = document.querySelector('.turbo-suboption-label span');
+    const bovRow = document.querySelector('.turbo-suboptions');
+
+    if (asp === 'supercharged') {
+      // Supercharged (Hellcat): Screaming mechanical blower, NO turbo whistle, NO "вутуту" BOV
+      if (turboTitleEl) turboTitleEl.innerHTML = '⚙️ Механический компрессор / Supercharger';
+      if (turboStateBadge) {
+        turboStateBadge.textContent = 'КОМПРЕССОР';
+        turboStateBadge.classList.add('active');
+        turboStateBadge.style.background = 'rgba(230, 81, 0, 0.25)';
+        turboStateBadge.style.color = '#ff9800';
+      }
+      if (turboToggleBtn) {
+        turboToggleBtn.classList.add('active');
+        if (turboToggleText) turboToggleText.textContent = 'ВКЛ';
+      }
+      if (bovLabelEl) {
+        bovLabelEl.innerHTML = '💥 Блоу-офф (Stututu) &mdash; <span style="opacity: 0.5;">нет на компрессоре</span>';
+      }
+      if (turboBovCheck) {
+        turboBovCheck.checked = false;
+        turboBovCheck.disabled = true;
+      }
+      if (bovRow) {
+        bovRow.style.opacity = '0.4';
+      }
+      isTurboWhineActive = true;
+      const vol = turboVolumeSlider ? parseInt(turboVolumeSlider.value, 10) : 100;
+      audio.setTurboWhine(true);
+      audio.setTurboVolume(vol);
+      audio.setTurboBlowOff(false);
+    } else if (asp === 'turbo') {
+      // Turbocharged: Spooling turbine whistle + authentic "вутуту" Blow-Off Valve flutter
+      if (turboTitleEl) turboTitleEl.innerHTML = '🌀 Свист турбин / Turbo Whine';
+      if (turboStateBadge) {
+        turboStateBadge.textContent = 'ТУРБО';
+        turboStateBadge.classList.add('active');
+        turboStateBadge.style.background = 'rgba(0, 168, 255, 0.2)';
+        turboStateBadge.style.color = '#00a8ff';
+      }
+      if (turboToggleBtn) {
+        turboToggleBtn.classList.add('active');
+        if (turboToggleText) turboToggleText.textContent = 'ВКЛ';
+      }
+      if (bovLabelEl) {
+        bovLabelEl.innerHTML = '💥 Сброс давления Blow-Off (Stututu)';
+      }
+      if (turboBovCheck) {
+        turboBovCheck.checked = true;
+        turboBovCheck.disabled = false;
+      }
+      if (bovRow) {
+        bovRow.style.opacity = '1.0';
+      }
+      isTurboWhineActive = true;
+      const vol = turboVolumeSlider ? parseInt(turboVolumeSlider.value, 10) : 100;
+      audio.setTurboWhine(true);
+      audio.setTurboVolume(vol);
+      audio.setTurboBlowOff(true);
+    } else {
+      // Naturally Aspirated (Атмосферный): Pure atmospheric roar
+      if (turboTitleEl) turboTitleEl.innerHTML = '🏁 Атмосферный / Natural Intake';
+      if (turboStateBadge) {
+        turboStateBadge.textContent = 'АТМО';
+        turboStateBadge.classList.remove('active');
+        turboStateBadge.style.background = 'rgba(255, 255, 255, 0.1)';
+        turboStateBadge.style.color = '#888';
+      }
+      if (turboToggleBtn) {
+        turboToggleBtn.classList.remove('active');
+        if (turboToggleText) turboToggleText.textContent = 'ВЫКЛ';
+      }
+      if (bovLabelEl) {
+        bovLabelEl.innerHTML = '💥 Сброс давления Blow-Off (N/A)';
+      }
+      if (turboBovCheck) {
+        turboBovCheck.checked = false;
+        turboBovCheck.disabled = true;
+      }
+      if (bovRow) {
+        bovRow.style.opacity = '0.4';
+      }
+      isTurboWhineActive = false;
+      audio.setTurboWhine(false);
+      audio.setTurboVolume(0);
+      audio.setTurboBlowOff(false);
     }
   }
 
@@ -958,6 +1057,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
   if (turboToggleBtn) turboToggleBtn.addEventListener('click', handleTurboToggle);
   if (advWhineToggleBtn) advWhineToggleBtn.addEventListener('click', handleTurboToggle);
+
+  // Initialize aspiration mode based on current car
+  updateAspirationUI(audio ? audio.currentPresetId : 'cls63-amg');
 
   function handleTurboVolumeInput(e) {
     ensureAudioActive();
@@ -1075,6 +1177,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (isV6ProEnabled) {
           syncAcousticUIToAudio();
         }
+        updateAspirationUI(selectedId);
       } catch (err) {
         console.error('Error switching preset:', err);
       }
@@ -1125,6 +1228,7 @@ document.addEventListener('DOMContentLoaded', () => {
           if (isV6ProEnabled) {
             syncAcousticUIToAudio();
           }
+          updateAspirationUI(item.id);
           // Re-apply user driving preferences to new car
           applyCrackleMode(currentCrackleIdx, false, false);
           applyGpsSensitivity(currentSensId, false);
