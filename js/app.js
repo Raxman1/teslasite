@@ -92,9 +92,9 @@ document.addEventListener('DOMContentLoaded', () => {
   const rpmMultiplierBtn = document.getElementById('rpmMultiplierBtn');
 
   const RPM_MODES = [
-    { mult: 1.0, profile: 'comfort', label: '⚙️ Обороты: Обычные (1x)', notify: '⚙️ Обычные обороты (1x: D — 20 км/ч = 2k RPM)', cls: 'comfort' },
-    { mult: 2.0, profile: 'sport',   label: '🔥 Обороты: СПОРТ (2x)',   notify: '🔥 СПОРТ: Повышенные (2x: S — 20 км/ч = 4,000 RPM)', cls: 'sport' },
-    { mult: 3.0, profile: 'sport',   label: '⚡ Обороты: ТРЕК (3x)',    notify: '⚡ ТРЕК: Экстрим (3x: Race — 20 км/ч = 6,000 RPM)', cls: 'extreme' }
+    { mult: 1.0, profile: 'comfort', i18nKey: 'rpm_profile_1x', label: '⚙️ Обороты: Обычные (1x)', notifyKey: 'rpm_notify_1x', notify: '⚙️ Обычные обороты (1x: D — 20 км/ч = 2k RPM)', cls: 'comfort' },
+    { mult: 2.0, profile: 'sport',   i18nKey: 'rpm_profile_2x', label: '🔥 Обороты: СПОРТ (2x)',   notifyKey: 'rpm_notify_2x', notify: '🔥 СПОРТ: Повышенные (2x: S — 20 км/ч = 4,000 RPM)', cls: 'sport' },
+    { mult: 3.0, profile: 'sport',   i18nKey: 'rpm_profile_3x', label: '⚡ Обороты: ТРЕК (3x)',    notifyKey: 'rpm_notify_3x', notify: '⚡ ТРЕК: Экстрим (3x: Race — 20 км/ч = 6,000 RPM)', cls: 'extreme' }
   ];
 
   let currentRpmModeIdx = 0;
@@ -120,11 +120,13 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     if (shiftProfileBtn) {
-      shiftProfileBtn.textContent = mode.label;
+      const t = (k, fb) => (window.i18n && window.i18n.t) ? window.i18n.t(k, fb) : fb;
+      shiftProfileBtn.textContent = t(mode.i18nKey, mode.label);
       shiftProfileBtn.className = `btn-shift-profile ${mode.cls}`;
     }
     if (rpmMultiplierBtn) {
-      rpmMultiplierBtn.textContent = `⚡ Динамика: x${mode.mult}`;
+      const t = (k, fb) => (window.i18n && window.i18n.t) ? window.i18n.t(k, fb) : fb;
+      rpmMultiplierBtn.textContent = `⚡ ${t('hud_dynamics_btn', 'Динамика')}: x${mode.mult}`;
       rpmMultiplierBtn.classList.toggle('boosted', mode.mult > 1.0);
     }
     if (headerRpmMultBtn) {
@@ -165,9 +167,9 @@ document.addEventListener('DOMContentLoaded', () => {
   const crackleFireBtn = document.getElementById('crackleFireBtn');
 
   const CRACKLE_MODES = [
-    { id: 'quiet', label: '🔇 Тихо',  val: 0.0, btnText: '💥 Отстрелы: 🔇 Тихо',  notify: '🔇 Выхлоп: Без отстрелов (Тихо)' },
-    { id: 'sport', label: '💥 Спорт', val: 0.75, btnText: '💥 Отстрелы: 💥 Спорт', notify: '💥 Выхлоп: Спортивные отстрелы' },
-    { id: 'fire',  label: '🔥 Огонь', val: 1.5,  btnText: '💥 Отстрелы: 🔥 Огонь', notify: '🔥 Выхлоп: Антилаг и огонь' }
+    { id: 'quiet', i18nKey: 'crackle_quiet', label: '🔇 Тихо',  val: 0.0, btnText: '💥 Отстрелы: 🔇 Тихо',  notifyKey: 'crackle_quiet_notify', notify: '🔇 Выхлоп: Без отстрелов (Тихо)' },
+    { id: 'sport', i18nKey: 'crackle_sport', label: '💥 Спорт', val: 0.75, btnText: '💥 Отстрелы: 💥 Спорт', notifyKey: 'crackle_sport_notify', notify: '💥 Выхлоп: Спортивные отстрелы' },
+    { id: 'fire',  i18nKey: 'crackle_fire',  label: '🔥 Огонь', val: 1.5,  btnText: '💥 Отстрелы: 🔥 Огонь', notifyKey: 'crackle_fire_notify', notify: '🔥 Выхлоп: Антилаг и огонь' }
   ];
 
   let currentCrackleIdx = 1; // Default to Sport (0.75)
@@ -194,7 +196,8 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     if (crackleQuickBtn) {
-      crackleQuickBtn.textContent = mode.btnText;
+      const t = (k, fb) => (window.i18n && window.i18n.t) ? window.i18n.t(k, fb) : fb;
+      crackleQuickBtn.textContent = t(mode.i18nKey, mode.btnText);
       crackleQuickBtn.classList.toggle('active', mode.id !== 'quiet');
     }
 
@@ -379,7 +382,8 @@ document.addEventListener('DOMContentLoaded', () => {
       teslaAcousticBody.style.display = isAcousticExpanded ? 'block' : 'none';
     }
     if (teslaAcousticExpandBtn) {
-      teslaAcousticExpandBtn.textContent = isAcousticExpanded ? '⚙️ Свернуть ▲' : '⚙️ Настройки ▼';
+      const t = (k, fb) => (window.i18n && window.i18n.t) ? window.i18n.t(k, fb) : fb;
+      teslaAcousticExpandBtn.textContent = isAcousticExpanded ? t('btn_settings_collapse', '⚙️ Свернуть ▲') : t('btn_settings_expand', '⚙️ Настройки ▼');
     }
   }
 
@@ -431,8 +435,8 @@ document.addEventListener('DOMContentLoaded', () => {
   let currentEngineMode = 'dsp'; // 'dsp' | 'samples'
 
   const DSP_PRESETS = [
-    { id: 'dsp:cls63-amg', name: 'Mercedes CLS 63 AMG «Банан»', badge: '5.5L BiTurbo V8 · 585 HP' },
-    { id: 'dsp:g63-amg', name: 'Mercedes-AMG G 63 «Гелик»', badge: '4.0L V8 · Side Pipes' },
+    { id: 'dsp:cls63-amg', name: 'Mercedes CLS 63 AMG', badge: '5.5L BiTurbo V8 · 585 HP' },
+    { id: 'dsp:g63-amg', name: 'Mercedes-AMG G 63', badge: '4.0L V8 · Side Pipes' },
     { id: 'dsp:c63-amg-w204', name: 'Mercedes C 63 AMG (W204)', badge: '6.2L V8 NA · 507 HP' },
     { id: 'dsp:sls-amg', name: 'Mercedes SLS AMG', badge: '6.2L V8 Gullwing' },
     { id: 'dsp:gt3', name: 'Porsche 911 GT3', badge: '9,000 RPM Flat-6' },
@@ -533,7 +537,8 @@ document.addEventListener('DOMContentLoaded', () => {
       const isOpen = advDspBox.style.display !== 'none';
       advDspBox.style.display = isOpen ? 'none' : 'block';
       toggleAdvDspBtn.classList.toggle('active', !isOpen);
-      toggleAdvDspBtn.textContent = isOpen ? '⚙️ Опции' : '✕ Скрыть';
+      const t = (k, fb) => (window.i18n && window.i18n.t) ? window.i18n.t(k, fb) : fb;
+      toggleAdvDspBtn.textContent = isOpen ? t('btn_options', '⚙️ Опции') : t('btn_hide', '✕ Скрыть');
     });
   }
 
@@ -625,7 +630,9 @@ document.addEventListener('DOMContentLoaded', () => {
       v6ToggleBtn.classList.toggle('off', !enabled);
     }
     if (v6ToggleText) {
-      v6ToggleText.textContent = enabled ? '⚡ v6.0 PRO: ВКЛ' : '⚡ v6.0 PRO: ВЫКЛ';
+      const t = (k, fb) => (window.i18n && window.i18n.t) ? window.i18n.t(k, fb) : fb;
+      const state = enabled ? t('state_on', 'ВКЛ') : t('state_off', 'ВЫКЛ');
+      v6ToggleText.textContent = `⚡ v6.0 ${t('pro_label', 'PRO')}: ${state}`;
     }
     if (classicAcousticView) {
       classicAcousticView.style.display = enabled ? 'none' : 'block';
@@ -1404,14 +1411,23 @@ document.addEventListener('DOMContentLoaded', () => {
     if (speedUnitDisplay) {
       speedUnitDisplay.textContent = isMphMode ? 'MPH' : (window.i18n ? window.i18n.t('speed_unit_kmh', 'KM/H') : 'KM/H');
     }
-    const mode = CRACKLE_MODES[currentCrackleIdx];
-    if (crackleQuickBtn && mode) {
-      crackleQuickBtn.textContent = mode.btnText;
+    if (hudSpeed && !telemetry.lastPosition) {
+      const uStr = isMphMode ? (window.i18n ? window.i18n.t('unit_mph_short', 'mph') : 'mph') : (window.i18n ? window.i18n.t('unit_kmh_short', 'km/h') : 'km/h');
+      hudSpeed.textContent = `0.0 ${uStr}`;
     }
+    if (hudAccel && !telemetry.lastPosition) {
+      hudAccel.textContent = `0.00 ${window.i18n ? window.i18n.t('unit_ms2', 'm/s²') : 'm/s²'}`;
+    }
+    applyRpmMode(currentRpmModeIdx, false, false);
+    applyCrackleMode(currentCrackleIdx, false, false);
   });
 
   // Restore everything immediately
-  setTimeout(restoreAllUserSettings, 120);
+  setTimeout(() => {
+    restoreAllUserSettings();
+    applyRpmMode(currentRpmModeIdx, false, false);
+    applyCrackleMode(currentCrackleIdx, false, false);
+  }, 120);
 
 
 
@@ -1580,11 +1596,12 @@ document.addEventListener('DOMContentLoaded', () => {
   async function unlockAndStartEngine(withStarter = false) {
     if (audio.isPlaying || isStartingAudio) return;
     isStartingAudio = true;
+    const t = (k, fb) => (window.i18n && window.i18n.t) ? window.i18n.t(k, fb) : fb;
     if (withStarter) {
-      startBtn.textContent = '⚡ СТАРТЕР...';
+      startBtn.textContent = t('btn_starter_crank', '⚡ СТАРТЕР...');
       startBtn.classList.add('cranking');
     } else {
-      startBtn.textContent = 'ЗАПУСК...';
+      startBtn.textContent = t('btn_starting', 'ЗАПУСК...');
     }
     startBtn.disabled = true;
 
@@ -2115,19 +2132,20 @@ document.addEventListener('DOMContentLoaded', () => {
     } else {
       hudSpeed.title = '';
     }
-    hudAccel.textContent = `${effectiveAccel > 0 ? '+' : ''}${effectiveAccel.toFixed(2)} м/с²`;
+    const t = (k, fb) => (window.i18n && window.i18n.t) ? window.i18n.t(k, fb) : fb;
+    hudAccel.textContent = `${effectiveAccel > 0 ? '+' : ''}${effectiveAccel.toFixed(2)} ${t('unit_ms2', 'м/с²')}`;
     hudGForce.textContent = `${(data.gForce || 0).toFixed(2)} G`;
-    hudAccuracy.textContent = data.accuracy ? `±${Math.round(data.accuracy)} м` : '–';
-    hudRate.textContent = data.hz > 0 ? `${data.hz} Гц` : 'GPS 1 Гц';
+    hudAccuracy.textContent = data.accuracy ? `±${Math.round(data.accuracy)} ${t('unit_meter', 'м')}` : '–';
+    hudRate.textContent = data.hz > 0 ? `${data.hz} ${t('unit_hz', 'Гц')}` : `GPS 1 ${t('unit_hz', 'Гц')}`;
     if (data.latitude && data.longitude) {
       hudCoords.textContent = `${data.latitude.toFixed(5)}°, ${data.longitude.toFixed(5)}°`;
       if (gnssStatusBadge) {
-        gnssStatusBadge.textContent = '✅ Спутники захвачены';
+        gnssStatusBadge.textContent = t('gnss_satellites_locked', '✅ Спутники захвачены');
         gnssStatusBadge.style.color = 'var(--accent-green)';
       }
     } else if (telemetry.isTracking) {
       if (gnssStatusBadge) {
-        gnssStatusBadge.textContent = '🛰️ Поиск спутников...';
+        gnssStatusBadge.textContent = t('gnss_searching_satellites', '🛰️ Поиск спутников...');
         gnssStatusBadge.style.color = 'var(--accent-amber)';
       }
     }

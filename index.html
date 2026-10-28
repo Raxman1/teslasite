@@ -56,7 +56,7 @@
   }
   </script>
 
-  <link rel="stylesheet" href="style.css?v=8.1">
+  <link rel="stylesheet" href="style.css?v=8.2">
   <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🏎️</text></svg>">
   <script>
     (function() {
@@ -130,19 +130,19 @@
     <div class="sound-slider-group">
       <div class="engine-volume-control" title="Общая громкость мотора">
         <span class="vol-icon">🔊</span>
-        <span class="vol-label">Мотор</span>
+        <span class="vol-label" data-i18n="vol_motor">Мотор</span>
         <input id="engineVolumeSlider" type="range" min="0" max="100" value="100" class="vol-slider">
         <span id="engineVolumeText" class="vol-value">100%</span>
       </div>
       <div class="engine-volume-control" title="Регулировка сабвуфера: убавьте, если дребезжат дверные клипсы и обшивка Tesla!">
         <span class="vol-icon">🔈</span>
-        <span class="vol-label">Бас</span>
+        <span class="vol-label" data-i18n="vol_bass">Бас</span>
         <input id="quickBassSlider" type="range" min="0" max="150" value="100" class="vol-slider">
         <span id="quickBassText" class="vol-value">100%</span>
       </div>
       <div class="engine-volume-control" title="Громкость прямотока и выхлопа">
         <span class="vol-icon">💨</span>
-        <span class="vol-label">Выхлоп</span>
+        <span class="vol-label" data-i18n="vol_exhaust">Выхлоп</span>
         <input id="quickExhaustSlider" type="range" min="0" max="150" value="100" class="vol-slider">
         <span id="quickExhaustText" class="vol-value">100%</span>
       </div>
@@ -545,24 +545,24 @@
         <div class="card telemetry-card cluster-telemetry-card">
           <div class="hud-title">
             <span class="hud-main-title" data-i18n="hud_title">🛰️ Сенсоры и Телеметрия GNSS</span>
-            <span id="hudRate" class="hud-rate-badge">GPS 1 Гц</span>
+            <span id="hudRate" class="hud-rate-badge" data-i18n="hud_rate_default">GPS 1 Гц</span>
           </div>
 
           <div class="hud-grid">
             <div class="hud-item">
               <div class="hud-label" data-i18n="hud_speed_label">GPS Скорость</div>
-              <div id="hudSpeed" class="hud-value highlight">0.0 км/ч</div>
+              <div id="hudSpeed" class="hud-value highlight">0.0 km/h</div>
             </div>
             <div class="hud-item">
               <div class="hud-label" data-i18n="hud_accel_label">Ускорение</div>
-              <div id="hudAccel" class="hud-value">0.00 м/с²</div>
+              <div id="hudAccel" class="hud-value">0.00 m/s²</div>
             </div>
             <div class="hud-item">
-              <div class="hud-label">Перегрузка (G)</div>
+              <div class="hud-label" data-i18n="hud_gforce_label">Перегрузка (G)</div>
               <div id="hudGForce" class="hud-value">0.00 G</div>
             </div>
             <div class="hud-item">
-              <div class="hud-label">Точность GPS</div>
+              <div class="hud-label" data-i18n="hud_accuracy_label">Точность GPS</div>
               <div id="hudAccuracy" class="hud-value">–</div>
             </div>
           </div>
@@ -571,15 +571,15 @@
             <div class="hud-coords-group">
               <div class="hud-item hud-coords-box" id="hudCoordsBox" title="Нажмите для активации GPS">
                 <div class="hud-label" style="display: flex; justify-content: space-between; align-items: center; gap: 6px;">
-                  <span>Координаты GNSS</span>
-                  <span id="gnssStatusBadge" style="font-size: 11px; color: var(--accent-amber);">Ожидание GPS</span>
+                  <span data-i18n="hud_coords_label">Координаты GNSS</span>
+                  <span id="gnssStatusBadge" style="font-size: 11px; color: var(--accent-amber);" data-i18n="hud_gps_waiting">Ожидание GPS</span>
                 </div>
-                <div id="hudCoords" class="hud-value hud-coords-val">🛰️ Нажмите сюда или вкладку 📡 GPS</div>
+                <div id="hudCoords" class="hud-value hud-coords-val" data-i18n="hud_coords_prompt">🛰️ Нажмите сюда или вкладку 📡 GPS</div>
               </div>
 
               <div id="bgNotice" class="bg-notice-pill">
                 <span>🔒</span>
-                <span>Фон активен: звук и GPS работают при блокировке экрана</span>
+                <span data-i18n="hud_bg_notice">Фон активен: звук и GPS работают при блокировке экрана</span>
               </div>
             </div>
 
@@ -596,8 +596,8 @@
       <!-- RIGHT: Interactive Dual Pedals (Brake & Gas) & Simulator Controls -->
       <div class="card pedal-section">
         <div class="hud-title" style="width: 100%; display: flex; justify-content: space-between; align-items: center;">
-          <span style="font-size: 11px; font-weight: 700; color: #ff3b30;">🛑 ТОРМОЗ: <b id="brakePercent">0%</b></span>
-          <span style="font-size: 11px; font-weight: 700; color: var(--accent-amber);">⚡ ГАЗ: <b id="pedalPercent">0%</b></span>
+          <span style="font-size: 11px; font-weight: 700; color: #ff3b30;">🛑 <span data-i18n="pedal_brake">ТОРМОЗ</span>: <b id="brakePercent">0%</b></span>
+          <span style="font-size: 11px; font-weight: 700; color: var(--accent-amber);">⚡ <span data-i18n="pedal_gas">ГАЗ</span>: <b id="pedalPercent">0%</b></span>
         </div>
 
         <!-- 3D Dual Aluminum Sports Pedals -->
@@ -653,31 +653,29 @@
 
         <!-- Quick Action Buttons -->
         <div class="pedal-actions">
-          <button id="blipBtn" class="btn">💥 Перегазовка</button>
-          <button id="launchBtn" class="btn">🚀 Launch</button>
-          <button id="holdThrottleBtn" class="btn" title="Зафиксировать текущую силу газа">🔒 Круиз</button>
+          <button id="blipBtn" class="btn" data-i18n="btn_blip">💥 Перегазовка</button>
+          <button id="launchBtn" class="btn" data-i18n="btn_launch">🚀 Launch</button>
+          <button id="holdThrottleBtn" class="btn" title="Зафиксировать текущую силу газа" data-i18n="btn_cruise">🔒 Круиз</button>
         </div>
 
         <!-- Gearbox Mode Selector -->
         <div class="gear-selector">
-          <button class="gear-mode-btn active" data-mode="N">N (Нейтраль)</button>
-          <button class="gear-mode-btn" data-mode="A">D (Автомат)</button>
-          <button class="gear-mode-btn" data-mode="M">M (Ручной)</button>
+          <button class="gear-mode-btn active" data-mode="N" data-i18n="gear_neutral">N (Нейтраль)</button>
+          <button class="gear-mode-btn" data-mode="A" data-i18n="gear_drive">D (Автомат)</button>
+          <button class="gear-mode-btn" data-mode="M" data-i18n="gear_manual">M (Ручной)</button>
         </div>
 
         <!-- Tactile Paddle Shifters & Direct Gear Selector -->
         <div class="manual-shifter-box" id="manualShifterBox">
           <div style="font-size: 10px; font-weight: 700; color: var(--accent-amber); margin-bottom: 6px; text-transform: uppercase; letter-spacing: 0.5px; display: flex; justify-content: space-between; align-items: center;">
-            <span>🏎️ Ручные лепестки (M)</span>
+            <span data-i18n="shifter_paddles_label">🏎️ Ручные лепестки (M)</span>
             <div style="display: flex; gap: 6px; align-items: center;">
               <button id="rpmMultiplierBtn" class="btn-rpm-mult" type="button" title="Множитель оборотов двигателя: на 20 км/ч дает 4,000 RPM вместо 2,000 RPM (x1 / x1.5 / x2 / x3)">⚡ Динамика: x1</button>
-              <span style="color: var(--text-muted); font-size: 9px;">Q / E / Колесо руля</span>
+              <span style="color: var(--text-muted); font-size: 9px;" data-i18n="shifter_keys_hint">Q / E / Колесо руля</span>
             </div>
           </div>
           <div class="paddle-shifter-row">
-            <button id="shiftDownBtn" class="btn btn-paddle btn-paddle-down" type="button" title="Вниз (Q / Левый лепесток / Колесо вниз)">
-              ◀ ВНИЗ
-            </button>
+            <button id="shiftDownBtn" class="btn btn-paddle btn-paddle-down" type="button" title="Вниз (Q / Левый лепесток / Колесо вниз)" data-i18n="paddle_down">◀ ВНИЗ</button>
             <div class="gear-pills-list">
               <button class="gear-num-btn" data-gear="1" type="button">1</button>
               <button class="gear-num-btn" data-gear="2" type="button">2</button>
@@ -687,9 +685,7 @@
               <button class="gear-num-btn" data-gear="6" type="button">6</button>
               <button class="gear-num-btn" data-gear="7" type="button">7</button>
             </div>
-            <button id="shiftUpBtn" class="btn btn-paddle btn-paddle-up" type="button" title="Вверх (E / Правый лепесток / Колесо вверх)">
-              ВВЕРХ ▶
-            </button>
+            <button id="shiftUpBtn" class="btn btn-paddle btn-paddle-up" type="button" title="Вверх (E / Правый лепесток / Колесо вверх)" data-i18n="paddle_up">ВВЕРХ ▶</button>
           </div>
         </div>
       </div>
@@ -887,19 +883,19 @@
   <script src="js/peerjs.min.js"></script>
   <script src="js/qrcode.min.js"></script>
   <!-- Procedural DSP Engine (from teslasound.io) -->
-  <script src="js/dsp/cars.js?v=8.1"></script>
-  <script src="js/dsp/engine-dsp.js?v=8.1"></script>
-  <script src="js/dsp/vehicle.js?v=8.1"></script>
-  <script src="js/dsp-audio.js?v=8.1"></script>
-  <script src="js/bov-sound.js?v=8.1"></script>
-  <script src="js/starter-sound.js?v=8.1"></script>
-  <script src="js/turbo-sound.js?v=8.1"></script>
-  <script src="js/settings-storage.js?v=8.1"></script>
-  <script src="js/i18n.js?v=8.1"></script>
-  <script src="js/subscription.js?v=8.1"></script>
-  <script src="js/audio-engine.js?v=8.1"></script>
-  <script src="js/telemetry.js?v=8.1"></script>
-  <script src="js/p2p.js?v=8.1"></script>
-  <script src="js/app.js?v=8.1"></script>
+  <script src="js/dsp/cars.js?v=8.2"></script>
+  <script src="js/dsp/engine-dsp.js?v=8.2"></script>
+  <script src="js/dsp/vehicle.js?v=8.2"></script>
+  <script src="js/dsp-audio.js?v=8.2"></script>
+  <script src="js/bov-sound.js?v=8.2"></script>
+  <script src="js/starter-sound.js?v=8.2"></script>
+  <script src="js/turbo-sound.js?v=8.2"></script>
+  <script src="js/settings-storage.js?v=8.2"></script>
+  <script src="js/i18n.js?v=8.2"></script>
+  <script src="js/subscription.js?v=8.2"></script>
+  <script src="js/audio-engine.js?v=8.2"></script>
+  <script src="js/telemetry.js?v=8.2"></script>
+  <script src="js/p2p.js?v=8.2"></script>
+  <script src="js/app.js?v=8.2"></script>
 </body>
 </html>

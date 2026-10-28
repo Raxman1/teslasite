@@ -12,7 +12,7 @@
 window.MOTORSOUND_CARS = [
   {
     id: 'cls63-amg',
-    name: 'Mercedes-Benz CLS 63 AMG «Банан»',
+    name: 'Mercedes-Benz CLS 63 AMG',
     tagline: '5.5 L BiTurbo V8 · 585 HP · AMG MCT 7-speed · Crossplane Burble',
     engine: {
       idleRpm: 650,
@@ -78,7 +78,7 @@ window.MOTORSOUND_CARS = [
   },
   {
     id: 'g63-amg',
-    name: 'Mercedes-AMG G 63 «Гелик»',
+    name: 'Mercedes-AMG G 63',
     tagline: '4.0 L Biturbo V8 · 585 HP · Side Pipes · Earthshaker Sub-Bass',
     engine: {
       idleRpm: 680,
