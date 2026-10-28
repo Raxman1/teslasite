@@ -1,0 +1,8 @@
+User-agent: *
+Allow: /
+Disallow: /extracted/
+Disallow: /extracted_mods/
+Disallow: /extracted_wav/
+Disallow: /raw_presets/
+
+Sitemap: https://raxman1.github.io/teslasite/sitemap.xml

@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"
+        xmlns:xhtml="http://www.w3.org/1999/xhtml">
+  <url>
+    <loc>https://raxman1.github.io/teslasite/</loc>
+    <lastmod>2026-10-28</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>1.0</priority>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://raxman1.github.io/teslasite/" />
+    <xhtml:link rel="alternate" hreflang="en" href="https://raxman1.github.io/teslasite/?lang=en" />
+    <xhtml:link rel="alternate" hreflang="ru" href="https://raxman1.github.io/teslasite/?lang=ru" />
+    <xhtml:link rel="alternate" hreflang="de" href="https://raxman1.github.io/teslasite/?lang=de" />
+    <xhtml:link rel="alternate" hreflang="es" href="https://raxman1.github.io/teslasite/?lang=es" />
+    <xhtml:link rel="alternate" hreflang="fr" href="https://raxman1.github.io/teslasite/?lang=fr" />
+    <xhtml:link rel="alternate" hreflang="zh" href="https://raxman1.github.io/teslasite/?lang=zh" />
+    <xhtml:link rel="alternate" hreflang="ja" href="https://raxman1.github.io/teslasite/?lang=ja" />
+    <xhtml:link rel="alternate" hreflang="pt" href="https://raxman1.github.io/teslasite/?lang=pt" />
+    <xhtml:link rel="alternate" hreflang="ar" href="https://raxman1.github.io/teslasite/?lang=ar" />
+  </url>
+  <url>
+    <loc>https://raxman1.github.io/teslasite/legal/terms.html</loc>
+    <lastmod>2026-10-28</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.5</priority>
+  </url>
+  <url>
+    <loc>https://raxman1.github.io/teslasite/legal/privacy.html</loc>
+    <lastmod>2026-10-28</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.5</priority>
+  </url>
+  <url>
+    <loc>https://raxman1.github.io/teslasite/legal/refund.html</loc>
+    <lastmod>2026-10-28</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.5</priority>
+  </url>
+</urlset>

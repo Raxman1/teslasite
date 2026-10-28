@@ -2803,38 +2803,47 @@ kbd {
     flex-shrink: 0 !important;
   }
 
-  .controls-container {
+  .header-actions {
     width: 100% !important;
-    display: grid !important;
-    grid-template-columns: auto auto 1fr !important;
+    display: flex !important;
+    flex-wrap: wrap !important;
     gap: 6px !important;
     align-items: center !important;
     box-sizing: border-box !important;
   }
 
-  #p2pLinkBtn {
-    padding: 6px 8px !important;
-    font-size: 11px !important;
-    white-space: nowrap !important;
-    flex-shrink: 0 !important;
+  .btn-pro-badge {
+    padding: 5px 8px !important;
+    font-size: 10.5px !important;
+    flex: 1 1 auto !important;
+    justify-content: center !important;
   }
 
-  #fullscreenBtn {
-    padding: 6px 8px !important;
-    font-size: 11px !important;
-    white-space: nowrap !important;
-    flex-shrink: 0 !important;
+  .lang-select-wrapper {
+    flex: 0 0 auto !important;
+  }
+
+  .lang-picker-select {
+    padding: 4px 6px !important;
+    font-size: 10.5px !important;
+  }
+
+  #p2pModalBtn, #fullscreenBtn {
+    padding: 5px 8px !important;
+    font-size: 10.5px !important;
+    flex: 0 0 auto !important;
   }
 
   #startBtn {
     width: 100% !important;
-    padding: 8px 10px !important;
-    font-size: 12px !important;
-    font-weight: 800 !important;
+    padding: 9px 12px !important;
+    font-size: 13px !important;
+    font-weight: 900 !important;
     letter-spacing: 0.5px !important;
     white-space: nowrap !important;
     text-align: center !important;
     box-sizing: border-box !important;
+    margin-top: 2px !important;
   }
 
   /* 2. Top Sound Bar */
@@ -3040,5 +3049,499 @@ kbd {
     width: 100% !important;
     max-width: 100% !important;
     box-sizing: border-box !important;
+  }
+}
+
+
+/* ==========================================================================
+   SaaS Commercial Monetization & Legal Compliance Styles (v8.0)
+   ========================================================================== */
+
+/* Pro Upgrade Badge / Button in Header */
+.btn-pro-badge {
+  background: linear-gradient(135deg, #ff9900 0%, #ff5500 100%);
+  color: #000;
+  border: none;
+  border-radius: 20px;
+  padding: 6px 14px;
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0.5px;
+  cursor: pointer;
+  box-shadow: 0 0 15px rgba(255, 153, 0, 0.45);
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.btn-pro-badge:hover {
+  transform: translateY(-1px) scale(1.03);
+  box-shadow: 0 0 22px rgba(255, 153, 0, 0.7);
+  filter: brightness(1.1);
+}
+
+.btn-pro-badge.is-active {
+  background: linear-gradient(135deg, #00e676 0%, #00b0ff 100%);
+  color: #000;
+  box-shadow: 0 0 15px rgba(0, 230, 118, 0.4);
+}
+
+/* Language Selector */
+.lang-select-wrapper {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  flex-shrink: 0;
+}
+
+.lang-picker-select {
+  background: rgba(20, 24, 34, 0.85);
+  color: var(--text-main);
+  border: 1px solid var(--border-glass);
+  border-radius: 16px;
+  padding: 5px 10px;
+  font-size: 11.5px;
+  font-weight: 700;
+  cursor: pointer;
+  outline: none;
+  transition: all 0.2s;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.3);
+}
+
+.lang-picker-select:hover, .lang-picker-select:focus {
+  border-color: var(--accent-amber);
+  box-shadow: 0 0 10px rgba(255, 153, 0, 0.3);
+}
+
+.lang-picker-select option {
+  background: #12161f;
+  color: #fff;
+}
+
+/* Modal Overlay Common */
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background: rgba(0, 0, 0, 0.82);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  display: none;
+  justify-content: center;
+  align-items: center;
+  z-index: 10000;
+  padding: 16px;
+  box-sizing: border-box;
+}
+
+.modal-overlay.show {
+  display: flex !important;
+}
+
+/* Subscription Paywall Modal */
+.sub-modal-card {
+  background: linear-gradient(180deg, rgba(24, 28, 40, 0.98) 0%, rgba(14, 17, 24, 0.99) 100%);
+  border: 1px solid rgba(255, 153, 0, 0.35);
+  box-shadow: 0 25px 60px rgba(0, 0, 0, 0.8), 0 0 35px rgba(255, 153, 0, 0.15);
+  border-radius: 20px;
+  max-width: 520px;
+  width: 100%;
+  max-height: 90vh;
+  overflow-y: auto;
+  padding: 28px 24px;
+  box-sizing: border-box;
+  position: relative;
+  color: var(--text-main);
+  text-align: center;
+}
+
+.sub-pill-badge {
+  display: inline-block;
+  background: linear-gradient(90deg, #ff9900, #ff5500);
+  color: #000;
+  font-size: 10.5px;
+  font-weight: 900;
+  letter-spacing: 1.5px;
+  padding: 4px 12px;
+  border-radius: 20px;
+  margin-bottom: 10px;
+  text-transform: uppercase;
+}
+
+.sub-modal-title {
+  font-size: 24px;
+  font-weight: 900;
+  letter-spacing: 0.5px;
+  margin-bottom: 6px;
+  color: #fff;
+}
+
+.sub-modal-subtitle {
+  font-size: 13px;
+  color: var(--text-muted);
+  line-height: 1.45;
+  margin-bottom: 20px;
+}
+
+/* Plan Toggle Switch */
+.plan-toggle-container {
+  display: flex;
+  background: rgba(0, 0, 0, 0.5);
+  border: 1px solid var(--border-glass);
+  border-radius: 30px;
+  padding: 4px;
+  margin: 0 auto 20px auto;
+  max-width: 380px;
+  position: relative;
+}
+
+.plan-toggle-btn {
+  flex: 1;
+  background: transparent;
+  border: none;
+  color: var(--text-muted);
+  font-size: 13px;
+  font-weight: 700;
+  padding: 10px 14px;
+  border-radius: 24px;
+  cursor: pointer;
+  transition: all 0.25s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+}
+
+.plan-toggle-btn.active {
+  background: var(--accent-amber);
+  color: #000;
+  font-weight: 800;
+  box-shadow: 0 4px 15px rgba(255, 153, 0, 0.4);
+}
+
+.free-months-tag {
+  background: #ff2222;
+  color: #fff;
+  font-size: 9.5px;
+  font-weight: 900;
+  padding: 2px 7px;
+  border-radius: 12px;
+  letter-spacing: 0.3px;
+}
+
+/* Pricing Display Card */
+.sub-pricing-box {
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 16px;
+  padding: 18px 20px;
+  margin-bottom: 20px;
+}
+
+.sub-price-row {
+  display: flex;
+  align-items: baseline;
+  justify-content: center;
+  gap: 6px;
+  margin-bottom: 4px;
+}
+
+.sub-price-val {
+  font-size: 44px;
+  font-weight: 900;
+  color: #fff;
+  line-height: 1;
+}
+
+.sub-price-period {
+  font-size: 14px;
+  color: var(--text-muted);
+  font-weight: 600;
+}
+
+/* Feature Checkmarks */
+.sub-features-list {
+  text-align: left;
+  list-style: none;
+  padding: 0;
+  margin: 0 0 22px 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.sub-features-list li {
+  font-size: 13px;
+  color: #d8e2ec;
+  line-height: 1.4;
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+}
+
+/* CTA Checkout Button */
+.btn-sub-checkout {
+  width: 100%;
+  background: linear-gradient(135deg, #ff9900 0%, #ff5500 100%);
+  color: #000;
+  border: none;
+  border-radius: 12px;
+  padding: 15px 20px;
+  font-size: 15px;
+  font-weight: 900;
+  letter-spacing: 0.5px;
+  cursor: pointer;
+  box-shadow: 0 10px 25px rgba(255, 153, 0, 0.45);
+  transition: all 0.25s ease;
+  margin-bottom: 14px;
+}
+
+.btn-sub-checkout:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 14px 30px rgba(255, 153, 0, 0.65);
+  filter: brightness(1.1);
+}
+
+/* Promo Code Box */
+.sub-promo-row {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 14px;
+}
+
+.sub-promo-input {
+  flex: 1;
+  background: rgba(0, 0, 0, 0.4);
+  border: 1px solid var(--border-glass);
+  border-radius: 10px;
+  padding: 10px 14px;
+  color: #fff;
+  font-size: 13px;
+  font-weight: 600;
+  text-transform: uppercase;
+  outline: none;
+}
+
+.sub-promo-input:focus {
+  border-color: var(--accent-amber);
+}
+
+.btn-promo-apply {
+  background: rgba(255, 255, 255, 0.1);
+  color: #fff;
+  border: 1px solid var(--border-glass);
+  border-radius: 10px;
+  padding: 10px 16px;
+  font-size: 12.5px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s;
+  white-space: nowrap;
+}
+
+.btn-promo-apply:hover {
+  background: rgba(255, 255, 255, 0.2);
+}
+
+.sub-feedback-msg {
+  font-size: 12px;
+  min-height: 18px;
+  margin-bottom: 12px;
+  font-weight: 600;
+}
+
+.sub-trust-footer {
+  font-size: 11px;
+  color: var(--text-muted);
+  border-top: 1px solid var(--border-glass);
+  padding-top: 14px;
+  line-height: 1.5;
+}
+
+/* Legal Documents Modal */
+.legal-modal-card {
+  background: #10141d;
+  border: 1px solid var(--border-glass);
+  border-radius: 20px;
+  max-width: 780px;
+  width: 100%;
+  max-height: 85vh;
+  display: flex;
+  flex-direction: column;
+  padding: 24px;
+  box-sizing: border-box;
+}
+
+.legal-tabs-header {
+  display: flex;
+  gap: 8px;
+  border-bottom: 1px solid var(--border-glass);
+  padding-bottom: 12px;
+  margin-bottom: 16px;
+  overflow-x: auto;
+  flex-shrink: 0;
+}
+
+.legal-tab-btn {
+  background: transparent;
+  border: 1px solid var(--border-glass);
+  color: var(--text-muted);
+  border-radius: 10px;
+  padding: 8px 14px;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all 0.2s;
+}
+
+.legal-tab-btn:hover {
+  color: #fff;
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.legal-tab-btn.active {
+  background: rgba(255, 153, 0, 0.15);
+  border-color: var(--accent-amber);
+  color: var(--accent-amber);
+}
+
+.legal-scroll-body {
+  flex: 1;
+  overflow-y: auto;
+  padding-right: 8px;
+  font-size: 13.5px;
+  line-height: 1.65;
+  color: #c0cedb;
+}
+
+.legal-scroll-body h3 {
+  color: #fff;
+  font-size: 18px;
+  margin: 16px 0 8px 0;
+}
+
+.legal-scroll-body p {
+  margin-bottom: 12px;
+}
+
+.legal-scroll-body ul {
+  padding-left: 20px;
+  margin-bottom: 14px;
+}
+
+/* Cookie & Consent Banner */
+.cookie-banner {
+  position: fixed;
+  bottom: 16px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(16, 20, 28, 0.95);
+  border: 1px solid var(--border-glass);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border-radius: 14px;
+  padding: 12px 18px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.6);
+  z-index: 9990;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  max-width: 92vw;
+  width: 640px;
+  box-sizing: border-box;
+}
+
+.cookie-banner.hidden {
+  display: none !important;
+}
+
+.cookie-text {
+  flex: 1;
+  font-size: 12px;
+  color: var(--text-muted);
+  line-height: 1.4;
+}
+
+.cookie-btn-accept {
+  background: var(--accent-amber);
+  color: #000;
+  border: none;
+  border-radius: 8px;
+  padding: 8px 14px;
+  font-size: 12px;
+  font-weight: 800;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all 0.2s;
+}
+
+.cookie-btn-accept:hover {
+  filter: brightness(1.1);
+}
+
+/* Footer Legal Links Row */
+.footer-legal-row {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 16px;
+  margin-top: 10px;
+  font-size: 12px;
+  color: var(--text-muted);
+  flex-wrap: wrap;
+}
+
+.footer-legal-link {
+  color: var(--text-muted);
+  text-decoration: none;
+  cursor: pointer;
+  transition: color 0.2s;
+}
+
+.footer-legal-link:hover {
+  color: var(--accent-amber);
+  text-decoration: underline;
+}
+
+/* Mobile responsive refinements for SaaS elements */
+@media (max-width: 600px) {
+  .sub-modal-card {
+    padding: 20px 16px !important;
+    max-height: 94vh !important;
+  }
+  .sub-modal-title {
+    font-size: 20px !important;
+  }
+  .sub-price-val {
+    font-size: 36px !important;
+  }
+  .plan-toggle-btn {
+    font-size: 11.5px !important;
+    padding: 8px 10px !important;
+  }
+  .btn-pro-badge {
+    padding: 5px 9px !important;
+    font-size: 11px !important;
+  }
+  .lang-picker-select {
+    padding: 4px 6px !important;
+    font-size: 10.5px !important;
+  }
+  .cookie-banner {
+    flex-direction: column !important;
+    text-align: center !important;
+    bottom: 8px !important;
+    width: 95vw !important;
+    padding: 10px 12px !important;
+  }
+  .footer-legal-row {
+    gap: 10px !important;
+    font-size: 11px !important;
   }
 }

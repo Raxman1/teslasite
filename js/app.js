@@ -1161,6 +1161,105 @@ document.addEventListener('DOMContentLoaded', () => {
   setTimeout(resizeCanvas, 100);
   window.scrollTo(0, 0);
 
+  // ==============================================================
+  // SaaS Commercial Platform: i18n, Subscription & Legal Modules
+  // ==============================================================
+  function initSaaSCommercialModules() {
+    // 1. Initialize Localization
+    if (window.i18n) {
+      window.i18n.init();
+      const langSelect = document.getElementById('langSelect');
+      if (langSelect) {
+        langSelect.value = window.i18n.currentLang;
+        langSelect.addEventListener('change', (e) => {
+          window.i18n.setLanguage(e.target.value);
+        });
+      }
+    }
+
+    // 2. Initialize Subscription & Paywall
+    if (window.subscription) {
+      window.subscription.init();
+    }
+
+    // 3. Initialize In-App Legal Modal & Tabs
+    const legalModal = document.getElementById('legalModal');
+    const closeLegalModalBtn = document.getElementById('closeLegalModalBtn');
+    const closeLegalModalBtnBottom = document.getElementById('closeLegalModalBtnBottom');
+    const legalTabBtns = document.querySelectorAll('.legal-tab-btn');
+    const legalPanes = document.querySelectorAll('.legal-tab-pane');
+
+    function openLegalModal(tabId = 'legal-terms') {
+      if (legalModal) {
+        legalModal.classList.add('show');
+        legalTabBtns.forEach(b => b.classList.toggle('active', b.dataset.tab === tabId));
+        legalPanes.forEach(p => p.style.display = (p.id === tabId) ? 'block' : 'none');
+      }
+    }
+
+    function closeLegalModal() {
+      if (legalModal) legalModal.classList.remove('show');
+    }
+
+    if (closeLegalModalBtn) closeLegalModalBtn.addEventListener('click', closeLegalModal);
+    if (closeLegalModalBtnBottom) closeLegalModalBtnBottom.addEventListener('click', closeLegalModal);
+    if (legalModal) {
+      legalModal.addEventListener('click', (e) => {
+        if (e.target === legalModal) closeLegalModal();
+      });
+    }
+
+    legalTabBtns.forEach(btn => {
+      btn.addEventListener('click', () => {
+        const tabId = btn.dataset.tab;
+        legalTabBtns.forEach(b => b.classList.toggle('active', b === btn));
+        legalPanes.forEach(p => p.style.display = (p.id === tabId) ? 'block' : 'none');
+      });
+    });
+
+    ['linkTermsModal', 'linkPrivacyModal', 'linkRefundModal'].forEach(id => {
+      const link = document.getElementById(id);
+      if (link) {
+        link.addEventListener('click', (e) => {
+          e.preventDefault();
+          const tab = (id === 'linkTermsModal') ? 'legal-terms' : (id === 'linkPrivacyModal') ? 'legal-privacy' : 'legal-refund';
+          openLegalModal(tab);
+        });
+      }
+    });
+
+    // 4. Cookie / Privacy Notice Banner
+    const cookieBanner = document.getElementById('cookieBanner');
+    const acceptCookieBtn = document.getElementById('acceptCookieBtn');
+    if (cookieBanner && acceptCookieBtn) {
+      try {
+        if (localStorage.getItem('tesla_cookie_consent') === 'true') {
+          cookieBanner.classList.add('hidden');
+        }
+      } catch (e) {}
+      acceptCookieBtn.addEventListener('click', () => {
+        try {
+          localStorage.setItem('tesla_cookie_consent', 'true');
+        } catch (e) {}
+        cookieBanner.classList.add('hidden');
+      });
+    }
+
+    // 5. Update dynamic buttons on language change
+    window.addEventListener('languageChanged', () => {
+      if (startBtn) {
+        if (audio && audio.isPlaying) {
+          startBtn.textContent = window.i18n ? window.i18n.t('btn_stop', '⏹ ЗАГЛУШИТЬ') : '⏹ ЗАГЛУШИТЬ';
+        } else {
+          startBtn.textContent = window.i18n ? window.i18n.t('btn_start', 'START ENGINE') : 'START ENGINE';
+        }
+      }
+    });
+  }
+
+  initSaaSCommercialModules();
+
+
   // 0. PRESET SELECTOR
   if (presetSelect) {
     presetSelect.addEventListener('change', async (e) => {
@@ -1345,7 +1444,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
       const delayMs = withStarter ? 350 : 0;
       setTimeout(() => {
-        startBtn.textContent = '⏹ ЗАГЛУШИТЬ';
+        startBtn.textContent = (window.i18n ? window.i18n.t('btn_stop', '⏹ ЗАГЛУШИТЬ') : '⏹ ЗАГЛУШИТЬ');
         startBtn.className = 'btn btn-danger';
         startBtn.classList.remove('cranking');
         startBtn.disabled = false;
@@ -1355,7 +1454,7 @@ document.addEventListener('DOMContentLoaded', () => {
       console.log('Engine successfully started!');
     } catch (err) {
       console.error('Audio start failed:', err);
-      startBtn.textContent = 'START ENGINE';
+      startBtn.textContent = (window.i18n ? window.i18n.t('btn_start', 'START ENGINE') : 'START ENGINE');
       startBtn.className = 'btn btn-primary';
       startBtn.classList.remove('cranking');
       startBtn.disabled = false;
@@ -1372,7 +1471,7 @@ document.addEventListener('DOMContentLoaded', () => {
       audio.stop();
       releaseScreenWakeLock();
       updateMediaSessionInfo();
-      startBtn.textContent = 'START ENGINE';
+      startBtn.textContent = (window.i18n ? window.i18n.t('btn_start', 'START ENGINE') : 'START ENGINE');
       startBtn.className = 'btn btn-primary';
       startBtn.classList.remove('cranking');
     }
@@ -2243,7 +2342,7 @@ document.addEventListener('DOMContentLoaded', () => {
         navigator.mediaSession.setActionHandler('pause', () => {
           if (audio.isPlaying) {
             audio.stop();
-            startBtn.textContent = 'START ENGINE';
+            startBtn.textContent = (window.i18n ? window.i18n.t('btn_start', 'START ENGINE') : 'START ENGINE');
             startBtn.className = 'btn btn-primary';
           }
           if (mediaSessionKeeper) mediaSessionKeeper.pause();
