@@ -111,6 +111,7 @@ document.addEventListener('DOMContentLoaded', () => {
     try {
       localStorage.setItem('tesla_rpm_multiplier', mode.mult);
       localStorage.setItem('tesla_shift_profile', mode.profile);
+      if (window.TeslaSettings) window.TeslaSettings.set('rpmProfile', currentRpmModeIdx);
     } catch (e) {}
 
     if (audio) {
@@ -184,6 +185,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     try {
       localStorage.setItem('tesla_crackle_mode', mode.id);
+      if (window.TeslaSettings) window.TeslaSettings.set('crackleMode', mode.id);
     } catch (e) {}
 
     if (audio) {
@@ -255,6 +257,7 @@ document.addEventListener('DOMContentLoaded', () => {
     currentSensId = sensId;
     try {
       localStorage.setItem('tesla_gps_sensitivity', sensId);
+      if (window.TeslaSettings) window.TeslaSettings.set('throttleSens', sensId);
     } catch (e) {}
 
     const found = SENS_MODES.find(m => m.id === sensId) || SENS_MODES[1];
@@ -1259,11 +1262,164 @@ document.addEventListener('DOMContentLoaded', () => {
 
   initSaaSCommercialModules();
 
+  // ==============================================================
+  // Unified Persistent Settings & Speed Units (MPH / KM/H)
+  // ==============================================================
+  let isMphMode = window.TeslaSettings ? window.TeslaSettings.get('mph', false) : false;
+  const unitMphCheckbox = document.getElementById('unitMphCheckbox');
+  const unitMphToggleLabel = document.getElementById('unitMphToggleLabel');
+  const speedUnitDisplay = document.getElementById('speedUnitDisplay');
+
+  function updateDeadzoneButtonsUnit() {
+    const d0 = document.getElementById('deadzone0Btn');
+    const d2 = document.getElementById('deadzone2Btn');
+    const d4 = document.getElementById('deadzone4Btn');
+    const t = (k, f) => (window.i18n ? window.i18n.t(k, f) : f);
+    if (isMphMode) {
+      if (d0) d0.textContent = t('deadzone_0_mph', '0 mph');
+      if (d2) d2.textContent = t('deadzone_2_mph', '1.2 mph');
+      if (d4) d4.textContent = t('deadzone_4_mph', '2.5 mph ★');
+    } else {
+      if (d0) d0.textContent = t('deadzone_0_kmh', '0 км/ч');
+      if (d2) d2.textContent = t('deadzone_2_kmh', '2 км/ч');
+      if (d4) d4.textContent = t('deadzone_4_kmh', '4 км/ч ★');
+    }
+  }
+
+  function setSpeedUnit(isMph, save = true) {
+    isMphMode = !!isMph;
+    if (unitMphCheckbox) unitMphCheckbox.checked = isMphMode;
+    if (unitMphToggleLabel) unitMphToggleLabel.classList.toggle('active', isMphMode);
+    if (speedUnitDisplay) {
+      speedUnitDisplay.textContent = isMphMode ? 'MPH' : (window.i18n ? window.i18n.t('speed_unit_kmh', 'KM/H') : 'KM/H');
+    }
+    updateDeadzoneButtonsUnit();
+    if (save && window.TeslaSettings) {
+      window.TeslaSettings.set('mph', isMphMode);
+    }
+  }
+
+  if (unitMphCheckbox) {
+    unitMphCheckbox.addEventListener('change', (e) => setSpeedUnit(e.target.checked));
+  }
+  if (unitMphToggleLabel) {
+    unitMphToggleLabel.addEventListener('click', (e) => {
+      if (e.target !== unitMphCheckbox) {
+        setSpeedUnit(!isMphMode);
+      }
+    });
+  }
+  if (speedUnitDisplay) {
+    speedUnitDisplay.addEventListener('click', () => setSpeedUnit(!isMphMode));
+  }
+
+  function restoreAllUserSettings() {
+    if (!window.TeslaSettings) return;
+    const s = window.TeslaSettings;
+
+    // 1. Units
+    setSpeedUnit(s.get('mph', false), false);
+
+    // 2. Sliders
+    const engVol = s.get('engineVol', 100);
+    if (engineVolumeSlider) {
+      engineVolumeSlider.value = engVol;
+      if (engineVolumeText) engineVolumeText.textContent = `${engVol}%`;
+      if (audio && audio.setMasterVolume) audio.setMasterVolume(engVol / 100);
+    }
+
+    const bassVol = s.get('quickBass', 100);
+    if (quickBassSlider) {
+      quickBassSlider.value = bassVol;
+      if (quickBassText) quickBassText.textContent = `${bassVol}%`;
+      if (audio && audio.setSubwooferGain) audio.setSubwooferGain(bassVol / 100);
+    }
+
+    const exhVol = s.get('quickExhaust', 100);
+    if (quickExhaustSlider) {
+      quickExhaustSlider.value = exhVol;
+      if (quickExhaustText) quickExhaustText.textContent = `${exhVol}%`;
+      if (audio && audio.setExhaustVolume) audio.setExhaustVolume(exhVol / 100);
+    }
+
+    // 3. Profiles
+    const rpmProf = s.get('rpmProfile', 0);
+    applyRpmMode(rpmProf, false, false);
+
+    const crackleId = s.get('crackleMode', 'sport');
+    const crackleIdx = CRACKLE_MODES.findIndex(m => m.id === crackleId);
+    if (crackleIdx >= 0) applyCrackleMode(crackleIdx, false, false);
+
+    const dz = s.get('deadzone', 4);
+    applyGpsDeadzone(dz, false);
+
+    const sens = s.get('throttleSens', 'sport');
+    applyGpsSensitivity(sens, false);
+
+    const exhMode = s.get('exhaustMode', 'open');
+    applyExhaustMode(exhMode, false);
+
+    // 4. Car preset
+    const presetId = s.get('preset', null);
+    if (presetId && presetSelect) {
+      presetSelect.value = presetId;
+      const list = currentEngineMode === 'dsp' ? DSP_PRESETS : SAMPLE_PRESETS;
+      const pInfo = list.find(item => item.id === presetId);
+      if (pInfo) updateBrandDisplay(pInfo.name, pInfo.badge);
+      if (audio && audio.setPreset) {
+        audio.setPreset(presetId).catch(() => {});
+      }
+    }
+
+    // 5. Active tab
+    const tabName = s.get('activeTab', 'pedal');
+    const targetTab = Array.from(tabBtns).find(b => b.dataset.tab === tabName);
+    if (targetTab && tabName !== 'p2p') {
+      targetTab.click();
+    }
+  }
+
+  // Hook all volume slider inputs to auto-save in TeslaSettings
+  if (engineVolumeSlider) {
+    engineVolumeSlider.addEventListener('input', (e) => {
+      if (window.TeslaSettings) window.TeslaSettings.set('engineVol', parseInt(e.target.value, 10));
+    });
+  }
+  if (quickBassSlider) {
+    quickBassSlider.addEventListener('input', (e) => {
+      if (window.TeslaSettings) window.TeslaSettings.set('quickBass', parseInt(e.target.value, 10));
+    });
+  }
+  if (quickExhaustSlider) {
+    quickExhaustSlider.addEventListener('input', (e) => {
+      if (window.TeslaSettings) window.TeslaSettings.set('quickExhaust', parseInt(e.target.value, 10));
+    });
+  }
+
+  // Also update dynamic buttons on languageChanged event
+  window.addEventListener('languageChanged', () => {
+    updateDeadzoneButtonsUnit();
+    if (unitMphCheckbox) unitMphCheckbox.checked = isMphMode;
+    if (unitMphToggleLabel) unitMphToggleLabel.classList.toggle('active', isMphMode);
+    if (speedUnitDisplay) {
+      speedUnitDisplay.textContent = isMphMode ? 'MPH' : (window.i18n ? window.i18n.t('speed_unit_kmh', 'KM/H') : 'KM/H');
+    }
+    const mode = CRACKLE_MODES[currentCrackleIdx];
+    if (crackleQuickBtn && mode) {
+      crackleQuickBtn.textContent = mode.btnText;
+    }
+  });
+
+  // Restore everything immediately
+  setTimeout(restoreAllUserSettings, 120);
+
+
 
   // 0. PRESET SELECTOR
   if (presetSelect) {
     presetSelect.addEventListener('change', async (e) => {
       const selectedId = e.target.value;
+      if (window.TeslaSettings) window.TeslaSettings.set('preset', selectedId);
       const list = currentEngineMode === 'dsp' ? DSP_PRESETS : SAMPLE_PRESETS;
       const presetInfo = list.find(item => item.id === selectedId);
       if (presetInfo) {
@@ -1503,6 +1659,7 @@ document.addEventListener('DOMContentLoaded', () => {
       tabBtns.forEach(b => b.classList.remove('active'));
       btn.classList.add('active');
       activeTab = btn.dataset.tab;
+      if (window.TeslaSettings && activeTab !== 'p2p') window.TeslaSettings.set('activeTab', activeTab);
 
       if (activeTab === 'gps') {
         if (gnssStatusBadge && (!telemetry.lastPosition || !telemetry.lastPosition.coords)) {
@@ -1950,7 +2107,9 @@ document.addEventListener('DOMContentLoaded', () => {
       acceleration: effectiveAccel
     };
 
-    hudSpeed.textContent = `${effectiveSpeed.toFixed(1)} км/ч`;
+    const dispSpeed = isMphMode ? (effectiveSpeed * 0.621371) : effectiveSpeed;
+    const unitStr = isMphMode ? (window.i18n ? window.i18n.t('unit_mph_short', 'mph') : 'mph') : (window.i18n ? window.i18n.t('unit_kmh_short', 'км/ч') : 'км/ч');
+    hudSpeed.textContent = `${dispSpeed.toFixed(1)} ${unitStr}`;
     if (isStationary && rawSpeed > 0.2 && gpsDeadzone > 0) {
       hudSpeed.title = `Фильтр светофора активен: GPS дрейф ${rawSpeed.toFixed(1)} км/ч подавлен`;
     } else {
@@ -2517,7 +2676,11 @@ document.addEventListener('DOMContentLoaded', () => {
       gearText = (audio.gear || 1).toString();
     }
     gearDisplay.textContent = gearText;
-    speedDisplay.textContent = Math.round(audio.speed);
+    const currentDisplaySpeed = isMphMode ? Math.round(audio.speed * 0.621371) : Math.round(audio.speed);
+    speedDisplay.textContent = currentDisplaySpeed;
+    if (speedUnitDisplay) {
+      speedUnitDisplay.textContent = isMphMode ? 'MPH' : (window.i18n ? window.i18n.t('speed_unit_kmh', 'KM/H') : 'KM/H');
+    }
 
     // Highlight active gear pill
     const curG = audio.gear || 0;

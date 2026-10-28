@@ -56,11 +56,11 @@
   }
   </script>
 
-  <link rel="stylesheet" href="style.css?v=8.0">
+  <link rel="stylesheet" href="style.css?v=8.1">
   <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🏎️</text></svg>">
   <script>
     (function() {
-      const LATEST_V = '8.0';
+      const LATEST_V = '8.1';
       const p = new URLSearchParams(window.location.search);
       if (p.get('v') !== LATEST_V) {
         p.set('v', LATEST_V);
@@ -78,7 +78,7 @@
       <button id="carSelectModalBtn" class="btn-car-picker" type="button" title="Нажмите, чтобы открыть меню выбора машин (шторка)">
         <span id="brandBadge" class="brand-badge">585 HP</span>
         <span id="brandTitle" class="brand-title">Mercedes CLS 63 AMG</span>
-        <span class="picker-arrow">▼ ШТОРКА</span>
+        <span class="picker-arrow" data-i18n="brand_curtain">▼ ШТОРКА</span>
       </button>
       <select id="presetSelect" class="preset-dropdown" style="display: none;">
         <!-- Kept in background for compatibility -->
@@ -148,8 +148,13 @@
       </div>
     </div>
     <div class="sound-quick-actions">
-      <button id="shiftProfileBtn" class="btn-quick-pill" type="button" title="Обороты: 1x (Обычные: D) / 2x (СПОРТ: 20 км/ч = 4,000 RPM) / 3x (ТРЕК)">⚙️ Обороты: 1x</button>
-      <button id="crackleQuickBtn" class="btn-quick-pill active" type="button" title="Отстрелы выхлопа: 🔇 Тихо / 💥 Спорт / 🔥 Огонь">💥 Отстрелы: Спорт</button>
+      <!-- MPH Units Toggle Checkbox Pill -->
+      <label class="btn-quick-pill unit-toggle-pill" id="unitMphToggleLabel" title="Переключение единиц скорости: КМ/Ч или МИЛИ/Ч (MPH)">
+        <input type="checkbox" id="unitMphCheckbox">
+        <span id="unitMphText" data-i18n="unit_mph_label">🇺🇸 Мили (MPH)</span>
+      </label>
+      <button id="shiftProfileBtn" class="btn-quick-pill" type="button" title="Обороты: 1x / 2x / 3x">⚙️ Обороты: 1x</button>
+      <button id="crackleQuickBtn" class="btn-quick-pill active" type="button" title="Отстрелы: Тихо / Спорт / Огонь">💥 Отстрелы: Спорт</button>
     </div>
     <!-- Hidden compatibility elements to ensure no script errors -->
     <div style="display: none;">
@@ -160,9 +165,9 @@
   <!-- Mode Selector Tabs -->
   <div class="tabs-container">
     <div class="tabs">
-      <button class="tab-btn active" data-tab="pedal"><span class="tab-text-full">🕹️ Тест-Педаль (Симулятор)</span><span class="tab-text-short">🕹️ Педаль</span></button>
-      <button class="tab-btn" data-tab="gps"><span class="tab-text-full">🛰️ GPS Сенсор (Макс. точность)</span><span class="tab-text-short">🛰️ GPS</span></button>
-      <button class="tab-btn" data-tab="p2p"><span class="tab-text-full">📱 P2P Линк с телефоном</span><span class="tab-text-short">📱 P2P</span></button>
+      <button class="tab-btn active" data-tab="pedal"><span class="tab-text-full" data-i18n="tab_pedal_full">🕹️ Тест-Педаль (Симулятор)</span><span class="tab-text-short" data-i18n="tab_pedal_short">🕹️ Педаль</span></button>
+      <button class="tab-btn" data-tab="gps"><span class="tab-text-full" data-i18n="tab_gps_full">🛰️ GPS Сенсор (Макс. точность)</span><span class="tab-text-short" data-i18n="tab_gps_short">🛰️ GPS</span></button>
+      <button class="tab-btn" data-tab="p2p"><span class="tab-text-full" data-i18n="tab_p2p_full">📱 P2P Линк с телефоном</span><span class="tab-text-short" data-i18n="tab_p2p_short">📱 P2P</span></button>
     </div>
   </div>
 
@@ -176,57 +181,57 @@
       <!-- LEFT 1: Driving Dynamics & Exhaust Controls (Лаконично, органично, понятно) -->
       <div class="card driving-settings-card">
         <div class="hud-title" style="margin-bottom: 6px;">
-          <span>🏎️ Настройки вождения и выхлопа</span>
+          <span data-i18n="card_driving_title">🏎️ Настройки вождения и выхлопа</span>
         </div>
 
         <!-- 1. GPS Deadzone / Traffic Light Filter -->
         <div class="setting-row">
           <div class="setting-header">
-            <span class="setting-title">🛑 Фильтр светофора (Стоп-зона GPS)</span>
-            <span class="setting-hint">Исключает дёргание на месте</span>
+            <span class="setting-title" data-i18n="setting_stop_filter">🛑 Фильтр светофора (Стоп-зона GPS)</span>
+            <span class="setting-hint" data-i18n="setting_stop_hint">Исключает дёргание на месте</span>
           </div>
           <div class="segmented-pill-group">
-            <button id="deadzone0Btn" class="segmented-pill" type="button" title="0 км/ч: фильтр выключен">0 км/ч</button>
-            <button id="deadzone2Btn" class="segmented-pill" type="button" title="2 км/ч: лёгкая фильтрация">2 км/ч</button>
-            <button id="deadzone4Btn" class="segmented-pill active pill-green" type="button" title="4 км/ч: чисто на светофорах (рекомендуется)">4 км/ч ★</button>
+            <button id="deadzone0Btn" class="segmented-pill" type="button" data-i18n="deadzone_0_kmh">0 км/ч</button>
+            <button id="deadzone2Btn" class="segmented-pill" type="button" data-i18n="deadzone_2_kmh">2 км/ч</button>
+            <button id="deadzone4Btn" class="segmented-pill active pill-green" type="button" data-i18n="deadzone_4_kmh">4 км/ч ★</button>
           </div>
         </div>
 
         <!-- 2. Throttle Response Intensity -->
         <div class="setting-row">
           <div class="setting-header">
-            <span class="setting-title">⚡ Чувствительность газа (Отклик)</span>
-            <span class="setting-hint">Реакция мотора на ускорение</span>
+            <span class="setting-title" data-i18n="setting_throttle_sens">⚡ Чувствительность газа (Отклик)</span>
+            <span class="setting-hint" data-i18n="setting_throttle_hint">Реакция мотора на ускорение</span>
           </div>
           <div class="segmented-pill-group">
-            <button id="sensComfortBtn" class="segmented-pill" type="button" title="Плавный комфортный набор оборотов для города">🚗 Комфорт</button>
-            <button id="sensSportBtn" class="segmented-pill active" type="button" title="Динамичный спортивный отклик педали">🏎️ Спорт</button>
-            <button id="sensInsaneBtn" class="segmented-pill" type="button" title="Мгновенная отдача и полный крутящий момент">⚡ Мгновенно</button>
+            <button id="sensComfortBtn" class="segmented-pill" type="button" data-i18n="pill_comfort">🚗 Комфорт</button>
+            <button id="sensSportBtn" class="segmented-pill active" type="button" data-i18n="pill_sport">🏎️ Спорт</button>
+            <button id="sensInsaneBtn" class="segmented-pill" type="button" data-i18n="pill_insane">⚡ Мгновенно</button>
           </div>
         </div>
 
         <!-- 3. Exhaust Flaps / Character (Muffler vs Straight Pipe) -->
         <div class="setting-row">
           <div class="setting-header">
-            <span class="setting-title">🎺 Заслонки выхлопа (Характер)</span>
-            <span class="setting-hint">Звучание выхлопного тракта</span>
+            <span class="setting-title" data-i18n="setting_exhaust_flaps">🎺 Заслонки выхлопа (Характер)</span>
+            <span class="setting-hint" data-i18n="setting_exhaust_hint">Звучание выхлопного тракта</span>
           </div>
           <div class="segmented-pill-group">
-            <button id="exhaustQuietBtn" class="segmented-pill" type="button" title="Заводской глушитель: благородный мягкий звук">🤫 Заводской</button>
-            <button id="exhaustOpenBtn" class="segmented-pill active" type="button" title="Спортивный прямоток: громкий басистый рык">🏁 Прямоток</button>
+            <button id="exhaustQuietBtn" class="segmented-pill" type="button" data-i18n="pill_stock">🤫 Заводской</button>
+            <button id="exhaustOpenBtn" class="segmented-pill active" type="button" data-i18n="pill_straight">🏁 Прямоток</button>
           </div>
         </div>
 
         <!-- 4. Crackle / Pops & Bangs -->
         <div class="setting-row">
           <div class="setting-header">
-            <span class="setting-title">💥 Отстрелы выхлопа (Pops & Bangs)</span>
-            <span class="setting-hint">Прострелы при сбросе газа</span>
+            <span class="setting-title" data-i18n="setting_crackle">💥 Отстрелы выхлопа (Pops & Bangs)</span>
+            <span class="setting-hint" data-i18n="setting_crackle_hint">Прострелы при сбросе газа</span>
           </div>
           <div class="segmented-pill-group">
-            <button id="crackleQuietBtn" class="segmented-pill" type="button" title="Без отстрелов: спокойная плавная езда">🔇 Тихо</button>
-            <button id="crackleSportBtn" class="segmented-pill active" type="button" title="Спортивные сочные отстрелы">💥 Спорт</button>
-            <button id="crackleFireBtn" class="segmented-pill pill-fire" type="button" title="Антилаг: громкие хлопки и огонь">🔥 Огонь</button>
+            <button id="crackleQuietBtn" class="segmented-pill" type="button" data-i18n="pill_quiet">🔇 Тихо</button>
+            <button id="crackleSportBtn" class="segmented-pill active" type="button" data-i18n="pill_sport">💥 Спорт</button>
+            <button id="crackleFireBtn" class="segmented-pill pill-fire" type="button" data-i18n="pill_fire">🔥 Огонь</button>
           </div>
         </div>
       </div>
@@ -235,14 +240,14 @@
       <div class="card tesla-audio-panel card-collapsible">
         <div class="hud-title" style="margin-bottom: 0; display: flex; justify-content: space-between; align-items: center; cursor: pointer;" id="teslaAcousticHeader">
           <div style="display: flex; align-items: center; gap: 8px;">
-            <span>⚡ Акустика салона Tesla</span>
-            <span id="teslaAcousticBadge" style="font-size: 11.5px; padding: 2px 7px; border-radius: 6px; background: rgba(0,230,118,0.12); color: var(--accent-green); border: 1px solid rgba(0,230,118,0.3);">14 колонок</span>
+            <span data-i18n="card_acoustic_title">⚡ Акустика салона Tesla</span>
+            <span id="teslaAcousticBadge" style="font-size: 11.5px; padding: 2px 7px; border-radius: 6px; background: rgba(0,230,118,0.12); color: var(--accent-green); border: 1px solid rgba(0,230,118,0.3);" data-i18n="card_speakers_count">14 колонок</span>
           </div>
           <div style="display: flex; gap: 8px; align-items: center;">
             <button id="v6ToggleBtn" class="btn-v6-toggle" type="button" title="Нажмите для переключения режима v6.0 PRO">
-              <span id="v6ToggleText">⚡ PRO: ВКЛ</span>
+              <span id="v6ToggleText" data-i18n="btn_pro_toggle_on">⚡ PRO: ВКЛ</span>
             </button>
-            <button id="teslaAcousticExpandBtn" class="btn-adv-toggle" type="button">⚙️ Настройки ▼</button>
+            <button id="teslaAcousticExpandBtn" class="btn-adv-toggle" type="button" data-i18n="btn_settings_expand">⚙️ Настройки ▼</button>
           </div>
         </div>
 
@@ -258,9 +263,9 @@
               Распределение звука по салону:
             </div>
             <div class="tesla-soundstage-selector">
-              <button class="classic-stage-btn active" data-stage="tesla_mid" title="Мотор и выхлоп звучат строго сзади за сиденьями">🏎️ Задний выхлоп</button>
-              <button class="classic-stage-btn" data-stage="tesla_front" title="Впуск и турбина на лобовом стекле, выхлоп в багажнике">🏁 Впуск/Выхлоп</button>
-              <button class="classic-stage-btn" data-stage="tesla_3d" title="Полный 3D охват всех динамиков салона">🎧 3D Окружение</button>
+              <button class="classic-stage-btn active" data-stage="tesla_mid" data-i18n="stage_rear_exhaust">🏎️ Задний выхлоп</button>
+              <button class="classic-stage-btn" data-stage="tesla_front" data-i18n="stage_intake_exhaust">🏁 Впуск/Выхлоп</button>
+              <button class="classic-stage-btn" data-stage="tesla_3d" data-i18n="stage_3d_surround">🎧 3D Окружение</button>
             </div>
             <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 12px;">
               <span style="font-size: 11px; color: var(--text-muted);">Вибрация сабвуфера:</span>
@@ -295,10 +300,10 @@
           </div>
 
           <div class="tesla-soundstage-selector">
-            <button class="stage-btn active" data-stage="tesla_front" title="Впуск и мотор на лобовом стекле, выхлоп в багажнике">🏎️ Капот/Выхлоп</button>
-            <button class="stage-btn" data-stage="tesla_mid" title="Мотор и выхлоп звучат строго сзади за сиденьями (как в Carrera GT/Lambo)">🏁 Всё сзади</button>
-            <button class="stage-btn" data-stage="tesla_3d" title="Полный 3D охват всех 14 динамиков салона Tesla">🎧 3D Окружение</button>
-            <button class="stage-btn" data-stage="rear_only" title="Только задние динамики и сабвуфер">💨 Только выхлоп</button>
+            <button class="stage-btn active" data-stage="tesla_front" data-i18n="stage_hood_exhaust">🏎️ Капот/Выхлоп</button>
+            <button class="stage-btn" data-stage="tesla_mid" data-i18n="stage_all_rear">🏁 Всё сзади</button>
+            <button class="stage-btn" data-stage="tesla_3d" data-i18n="stage_3d_surround">🎧 3D Окружение</button>
+            <button class="stage-btn" data-stage="rear_only" data-i18n="stage_exhaust_only">💨 Только выхлоп</button>
           </div>
 
           <!-- Interactive Tesla Cabin Map (Visualizer) -->
@@ -361,14 +366,14 @@
           <!-- Main Acoustic Balance Crossfader (Front ↔ Rear) -->
           <div class="spatial-fader-card">
             <div class="slider-row">
-              <span class="slider-label">⚖️ Баланс салона: Капот ↔ Выхлоп</span>
+              <span class="slider-label" data-i18n="fader_label">⚖️ Баланс салона: Капот ↔ Выхлоп</span>
               <span id="faderValText" class="slider-value highlight">50 / 50 (Центр)</span>
             </div>
             <input id="faderSlider" class="tesla-slider" type="range" min="-100" max="100" value="0">
             <div class="fader-scale-labels">
-              <span>🏎️ Спереди (Мотор)</span>
-              <span>⚖️ Центр</span>
-              <span>💨 Сзади (Выхлоп)</span>
+              <span data-i18n="balance_front">🏎️ Спереди (Мотор)</span>
+              <span data-i18n="balance_center">⚖️ Центр</span>
+              <span data-i18n="balance_rear">💨 Сзади (Выхлоп)</span>
             </div>
           </div>
 
@@ -428,7 +433,7 @@
           <div id="turboControlBox" class="turbo-control-container">
             <div class="turbo-header">
               <div class="turbo-title-row">
-                <span class="turbo-title">🌀 Свист турбин / Turbo Whine</span>
+                <span class="turbo-title" data-i18n="turbo_title">🌀 Свист турбин / Turbo Whine</span>
                 <span id="turboStateBadge" class="turbo-badge active">ВКЛ</span>
               </div>
               <button id="turboToggleBtn" class="btn-turbo-toggle active" type="button" title="Включить / Выключить свист турбин">
@@ -438,7 +443,7 @@
 
             <!-- Turbo Whine Volume Slider -->
             <div class="slider-row" style="margin-top: 6px;">
-              <span class="slider-label">Громкость свиста турбин</span>
+              <span class="slider-label" data-i18n="turbo_vol_label">Громкость свиста турбин</span>
               <span id="turboVolumeValText" class="slider-value">100%</span>
             </div>
             <input id="turboVolumeSlider" class="tesla-slider" type="range" min="0" max="150" value="100">
@@ -447,7 +452,7 @@
             <div class="turbo-suboptions">
               <label class="turbo-suboption-label">
                 <input id="turboBovCheck" type="checkbox" checked>
-                <span>💥 Сброс давления Blow-Off (Stututu)</span>
+                <span data-i18n="turbo_bov_label">💥 Сброс давления Blow-Off (Stututu)</span>
               </label>
             </div>
           </div>
@@ -455,20 +460,20 @@
           <!-- DSP Tuning & Sound Generation Controls -->
           <div id="dspTuningBox" class="dsp-tuning-container">
             <div class="dsp-tuning-header">
-              <span>⚡ Тюнинг выхлопа и DSP</span>
-              <button id="toggleAdvDspBtn" class="btn-adv-toggle" type="button">⚙️ Опции</button>
+              <span data-i18n="dsp_tuning_title">⚡ Тюнинг выхлопа и DSP</span>
+              <button id="toggleAdvDspBtn" class="btn-adv-toggle" type="button" data-i18n="dsp_options_btn">⚙️ Опции</button>
             </div>
 
             <!-- 1. Flow / Character -->
             <div class="slider-row">
-              <span class="slider-label">Прямоток / Характер</span>
+              <span class="slider-label" data-i18n="dsp_flow_label">Прямоток / Характер</span>
               <span id="characterValText" class="slider-value">85%</span>
             </div>
             <input id="characterSlider" class="tesla-slider" type="range" min="15" max="100" value="85">
 
             <!-- 2. Crackle & Pops -->
             <div class="slider-row">
-              <span class="slider-label">Отстрелы / Pops & Bangs</span>
+              <span class="slider-label" data-i18n="dsp_crackle_label">Отстрелы / Pops & Bangs</span>
               <span id="crackleValText" class="slider-value">100%</span>
             </div>
             <input id="crackleSlider" class="tesla-slider" type="range" min="0" max="150" value="100">
@@ -531,7 +536,7 @@
           <div class="gauge-center-data">
             <div id="gearDisplay" class="gear-display">N</div>
             <div id="speedDisplay" class="speed-display">0</div>
-            <div class="speed-unit">KM/H</div>
+            <div id="speedUnitDisplay" class="speed-unit clickable-unit" title="Нажмите для переключения КМ/Ч ⇄ МИЛИ/Ч" data-i18n="speed_unit_kmh">KM/H</div>
             <div id="rpmNumeric" class="rpm-numeric">920 RPM</div>
           </div>
         </div>
@@ -539,17 +544,17 @@
         <!-- Integrated Open Telemetry & Sensors Dashboard (Right below / beside speedometer, ZERO scroll) -->
         <div class="card telemetry-card cluster-telemetry-card">
           <div class="hud-title">
-            <span class="hud-main-title">🛰️ Сенсоры и Телеметрия GNSS</span>
+            <span class="hud-main-title" data-i18n="hud_title">🛰️ Сенсоры и Телеметрия GNSS</span>
             <span id="hudRate" class="hud-rate-badge">GPS 1 Гц</span>
           </div>
 
           <div class="hud-grid">
             <div class="hud-item">
-              <div class="hud-label">GPS Скорость</div>
+              <div class="hud-label" data-i18n="hud_speed_label">GPS Скорость</div>
               <div id="hudSpeed" class="hud-value highlight">0.0 км/ч</div>
             </div>
             <div class="hud-item">
-              <div class="hud-label">Ускорение</div>
+              <div class="hud-label" data-i18n="hud_accel_label">Ускорение</div>
               <div id="hudAccel" class="hud-value">0.00 м/с²</div>
             </div>
             <div class="hud-item">
@@ -856,10 +861,10 @@
   <footer>
     <div data-i18n="footer_copy">Tesla Sound Simulator • Professional Automotive Procedural Audio Platform</div>
     <div class="footer-keybinds">
-      <span>🎮 <b>Руль Tesla:</b> Наклон колесика Вправо = Передача вверх (+), Влево = Вниз (-) • Прокрутка = Громкость</span>
-      <span><kbd>Space</kbd> / <kbd>W</kbd> — Газ</span>
-      <span><kbd>S</kbd> — Тормоз</span>
-      <span><kbd>Q</kbd> / <kbd>E</kbd> — Передачи вниз / вверх</span>
+      <span data-i18n-html="footer_wheel_hint">🎮 <b>Руль Tesla:</b> Наклон колесика Вправо = Передача вверх (+), Влево = Вниз (-) • Прокрутка = Громкость</span>
+      <span><kbd>Space</kbd> / <kbd>W</kbd> — <span data-i18n="footer_gas_key">Газ</span></span>
+      <span><kbd>S</kbd> — <span data-i18n="footer_brake_key">Тормоз</span></span>
+      <span><kbd>Q</kbd> / <kbd>E</kbd> — <span data-i18n="footer_gears_key">Передачи вниз / вверх</span></span>
     </div>
     <div class="footer-legal-row">
       <a href="legal/terms.html" class="footer-legal-link" id="linkTermsModal">Terms of Service</a>
@@ -882,18 +887,19 @@
   <script src="js/peerjs.min.js"></script>
   <script src="js/qrcode.min.js"></script>
   <!-- Procedural DSP Engine (from teslasound.io) -->
-  <script src="js/dsp/cars.js?v=8.0"></script>
-  <script src="js/dsp/engine-dsp.js?v=8.0"></script>
-  <script src="js/dsp/vehicle.js?v=8.0"></script>
-  <script src="js/dsp-audio.js?v=8.0"></script>
-  <script src="js/bov-sound.js?v=8.0"></script>
-  <script src="js/starter-sound.js?v=8.0"></script>
-  <script src="js/turbo-sound.js?v=8.0"></script>
-  <script src="js/i18n.js?v=8.0"></script>
-  <script src="js/subscription.js?v=8.0"></script>
-  <script src="js/audio-engine.js?v=8.0"></script>
-  <script src="js/telemetry.js?v=8.0"></script>
-  <script src="js/p2p.js?v=8.0"></script>
-  <script src="js/app.js?v=8.0"></script>
+  <script src="js/dsp/cars.js?v=8.1"></script>
+  <script src="js/dsp/engine-dsp.js?v=8.1"></script>
+  <script src="js/dsp/vehicle.js?v=8.1"></script>
+  <script src="js/dsp-audio.js?v=8.1"></script>
+  <script src="js/bov-sound.js?v=8.1"></script>
+  <script src="js/starter-sound.js?v=8.1"></script>
+  <script src="js/turbo-sound.js?v=8.1"></script>
+  <script src="js/settings-storage.js?v=8.1"></script>
+  <script src="js/i18n.js?v=8.1"></script>
+  <script src="js/subscription.js?v=8.1"></script>
+  <script src="js/audio-engine.js?v=8.1"></script>
+  <script src="js/telemetry.js?v=8.1"></script>
+  <script src="js/p2p.js?v=8.1"></script>
+  <script src="js/app.js?v=8.1"></script>
 </body>
 </html>

@@ -3545,3 +3545,48 @@ kbd {
     font-size: 11px !important;
   }
 }
+
+
+/* ==========================================================================
+   Speed Units Toggle (KM/H ↔ MPH) & Clickable Speedometer (v8.1)
+   ========================================================================== */
+.unit-toggle-pill {
+  cursor: pointer;
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 6px !important;
+  user-select: none !important;
+  transition: all 0.2s ease !important;
+}
+
+.unit-toggle-pill input[type="checkbox"] {
+  cursor: pointer;
+  accent-color: var(--accent-amber);
+  width: 14px;
+  height: 14px;
+  margin: 0;
+  flex-shrink: 0;
+}
+
+.unit-toggle-pill.active {
+  background: rgba(0, 176, 255, 0.18) !important;
+  border-color: #00b0ff !important;
+  color: #00b0ff !important;
+  box-shadow: 0 0 10px rgba(0, 176, 255, 0.35) !important;
+}
+
+.speed-unit.clickable-unit {
+  cursor: pointer;
+  transition: all 0.2s ease;
+  padding: 2px 6px;
+  border-radius: 4px;
+  border-bottom: 1px dotted rgba(255, 255, 255, 0.35);
+  display: inline-block;
+}
+
+.speed-unit.clickable-unit:hover {
+  color: var(--accent-amber);
+  background: rgba(255, 153, 0, 0.15);
+  border-bottom-color: var(--accent-amber);
+  transform: scale(1.08);
+}
