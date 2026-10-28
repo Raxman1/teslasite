@@ -229,13 +229,18 @@ class AudioEngine {
       if (this.shiftProfile) this.dspEngine.setShiftProfile(this.shiftProfile);
     }
 
-    // Initialize Universal Turbo Sound Synthesizer feeding into intakeBus or submixBus
+    // Dedicated Turbo Bus feeding straight to masterGain (audible in both Direct and Pro modes)
+    if (!this.turboBus) {
+      this.turboBus = this.ctx.createGain();
+      this.turboBus.gain.setValueAtTime(1.0, this.ctx.currentTime);
+      this.turboBus.connect(this.masterGain);
+    }
+
+    // Initialize Universal Turbo Sound Synthesizer feeding into turboBus
     if (window.TurboSoundEngine && !this.turboEngine) {
-      this.turboEngine = new window.TurboSoundEngine(this.ctx, () => this.intakeBus || this.submixBus || this.masterGain || this.ctx.destination);
+      this.turboEngine = new window.TurboSoundEngine(this.ctx, () => this.turboBus || this.masterGain || this.ctx.destination);
       this.turboEngine.init();
-      if (!this.v6ProEnabled) {
-        this.turboEngine.setEnabled(false);
-      }
+      this.turboEngine.setEnabled(true);
     }
 
     this.isReady = true;
@@ -489,7 +494,7 @@ class AudioEngine {
         this.submixBus.gain.setTargetAtTime(0.0, now, smooth);
       }
       if (this.turboEngine) {
-        this.turboEngine.setEnabled(false);
+        this.turboEngine.setEnabled(true);
       }
       // Completely flat acoustic filters (0 dB = straight wire)
       if (this.frontPresenceFilter) {

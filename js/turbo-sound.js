@@ -117,6 +117,9 @@ class TurboSoundEngine {
 
       this.noiseSource.start();
 
+      // Load authentic recorded blow-off valve (Вутуту) audio track immediately
+      this.loadStudioBov();
+
       // 5. Metallic Rotor Chime (Subtle Titanium Blade Passing Ring at High Boost)
       this.metallicOsc = this.ctx.createOscillator();
       this.metallicOsc.type = 'triangle';
@@ -153,8 +156,8 @@ class TurboSoundEngine {
     if (this.bovBuffer || this.bovLoading || !this.ctx) return;
     this.bovLoading = true;
     try {
-      let b64 = null;
-      if (window.CAR_PRESETS) {
+      let b64 = window.STUDIO_BOV_B64 || null;
+      if (!b64 && window.CAR_PRESETS) {
         if (window.CAR_PRESETS.amg_m177 && window.CAR_PRESETS.amg_m177.sounds && window.CAR_PRESETS.amg_m177.sounds.bov) {
           b64 = window.CAR_PRESETS.amg_m177.sounds.bov;
         } else if (window.CAR_PRESETS.supra_2jz && window.CAR_PRESETS.supra_2jz.sounds && window.CAR_PRESETS.supra_2jz.sounds.bov) {
@@ -210,8 +213,8 @@ class TurboSoundEngine {
     if (now - this.lastBovTime < 0.28) return; // cooldown
     this.lastBovTime = now;
 
-    const clampedSpool = Math.max(0.15, Math.min(1.0, spool || 0.5));
-    const bovVol = Math.max(0.15, Math.min(1.0, (clampedSpool * 1.3) * (this.volume / 100.0) * 0.95));
+    const clampedSpool = Math.max(0.18, Math.min(1.0, spool || 0.6));
+    const bovVol = Math.max(0.35, Math.min(1.25, (clampedSpool * 1.5) * (this.volume / 100.0)));
 
     // 1. Play real studio-recorded BOV sample if available
     if (this.bovBuffer) {
@@ -362,13 +365,13 @@ class TurboSoundEngine {
     }
 
     // Amplitudes:
-    // Aerodynamic Whistle: natural curve with spool
-    const whistleAmp1 = Math.pow(this.spool, 1.4) * 0.42;
-    const whistleAmp2 = Math.pow(this.spool, 1.6) * 0.22;
+    // Aerodynamic Whistle: rich spool presence
+    const whistleAmp1 = Math.pow(this.spool, 1.3) * 0.55;
+    const whistleAmp2 = Math.pow(this.spool, 1.5) * 0.32;
     // Air rush through intake pipe
-    const airHissAmp = Math.pow(this.spool, 1.2) * (0.2 + 0.8 * safeThrottle) * 0.32;
+    const airHissAmp = Math.pow(this.spool, 1.1) * (0.25 + 0.75 * safeThrottle) * 0.42;
     // Metallic rotor blade chime (subtle bite, never synthetic)
-    const metallicAmp = Math.pow(this.spool, 1.8) * 0.065;
+    const metallicAmp = Math.pow(this.spool, 1.6) * 0.10;
 
     this.whistleGain1.gain.setTargetAtTime(whistleAmp1, this.ctx.currentTime, 0.04);
     this.whistleGain2.gain.setTargetAtTime(whistleAmp2, this.ctx.currentTime, 0.04);
