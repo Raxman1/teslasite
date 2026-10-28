@@ -867,7 +867,7 @@ class AudioEngine {
     }
   }
 
-  async start() {
+  async start(withStarter = false) {
     this.ensureContext();
     if (!this.isReady) await this.init();
     if (this.ctx && (this.ctx.state === 'suspended' || this.ctx.state === 'interrupted')) {
@@ -881,6 +881,14 @@ class AudioEngine {
 
     if (this.isPlaying) return;
 
+    // Trigger authentic mechanical starter motor synthesizer
+    if (withStarter && window.StarterSound && this.ctx) {
+      if (!this.starterSound) {
+        this.starterSound = new window.StarterSound(this.ctx, () => this.submixBus || this.masterGain || this.ctx.destination);
+      }
+      this.starterSound.startCrank(1.05);
+    }
+
     if (this.soundMode === 'dsp') {
       if (!this.dspEngine && this.ctx) {
         this.dspEngine = new window.DSPAudioEngine(this.ctx, () => this.dspSplitterBus || this.submixBus || this.masterGain || this.ctx.destination);
@@ -888,12 +896,12 @@ class AudioEngine {
         if (this.shiftProfile) this.dspEngine.setShiftProfile(this.shiftProfile);
       }
       if (this.dspEngine) {
-        await this.dspEngine.start();
+        await this.dspEngine.start(withStarter);
         this.isPlaying = true;
         this.rpm = this.dspEngine.rpm;
         this.redlineRpm = this.dspEngine.redlineRpm;
         this.maxRpm = this.dspEngine.maxRpm;
-        console.log(`Tesla DSP Engine running: ${this.dspEngine.car ? this.dspEngine.car.name : 'DSP'}`);
+        console.log(`Tesla DSP Engine running (starter=${withStarter}): ${this.dspEngine.car ? this.dspEngine.car.name : 'DSP'}`);
       }
       return;
     }
@@ -952,6 +960,9 @@ class AudioEngine {
       this.turboEngine.stop();
     }
     if (!this.isPlaying) return;
+    if (this.starterSound) {
+      this.starterSound.stopCrank();
+    }
     if (this.soundMode === 'dsp') {
       if (this.dspEngine) {
         this.dspEngine.stop();

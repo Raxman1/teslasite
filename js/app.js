@@ -1322,10 +1322,15 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // 1. ENGINE START / STOP BUTTON & AUTO-UNLOCK
   let isStartingAudio = false;
-  async function unlockAndStartEngine() {
+  async function unlockAndStartEngine(withStarter = false) {
     if (audio.isPlaying || isStartingAudio) return;
     isStartingAudio = true;
-    startBtn.textContent = 'ЗАПУСК...';
+    if (withStarter) {
+      startBtn.textContent = '⚡ СТАРТЕР...';
+      startBtn.classList.add('cranking');
+    } else {
+      startBtn.textContent = 'ЗАПУСК...';
+    }
     startBtn.disabled = true;
 
     // Synchronously unlock audio before any async awaits
@@ -1335,18 +1340,24 @@ document.addEventListener('DOMContentLoaded', () => {
       if (presetSelect && presetSelect.value && audio.currentPresetId !== presetSelect.value) {
         await audio.setPreset(presetSelect.value);
       }
-      await audio.start();
+      await audio.start(withStarter);
       initTeslaMediaSession();
-      startBtn.textContent = '⏹ ЗАГЛУШИТЬ';
-      startBtn.className = 'btn btn-danger';
-      startBtn.disabled = false;
-      requestScreenWakeLock();
-      updateMediaSessionInfo();
+
+      const delayMs = withStarter ? 1050 : 0;
+      setTimeout(() => {
+        startBtn.textContent = '⏹ ЗАГЛУШИТЬ';
+        startBtn.className = 'btn btn-danger';
+        startBtn.classList.remove('cranking');
+        startBtn.disabled = false;
+        requestScreenWakeLock();
+        updateMediaSessionInfo();
+      }, delayMs);
       console.log('Engine successfully started!');
     } catch (err) {
       console.error('Audio start failed:', err);
       startBtn.textContent = 'START ENGINE';
       startBtn.className = 'btn btn-primary';
+      startBtn.classList.remove('cranking');
       startBtn.disabled = false;
     } finally {
       isStartingAudio = false;
@@ -1356,13 +1367,14 @@ document.addEventListener('DOMContentLoaded', () => {
   startBtn.addEventListener('click', async () => {
     unlockSafariAndTeslaAudio();
     if (!audio.isPlaying) {
-      await unlockAndStartEngine();
+      await unlockAndStartEngine(true); // explicit button tap triggers full starter sound!
     } else {
       audio.stop();
       releaseScreenWakeLock();
       updateMediaSessionInfo();
       startBtn.textContent = 'START ENGINE';
       startBtn.className = 'btn btn-primary';
+      startBtn.classList.remove('cranking');
     }
   });
 

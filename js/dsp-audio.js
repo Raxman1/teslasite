@@ -195,7 +195,7 @@ class DSPAudioEngine {
     };
   }
 
-  async start() {
+  async start(withCrank = false) {
     if (this.ctx.state === 'suspended' || this.ctx.state === 'interrupted') {
       try {
         await Promise.race([
@@ -212,9 +212,9 @@ class DSPAudioEngine {
     this.isPlaying = true;
     if (this.vehicle) {
       this.vehicle.running = true;
-      this.vehicle.startT = 3.0;
+      this.vehicle.startT = withCrank ? 0.0 : 3.0;
     }
-    console.log('[DSPAudioEngine] Running:', this.car ? this.car.name : 'unknown');
+    console.log('[DSPAudioEngine] Running (crank=' + withCrank + '):', this.car ? this.car.name : 'unknown');
   }
 
   stop() {
