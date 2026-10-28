@@ -1343,7 +1343,7 @@ document.addEventListener('DOMContentLoaded', () => {
       await audio.start(withStarter);
       initTeslaMediaSession();
 
-      const delayMs = withStarter ? 1050 : 0;
+      const delayMs = withStarter ? 350 : 0;
       setTimeout(() => {
         startBtn.textContent = '⏹ ЗАГЛУШИТЬ';
         startBtn.className = 'btn btn-danger';

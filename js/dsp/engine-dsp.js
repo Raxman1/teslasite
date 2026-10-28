@@ -830,7 +830,8 @@ var EngineDSP = (function () {
     // is open at idle, cruising and coasting), and rises steadily with revs.
     // Otherwise just a faint whine at high load and revs.
     var b = s.blower;
-    this.whineAmp = t.whineLevel * (b
+    // Supercharger and turbo whine are strictly 0 below 90% idle RPM (avoids any squeaks/whines at cranking speed)
+    this.whineAmp = (this.rpm < cfg.idleRpm * 0.9) ? 0 : t.whineLevel * (b
       ? s.whine * smoothstep((load - b.boostLoad[0]) / (b.boostLoad[1] - b.boostLoad[0])) *
         (0.1 + 0.9 * clamp(this.rpm / cfg.redlineRpm, 0, 1))
       : s.whine * load * rpmN * rpmN);

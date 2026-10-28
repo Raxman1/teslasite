@@ -18,9 +18,9 @@
   function follow(dt, tau) { return 1 - Math.exp(-dt / tau); }
   function smoothstep(t) { t = clamp(t, 0, 1); return t * t * (3 - 2 * t); }
 
-  var START_CRANK_S = 1.05;
-  var START_CATCH_S = 1.45;
-  var START_DONE_S = 2.8;
+  var START_CRANK_S = 0.32;
+  var START_CATCH_S = 0.85;
+  var START_DONE_S = 2.0;
   // Test drive: below this speed the Gas pedal's hold zone pulls away gently
   // instead of holding (holding a standstill would just sit there).
   var HOLD_MIN_MPS = 10 / 3.6;
@@ -306,11 +306,12 @@
 
     if (this.startT < START_DONE_S) {
       var t = this.startT;
-      var flarePeak = Math.max(2150, idle * 2.35);
+      var flarePeak = Math.max(1850, idle * 2.15);
       if (t < START_CRANK_S) {
-        rpm = 230 + 75 * Math.sin(t * TWO_PI * 6.2);
+        // Quick, energetic 0.32s crank turnover directly into combustion
+        rpm = Math.min(idle * 0.75, 420 + 45 * Math.sin(t * TWO_PI * 8.0));
       } else if (t < START_CATCH_S) {
-        rpm = Math.min(flarePeak, rpm + 6200 * dt);
+        rpm = Math.min(flarePeak, rpm + 5500 * dt);
       } else {
         rpm += (idle - rpm) * follow(dt, 0.45);
       }
@@ -474,7 +475,7 @@
       cut = 0;
     } else if (this.startT < START_DONE_S) {
       var t = this.startT;
-      load = t < START_CRANK_S ? 0.06 : t < START_CATCH_S ? 0.85 : 0.85 * (1 - (t - START_CATCH_S) / (START_DONE_S - START_CATCH_S));
+      load = t < START_CRANK_S ? 0.05 : t < START_CATCH_S ? 0.75 : 0.75 * (1 - (t - START_CATCH_S) / (START_DONE_S - START_CATCH_S));
     }
     var idleLoad = this.running ? 0.12 * clamp(1 - (this.rpm - e.idleRpm) / 1500, 0, 1) : 0;
     this.load = cut && !this.limiterCut ? 0 : Math.max(load, idleLoad);

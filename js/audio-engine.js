@@ -886,7 +886,7 @@ class AudioEngine {
       if (!this.starterSound) {
         this.starterSound = new window.StarterSound(this.ctx, () => this.submixBus || this.masterGain || this.ctx.destination);
       }
-      this.starterSound.startCrank(1.05);
+      this.starterSound.startCrank(0.35);
     }
 
     if (this.soundMode === 'dsp') {

@@ -1,7 +1,7 @@
 /**
- * TeslaSound Pro - Authentic Supercar Starter Motor Synthesizer (v7.8)
- * Synthesizes high-torque DC starter motor whine, mechanical solenoid clack,
- * rhythmic 6Hz compression strokes, and bendix disengagement.
+ * TeslaSound Pro - Authentic Supercar Starter Sound (v7.9)
+ * Pure low-frequency mechanical starter rotation & compression thuds.
+ * ZERO high-pitch square/sawtooth waves, ZERO squeaks or screeches.
  */
 class StarterSound {
   constructor(ctx, getDestination) {
@@ -12,55 +12,56 @@ class StarterSound {
   }
 
   /**
-   * Play full realistic starter crank sequence
-   * @param {number} duration Duration of cranking in seconds before engine fires (default 1.05s)
-   * @param {function} onCatch Callback when ignition catches and engine flares up
-   * @param {function} onComplete Callback when starter is fully finished and disengaged
+   * Play realistic deep starter crank sequence
+   * @param {number} duration Crank duration in seconds (default 0.35s)
+   * @param {function} onCatch Callback when ignition catches and engine flares
+   * @param {function} onComplete Callback when crank completes
    */
-  startCrank(duration = 1.05, onCatch = null, onComplete = null) {
+  startCrank(duration = 0.35, onCatch = null, onComplete = null) {
     if (!this.ctx || this.isCranking) return;
     this.isCranking = true;
     const now = this.ctx.currentTime;
     const dest = this.getDestination();
 
-    // Starter Master Gain & Highpass Filter
+    // Starter Master Bus (with steep Low-Pass filter at 220 Hz to eliminate ANY squeaks)
     const masterGain = this.ctx.createGain();
-    masterGain.gain.setValueAtTime(1.0, now);
-    masterGain.connect(dest);
+    const lowPass = this.ctx.createBiquadFilter();
+    lowPass.type = 'lowpass';
+    lowPass.frequency.setValueAtTime(220, now); // Absolute ceiling: no squeaks or buzzes can pass!
+    lowPass.Q.setValueAtTime(0.7, now);
 
-    // 1. Initial Solenoid Engagement Clack (t = 0.0s)
-    this._playSolenoidClack(now, masterGain);
+    masterGain.gain.setValueAtTime(0.45, now);
+    masterGain.connect(lowPass);
+    lowPass.connect(dest);
 
-    // 2. High-Torque Electric Starter Motor Whine
-    const motorNodes = this._createStarterMotor(now, duration, masterGain);
+    // 1. Warm mechanical starter rotation (deep sine waves at 78 Hz & 156 Hz)
+    const motorNodes = this._createDeepStarterRotation(now, duration, masterGain);
 
-    // 3. Cylinder Compression Resistance Chugs (6.2 Hz rhythmic thuds)
-    const chugNodes = this._createCompressionChugs(now, duration, masterGain);
+    // 2. Rhythmic low compression thumps (65 Hz sub-bass)
+    const chugNodes = this._createLowCompressionThumps(now, duration, masterGain);
 
-    // Schedule Engine Ignition Catch (at duration)
-    const catchTimeMs = Math.round(duration * 1000);
+    // Schedule ignition catch at duration
+    const catchMs = Math.round(duration * 1000);
     this.crankTimer = setTimeout(() => {
       this.isCranking = false;
+      if (!this.ctx) return;
       const catchNow = this.ctx.currentTime;
 
-      // Disengage starter motor with smooth spin-down fade
-      masterGain.gain.setTargetAtTime(0.001, catchNow, 0.08);
+      // Soft natural fade out
+      masterGain.gain.setTargetAtTime(0.0001, catchNow, 0.05);
 
-      // Solenoid Disengagement Bendix Click
-      this._playDisengageClick(catchNow, dest);
-
-      // Clean up nodes after fade out
       setTimeout(() => {
         try {
           motorNodes.forEach(n => { if (n.stop) n.stop(); n.disconnect(); });
           chugNodes.forEach(n => { if (n.stop) n.stop(); n.disconnect(); });
           masterGain.disconnect();
+          lowPass.disconnect();
         } catch (e) {}
-      }, 250);
+      }, 150);
 
       if (onCatch) onCatch();
       if (onComplete) onComplete();
-    }, catchTimeMs);
+    }, catchMs);
   }
 
   stopCrank() {
@@ -71,171 +72,72 @@ class StarterSound {
     this.isCranking = false;
   }
 
-  // Heavy mechanical solenoid engagement clack
-  _playSolenoidClack(t, dest) {
-    try {
-      const osc = this.ctx.createOscillator();
-      const gain = this.ctx.createGain();
-      const filter = this.ctx.createBiquadFilter();
-
-      osc.type = 'triangle';
-      osc.frequency.setValueAtTime(180, t);
-      osc.frequency.exponentialRampToValueAtTime(45, t + 0.045);
-
-      filter.type = 'lowpass';
-      filter.frequency.setValueAtTime(800, t);
-
-      gain.gain.setValueAtTime(0.75, t);
-      gain.gain.exponentialRampToValueAtTime(0.001, t + 0.05);
-
-      osc.connect(filter);
-      filter.connect(gain);
-      gain.connect(dest);
-
-      osc.start(t);
-      osc.stop(t + 0.06);
-
-      // Metallic click transient
-      const clickBuf = this.ctx.createBuffer(1, Math.floor(this.ctx.sampleRate * 0.03), this.ctx.sampleRate);
-      const data = clickBuf.getChannelData(0);
-      for (let i = 0; i < data.length; i++) {
-        data[i] = (Math.random() * 2 - 1) * Math.exp(-i / (this.ctx.sampleRate * 0.004));
-      }
-      const clickSrc = this.ctx.createBufferSource();
-      clickSrc.buffer = clickBuf;
-      const clickFilter = this.ctx.createBiquadFilter();
-      clickFilter.type = 'bandpass';
-      clickFilter.frequency.value = 2400;
-      clickFilter.Q.value = 3.0;
-      const clickGain = this.ctx.createGain();
-      clickGain.gain.setValueAtTime(0.6, t);
-      clickSrc.connect(clickFilter);
-      clickFilter.connect(clickGain);
-      clickGain.connect(dest);
-      clickSrc.start(t);
-    } catch (e) {}
-  }
-
-  // Electric starter motor rotating at ~3000 RPM (fundamental ~340 Hz + harmonics)
-  _createStarterMotor(t, duration, dest) {
+  // Deep, warm starter motor armature hum (strictly low-frequency sine waves)
+  _createDeepStarterRotation(t, duration, dest) {
     const nodes = [];
     try {
-      // Motor fundamental oscillator
       const osc1 = this.ctx.createOscillator();
       const osc2 = this.ctx.createOscillator();
       const gain = this.ctx.createGain();
 
-      osc1.type = 'sawtooth';
-      osc2.type = 'square';
+      osc1.type = 'sine';
+      osc2.type = 'sine';
 
-      // Pitch curve: quick ramp up from 180 Hz to 345 Hz as starter reaches cranking speed
-      osc1.frequency.setValueAtTime(180, t);
-      osc1.frequency.exponentialRampToValueAtTime(345, t + 0.12);
+      // Cranking frequency: 78 Hz fundamental + 156 Hz warm octave (flywheel teeth engagement)
+      osc1.frequency.setValueAtTime(72, t);
+      osc1.frequency.linearRampToValueAtTime(84, t + 0.1);
 
-      osc2.frequency.setValueAtTime(360, t);
-      osc2.frequency.exponentialRampToValueAtTime(690, t + 0.12);
+      osc2.frequency.setValueAtTime(144, t);
+      osc2.frequency.linearRampToValueAtTime(168, t + 0.1);
 
-      // 6.2 Hz Compression stroke pitch modulation (resistance of pistons compressing air)
-      const lfo = this.ctx.createOscillator();
-      const lfoGain = this.ctx.createGain();
-      lfo.frequency.setValueAtTime(6.2, t); // ~240 cranking RPM / 40 = 6 Hz
-      lfoGain.gain.setValueAtTime(28, t);   // +/- 28 Hz pitch dip per stroke
-
-      lfo.connect(lfoGain);
-      lfoGain.connect(osc1.frequency);
-      lfoGain.connect(osc2.frequency);
-      lfo.start(t);
-      lfo.stop(t + duration + 0.2);
-      nodes.push(lfo, lfoGain);
-
-      // Resonant motor casing filter
-      const filter = this.ctx.createBiquadFilter();
-      filter.type = 'bandpass';
-      filter.frequency.setValueAtTime(750, t);
-      filter.Q.setValueAtTime(2.2, t);
-
-      // Starter motor volume envelope
       gain.gain.setValueAtTime(0.001, t);
-      gain.gain.linearRampToValueAtTime(0.48, t + 0.08);
-      gain.gain.setValueAtTime(0.48, t + duration - 0.05);
+      gain.gain.linearRampToValueAtTime(0.4, t + 0.04);
+      gain.gain.setValueAtTime(0.4, t + duration - 0.03);
 
-      osc1.connect(filter);
-      osc2.connect(filter);
-      filter.connect(gain);
+      osc1.connect(gain);
+      osc2.connect(gain);
       gain.connect(dest);
 
       osc1.start(t);
       osc2.start(t);
-      osc1.stop(t + duration + 0.2);
-      osc2.stop(t + duration + 0.2);
-      nodes.push(osc1, osc2, filter, gain);
+      osc1.stop(t + duration + 0.1);
+      osc2.stop(t + duration + 0.1);
+      nodes.push(osc1, osc2, gain);
     } catch (e) {}
     return nodes;
   }
 
-  // Rhythmic cylinder compression strokes (thumping air displacement)
-  _createCompressionChugs(t, duration, dest) {
+  // Deep low-frequency cylinder compression pulses (65 Hz sub-bass thud)
+  _createLowCompressionThumps(t, duration, dest) {
     const nodes = [];
     try {
-      // Noise burst modulated at 6.2 Hz
-      const bufferSize = Math.floor(this.ctx.sampleRate * (duration + 0.1));
-      const noiseBuffer = this.ctx.createBuffer(1, bufferSize, this.ctx.sampleRate);
-      const output = noiseBuffer.getChannelData(0);
-      for (let i = 0; i < bufferSize; i++) {
-        output[i] = Math.random() * 2 - 1;
-      }
+      const thudOsc = this.ctx.createOscillator();
+      const thudGain = this.ctx.createGain();
+      const lfo = this.ctx.createOscillator();
+      const lfoGain = this.ctx.createGain();
 
-      const whiteNoise = this.ctx.createBufferSource();
-      whiteNoise.buffer = noiseBuffer;
+      thudOsc.type = 'triangle';
+      thudOsc.frequency.setValueAtTime(62, t);
 
-      // Filter to deep metallic intake/compression thud
-      const filter = this.ctx.createBiquadFilter();
-      filter.type = 'lowpass';
-      filter.frequency.setValueAtTime(280, t);
+      // 7.5 Hz compression cadence
+      lfo.frequency.setValueAtTime(7.5, t);
+      lfoGain.gain.setValueAtTime(0.28, t);
 
-      // Tremolo amplitude modulation for compression chugs
-      const amGain = this.ctx.createGain();
-      const amLfo = this.ctx.createOscillator();
-      const amLfoScale = this.ctx.createGain();
+      thudGain.gain.setValueAtTime(0.28, t);
+      lfo.connect(lfoGain);
+      lfoGain.connect(thudGain.gain);
 
-      amLfo.frequency.setValueAtTime(6.2, t);
-      amLfoScale.gain.setValueAtTime(0.35, t);
-      amGain.gain.setValueAtTime(0.35, t);
+      thudOsc.connect(thudGain);
+      thudGain.connect(dest);
 
-      amLfo.connect(amLfoScale);
-      amLfoScale.connect(amGain.gain);
+      lfo.start(t);
+      thudOsc.start(t);
+      lfo.stop(t + duration + 0.1);
+      thudOsc.stop(t + duration + 0.1);
 
-      whiteNoise.connect(filter);
-      filter.connect(amGain);
-      amGain.connect(dest);
-
-      amLfo.start(t);
-      whiteNoise.start(t);
-      amLfo.stop(t + duration + 0.1);
-      whiteNoise.stop(t + duration + 0.1);
-
-      nodes.push(whiteNoise, filter, amGain, amLfo, amLfoScale);
+      nodes.push(thudOsc, thudGain, lfo, lfoGain);
     } catch (e) {}
     return nodes;
-  }
-
-  // Bendix overrunning clutch release click when engine catches
-  _playDisengageClick(t, dest) {
-    try {
-      const osc = this.ctx.createOscillator();
-      const gain = this.ctx.createGain();
-      osc.type = 'sine';
-      osc.frequency.setValueAtTime(1200, t);
-      osc.frequency.exponentialRampToValueAtTime(300, t + 0.08);
-
-      gain.gain.setValueAtTime(0.35, t);
-      gain.gain.exponentialRampToValueAtTime(0.001, t + 0.08);
-
-      osc.connect(gain);
-      gain.connect(dest);
-      osc.start(t);
-      osc.stop(t + 0.09);
-    } catch (e) {}
   }
 }
 
