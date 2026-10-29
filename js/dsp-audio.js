@@ -153,7 +153,7 @@ class DSPAudioEngine {
         }
         await Promise.race([
           this.workletPromise,
-          new Promise((_, reject) => setTimeout(() => reject(new Error('Worklet timeout')), 2500))
+          new Promise((_, reject) => setTimeout(() => reject(new Error('Worklet timeout')), 4000))
         ]);
 
         const node = new AudioWorkletNode(this.ctx, 'engine-processor', {
@@ -174,7 +174,7 @@ class DSPAudioEngine {
 
     // High-performance ScriptProcessorNode fallback with window.EngineDSP
     const dsp = window.EngineDSP.create(this.ctx.sampleRate, engineCfg, seed);
-    const node = this.ctx.createScriptProcessor(1024, 1, 2);
+    const node = this.ctx.createScriptProcessor(2048, 1, 2);
     node.onaudioprocess = (e) => {
       const out = e.outputBuffer;
       dsp.process(out.getChannelData(0), out.getChannelData(1), out.length);

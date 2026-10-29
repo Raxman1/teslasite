@@ -1488,7 +1488,39 @@ document.addEventListener('DOMContentLoaded', () => {
           <span class="car-card-badge">${item.badge}</span>
         </div>
       `;
-      addTouchInstantListener(card, async () => {
+      // Touch & Drag Detection for Tesla Touchscreen:
+      // Distinguish clean tap from scroll drag gesture.
+      let startY = 0;
+      let startX = 0;
+      let isDragging = false;
+      let touchStartTime = 0;
+
+      card.addEventListener('touchstart', (e) => {
+        if (e.touches && e.touches[0]) {
+          startY = e.touches[0].clientY;
+          startX = e.touches[0].clientX;
+          isDragging = false;
+          touchStartTime = Date.now();
+        }
+      }, { passive: true });
+
+      card.addEventListener('touchmove', (e) => {
+        if (e.touches && e.touches[0]) {
+          const dy = Math.abs(e.touches[0].clientY - startY);
+          const dx = Math.abs(e.touches[0].clientX - startX);
+          if (dy > 10 || dx > 10) {
+            isDragging = true;
+          }
+        }
+      }, { passive: true });
+
+      let lastSelect = 0;
+      const selectThisCar = async () => {
+        if (isDragging) return;
+        const now = Date.now();
+        if (now - lastSelect < 350) return;
+        lastSelect = now;
+
         carCardsGrid.querySelectorAll('.car-card-item').forEach(c => c.classList.remove('active'));
         card.classList.add('active');
         if (presetSelect) presetSelect.value = item.id;
@@ -1511,6 +1543,18 @@ document.addEventListener('DOMContentLoaded', () => {
           await unlockAndStartEngine();
         }
         closeCarModal();
+      };
+
+      card.addEventListener('touchend', (e) => {
+        if (!isDragging && (Date.now() - touchStartTime < 500)) {
+          selectThisCar();
+        }
+      }, { passive: true });
+
+      card.addEventListener('click', (e) => {
+        if (!isDragging) {
+          selectThisCar();
+        }
       });
       carCardsGrid.appendChild(card);
     });
@@ -2824,15 +2868,7 @@ document.addEventListener('DOMContentLoaded', () => {
     rpmNumeric.textContent = `${currentRpm} RPM`;
 
     const isLimiterActive = audio.isRevLimiting || (currentRpm >= (audio.redlineRpm || 8000) * 0.985 && (audio.throttle > 0.85 || audio.targetThrottle > 0.85));
-    if (isLimiterActive) {
-      rpmNumeric.style.color = '#ff2222';
-      rpmNumeric.style.textShadow = '0 0 16px rgba(255, 34, 34, 0.9)';
-      rpmNumeric.style.transform = `scale(1.08) rotate(${(Math.random() * 3 - 1.5).toFixed(1)}deg)`;
-    } else {
-      rpmNumeric.style.color = '';
-      rpmNumeric.style.textShadow = '';
-      rpmNumeric.style.transform = '';
-    }
+    rpmNumeric.classList.toggle('rev-limiter-active', isLimiterActive);
 
     let gearText = 'N';
     if (audio.gearMode === 'N' || audio.gear === 0) {

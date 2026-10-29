@@ -2125,11 +2125,13 @@ kbd {
 
 /* Car Preset Selection Modal */
 .car-picker-modal {
-  max-width: 760px;
-  width: 94vw;
-  max-height: 86vh;
+  max-width: 800px;
+  width: 95vw;
+  max-height: 88vh;
   display: flex;
   flex-direction: column;
+  overflow: hidden;
+  box-sizing: border-box;
 }
 
 .car-picker-modal-header {
@@ -2192,12 +2194,33 @@ kbd {
 
 .car-cards-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
   gap: 10px;
-  overflow-y: auto;
-  max-height: 52vh;
-  padding: 4px 6px 4px 0;
-  -webkit-overflow-scrolling: touch;
+  overflow-y: scroll !important;
+  max-height: 58vh;
+  min-height: 0;
+  flex: 1 1 auto;
+  padding: 4px 8px 16px 2px;
+  -webkit-overflow-scrolling: touch !important;
+  touch-action: pan-y !important;
+  overscroll-behavior-y: contain;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 153, 0, 0.5) rgba(255, 255, 255, 0.05);
+}
+
+.car-cards-grid::-webkit-scrollbar {
+  width: 8px;
+}
+.car-cards-grid::-webkit-scrollbar-track {
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 4px;
+}
+.car-cards-grid::-webkit-scrollbar-thumb {
+  background: rgba(255, 153, 0, 0.5);
+  border-radius: 4px;
+}
+.car-cards-grid::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 153, 0, 0.8);
 }
 
 .car-card-item {
@@ -2210,6 +2233,21 @@ kbd {
   display: flex;
   flex-direction: column;
   gap: 4px;
+  touch-action: pan-y !important;
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.rev-limiter-active {
+  color: #ff2222 !important;
+  text-shadow: 0 0 16px rgba(255, 34, 34, 0.9) !important;
+  animation: limiterShake 0.08s infinite alternate ease-in-out;
+}
+
+@keyframes limiterShake {
+  0% { transform: scale(1.06) rotate(-1deg); }
+  100% { transform: scale(1.06) rotate(1deg); }
 }
 
 .car-card-item:hover {

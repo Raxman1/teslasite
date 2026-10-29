@@ -848,12 +848,16 @@ var EngineDSP = (function () {
 
   EngineDSP.prototype._pop = function (bank, strength) {
     var sr = this.sr, r = this.rng;
-    bank.add(sr * 0.0012, strength * this.s.gain * 1.6, strength * this.s.gain * 1.2,
-      Math.exp(-1 / (sr * (0.002 + 0.004 * r.next()))));
+    var popTau = sr * (0.002 + 0.004 * r.next());
+    var noiseDecay = 1.0 - (1.0 / Math.max(1, popTau));
+    bank.add(sr * 0.0012, strength * this.s.gain * 1.6, strength * this.s.gain * 1.2, noiseDecay);
     if (strength * 0.9 > this.popEnv) {
       this.popEnv = strength * 0.9;
       this.popBp.set('bandpass', 700 + 1800 * r.next(), 0.8, 0, sr);
-      this.popDecay = Math.exp(-1 / (sr * (0.006 + 0.012 * r.next())));
+      this.popBp.z1 = 0;
+      this.popBp.z2 = 0;
+      var decayTau = sr * (0.006 + 0.012 * r.next());
+      this.popDecay = 1.0 - (1.0 / Math.max(1, decayTau));
     }
   };
 
