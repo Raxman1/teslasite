@@ -178,7 +178,11 @@
     "btn_hide": "✕ Hide",
     "pro_label": "PRO",
     "state_on": "ON",
-    "state_off": "OFF"
+    "state_off": "OFF",
+    "gear_up_label": "+",
+    "gear_down_label": "−",
+    "paddle_up_text": "UP",
+    "paddle_down_text": "DOWN"
   },
   "ru": {
     "site_title": "Tesla Звуковой Симулятор Суперкаров | V10, V8 и Турбо",
@@ -352,7 +356,11 @@
     "btn_hide": "✕ Скрыть",
     "pro_label": "PRO",
     "state_on": "ВКЛ",
-    "state_off": "ВЫКЛ"
+    "state_off": "ВЫКЛ",
+    "gear_up_label": "+",
+    "gear_down_label": "−",
+    "paddle_up_text": "ВВЕРХ",
+    "paddle_down_text": "ВНИЗ"
   },
   "fr": {
     "site_title": "Simulateur Sonore de Supercars pour Tesla | V10, V8 & Turbo",
@@ -527,7 +535,11 @@
     "btn_hide": "✕ Masquer",
     "pro_label": "PRO",
     "state_on": "ACTIVÉ",
-    "state_off": "DÉSACTIVÉ"
+    "state_off": "DÉSACTIVÉ",
+    "gear_up_label": "+",
+    "gear_down_label": "−",
+    "paddle_up_text": "HAUT",
+    "paddle_down_text": "BAS"
   },
   "de": {
     "site_title": "Tesla Supersportwagen Sound Simulator | V10, V8 & Turbo",
@@ -701,7 +713,11 @@
     "btn_hide": "✕ Ausblenden",
     "pro_label": "PRO",
     "state_on": "EIN",
-    "state_off": "AUS"
+    "state_off": "AUS",
+    "gear_up_label": "+",
+    "gear_down_label": "−",
+    "paddle_up_text": "HOCH",
+    "paddle_down_text": "RUNTER"
   },
   "es": {
     "site_title": "Simulador de Sonido de Superdeportivos para Tesla | V10, V8 y Turbo",
@@ -875,7 +891,11 @@
     "btn_hide": "✕ Ocultar",
     "pro_label": "PRO",
     "state_on": "ACT",
-    "state_off": "DES"
+    "state_off": "DES",
+    "gear_up_label": "+",
+    "gear_down_label": "−",
+    "paddle_up_text": "SUBIR",
+    "paddle_down_text": "BAJAR"
   },
   "zh": {
     "site_title": "特斯拉超跑声浪模拟器 | V10, V8 与涡轮增压",
@@ -1049,7 +1069,11 @@
     "btn_hide": "✕ 隐藏",
     "pro_label": "PRO",
     "state_on": "开启",
-    "state_off": "关闭"
+    "state_off": "关闭",
+    "gear_up_label": "+",
+    "gear_down_label": "−",
+    "paddle_up_text": "升档",
+    "paddle_down_text": "降档"
   },
   "ja": {
     "site_title": "テスラ スーパーカーサウンドシミュレーター | V10, V8 & Turbo",
@@ -1223,7 +1247,11 @@
     "btn_hide": "✕ 非表示",
     "pro_label": "PRO",
     "state_on": "オン",
-    "state_off": "オフ"
+    "state_off": "オフ",
+    "gear_up_label": "+",
+    "gear_down_label": "−",
+    "paddle_up_text": "シフトアップ",
+    "paddle_down_text": "シフトダウン"
   },
   "pt": {
     "site_title": "Simulador de Som de Supercarros para Tesla | V10, V8 & Turbo",
@@ -1397,7 +1425,11 @@
     "btn_hide": "✕ Ocultar",
     "pro_label": "PRO",
     "state_on": "LIG",
-    "state_off": "DESL"
+    "state_off": "DESL",
+    "gear_up_label": "+",
+    "gear_down_label": "−",
+    "paddle_up_text": "SUBIR",
+    "paddle_down_text": "DESCER"
   },
   "ar": {
     "site_title": "محاكي أصوات سيارات تيسلا الخارقة | V10 و V8 وتيربو",
@@ -1571,7 +1603,11 @@
     "btn_hide": "✕ إخفاء",
     "pro_label": "PRO",
     "state_on": "تشغيل",
-    "state_off": "إيقاف"
+    "state_off": "إيقاف",
+    "gear_up_label": "+",
+    "gear_down_label": "−",
+    "paddle_up_text": "أعلى",
+    "paddle_down_text": "أسفل"
   }
 };
 

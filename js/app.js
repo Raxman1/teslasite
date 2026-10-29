@@ -1516,9 +1516,16 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
+  // Robust Tesla Touchscreen Car Modal Logic:
+  // Opens on tap and STAYS open until explicitly closed or backdrop is tapped
+  let _backdropStartedOutside = false;
+  let _carModalOpenedAt = 0;
+
   function openCarModal() {
     if (!carSelectModal) return;
     renderCarCards();
+    _carModalOpenedAt = Date.now();
+    _backdropStartedOutside = false;
     carSelectModal.classList.add('open');
     carSelectModal.classList.add('active');
     carSelectModal.style.display = 'flex';
@@ -1533,21 +1540,33 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   if (carSelectModalBtn) {
-    addTouchInstantListener(carSelectModalBtn, openCarModal);
+    addTouchInstantListener(carSelectModalBtn, (e) => {
+      e.stopPropagation();
+      openCarModal();
+    });
   }
   if (dashboardCarPickerBtn) {
-    addTouchInstantListener(dashboardCarPickerBtn, openCarModal);
+    addTouchInstantListener(dashboardCarPickerBtn, (e) => {
+      e.stopPropagation();
+      openCarModal();
+    });
   }
   if (closeCarModalBtn) addTouchInstantListener(closeCarModalBtn, closeCarModal);
   if (closeCarModalBtnBottom) addTouchInstantListener(closeCarModalBtnBottom, closeCarModal);
+
   if (carSelectModal) {
+    carSelectModal.addEventListener('pointerdown', (e) => {
+      _backdropStartedOutside = (e.target === carSelectModal);
+    });
     carSelectModal.addEventListener('click', (e) => {
-      if (e.target === carSelectModal) closeCarModal();
+      if (e.target === carSelectModal && _backdropStartedOutside && (Date.now() - _carModalOpenedAt > 450)) {
+        closeCarModal();
+      }
+      _backdropStartedOutside = false;
     });
   }
 
-
-  // iOS Safari & Tesla Audio Session Unlocker
+  // iOS Safari & Tesla  // iOS Safari & Tesla Audio Session Unlocker
   // Plays valid silent audio to force iOS out of "Ambient" into "Playback" (bypasses silent switch)
   function unlockSafariAndTeslaAudio() {
     if ('audioSession' in navigator) {
@@ -1590,6 +1609,16 @@ document.addEventListener('DOMContentLoaded', () => {
   window.addEventListener('touchstart', handleGlobalUnlock, { once: true, passive: true });
   window.addEventListener('pointerdown', handleGlobalUnlock, { once: true, passive: true });
   window.addEventListener('click', handleGlobalUnlock, { once: true });
+  // Tesla-specific: also try on scroll and any interaction
+  window.addEventListener('scroll', handleGlobalUnlock, { once: true, passive: true });
+  // Try auto-start after page fully loaded (Tesla browser may allow this)
+  setTimeout(() => {
+    if (!audio.isPlaying && !isStartingAudio) {
+      unlockSafariAndTeslaAudio();
+      // Re-register media session even without playing (so steering wheel works before START press)
+      initTeslaMediaSession();
+    }
+  }, 1500);
 
   // 1. ENGINE START / STOP BUTTON & AUTO-UNLOCK
   let isStartingAudio = false;
@@ -1636,7 +1665,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   }
 
-  startBtn.addEventListener('click', async () => {
+  addTouchInstantListener(startBtn, async () => {
     unlockSafariAndTeslaAudio();
     if (!audio.isPlaying) {
       await unlockAndStartEngine(true); // explicit button tap triggers full starter sound!
@@ -1737,6 +1766,13 @@ document.addEventListener('DOMContentLoaded', () => {
     showShiftNotification(`▲ M${curG}`);
     updateMediaSessionInfo();
 
+    // Update big shift display
+    const _bigGD = document.getElementById('bigGearDisplay');
+    if (_bigGD) {
+      const _curGG = (audio.dspEngine && audio.dspEngine.vehicle) ? audio.dspEngine.vehicle.gear : (audio.gear || 1);
+      _bigGD.textContent = `M${_curGG}`;
+    }
+
     // Broadcast gear shift to paired Tesla or Phone via P2P
     if (broadcast && typeof p2p !== 'undefined' && p2p.isConnected) {
       p2p.sendGearShift(action);
@@ -1752,6 +1788,44 @@ document.addEventListener('DOMContentLoaded', () => {
       switchToManualAndShift(g);
     });
   });
+
+  // Big floating shift buttons (Tesla + Mobile Touch Optimized)
+  const bigShiftUpBtn = document.getElementById('bigShiftUpBtn');
+  const bigShiftDownBtn = document.getElementById('bigShiftDownBtn');
+  const bigGearDisplay = document.getElementById('bigGearDisplay');
+
+  function updateBigGearDisplay() {
+    if (!bigGearDisplay) return;
+    const curG = (audio.dspEngine && audio.dspEngine.vehicle) ? audio.dspEngine.vehicle.gear : (audio.gear || 1);
+    const mode = audio.gearMode || 'N';
+    bigGearDisplay.textContent = mode === 'N' ? 'N' : (mode === 'M' ? `M${curG}` : `D${curG}`);
+  }
+
+  if (bigShiftUpBtn) {
+    addTouchInstantListener(bigShiftUpBtn, () => {
+      bigShiftUpBtn.classList.add('pressed');
+      setTimeout(() => bigShiftUpBtn.classList.remove('pressed'), 140);
+      switchToManualAndShift('up');
+      updateBigGearDisplay();
+    });
+  }
+  if (bigShiftDownBtn) {
+    addTouchInstantListener(bigShiftDownBtn, () => {
+      bigShiftDownBtn.classList.add('pressed');
+      setTimeout(() => bigShiftDownBtn.classList.remove('pressed'), 140);
+      switchToManualAndShift('down');
+      updateBigGearDisplay();
+    });
+  }
+  if (bigShiftDownBtn) {
+    addTouchInstantListener(bigShiftDownBtn, () => {
+      switchToManualAndShift('down');
+      updateBigGearDisplay();
+    });
+  }
+
+  // Keep big display synced with gear selector
+  const _origSwitchToManual = switchToManualAndShift;
 
   gearBtns.forEach(btn => {
     addTouchInstantListener(btn, () => {
@@ -2083,16 +2157,12 @@ document.addEventListener('DOMContentLoaded', () => {
           setBrakePressure(Math.min(1.0, brakePressure + 0.15));
         }, 35);
       }
-    } else if (e.code === 'KeyE') {
-      audio.gearMode = 'M';
-      gearBtns.forEach(b => b.classList.toggle('active', b.dataset.mode === 'M'));
-      audio.shiftUp();
-      showShiftNotification(`▲ ПЕРЕДАЧА ${audio.gear || 1} (+)`);
-    } else if (e.code === 'KeyQ') {
-      audio.gearMode = 'M';
-      gearBtns.forEach(b => b.classList.toggle('active', b.dataset.mode === 'M'));
-      audio.shiftDown();
-      showShiftNotification(`▼ ПЕРЕДАЧА ${audio.gear || 1} (-)`);
+    } else if (e.code === 'KeyE' || e.code === 'ArrowRight' || e.code === 'MediaTrackNext' || e.code === 'PageUp') {
+      e.preventDefault();
+      switchToManualAndShift('up');
+    } else if (e.code === 'KeyQ' || e.code === 'ArrowLeft' || e.code === 'MediaTrackPrevious' || e.code === 'PageDown') {
+      e.preventDefault();
+      switchToManualAndShift('down');
     }
   });
 
@@ -2421,30 +2491,37 @@ document.addEventListener('DOMContentLoaded', () => {
   function attachMediaSessionStream() {
     if (!audio || !audio.ctx || !mediaSessionKeeper) return;
     try {
-      if (!mediaSessionKeeper._hasStreamAttached && audio.ctx) {
-        const ctx = audio.ctx;
-        if (ctx.state === 'suspended' || ctx.state === 'interrupted') {
-          ctx.resume().catch(() => {});
-        }
-        // Sub-audible carrier so Chromium audio mixer registers continuous active audio frames
-        const osc = ctx.createOscillator();
-        const gain = ctx.createGain();
-        osc.frequency.value = 32;
-        gain.gain.value = 0.004; // inaudible amplitude (~ -48 dBFS)
-        osc.connect(gain);
+      const ctx = audio.ctx;
+      if (ctx.state === 'suspended' || ctx.state === 'interrupted') {
+        ctx.resume().catch(() => {});
+      }
 
-        if (ctx.createMediaStreamDestination) {
+      if (!mediaSessionKeeper._hasStreamAttached && ctx.createMediaStreamDestination) {
+        try {
           const streamDest = ctx.createMediaStreamDestination();
-          gain.connect(streamDest);
-          osc.start();
+          // Connect actual master engine sound through clipper to media stream destination!
+          if (audio.clip) {
+            audio.clip.connect(streamDest);
+          } else if (audio.masterGain) {
+            audio.masterGain.connect(streamDest);
+          }
           mediaSessionKeeper.srcObject = streamDest.stream;
           mediaSessionKeeper._hasStreamAttached = true;
+        } catch (streamErr) {
+          console.warn('createMediaStreamDestination fallback:', streamErr);
         }
       }
-      mediaSessionKeeper.volume = 1.0; // 100% volume so OS media routing binds to this tab
+      mediaSessionKeeper.volume = 1.0;
       const playPromise = mediaSessionKeeper.play();
       if (playPromise !== undefined) {
-        playPromise.catch(e => console.warn('Keeper stream play:', e));
+        playPromise.catch(e => {
+          console.warn('Keeper stream play:', e);
+          // If srcObject play fails, try base64 silent loop
+          if (mediaSessionKeeper.srcObject) {
+            mediaSessionKeeper.srcObject = null;
+            mediaSessionKeeper.play().catch(() => {});
+          }
+        });
       }
     } catch (err) {
       console.warn('attachMediaSessionStream warning:', err);
@@ -2561,6 +2638,19 @@ document.addEventListener('DOMContentLoaded', () => {
   // Auto-initialize MediaSession immediately so steering wheel buttons bind on launch
   initTeslaMediaSession();
 
+  // Re-register MediaSession handlers on focus (Tesla OS sometimes drops the session)
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'visible') {
+      setTimeout(() => {
+        initTeslaMediaSession();
+        if (audio.isPlaying) attachMediaSessionStream();
+      }, 300);
+    }
+  });
+  window.addEventListener('focus', () => {
+    setTimeout(() => initTeslaMediaSession(), 200);
+  });
+
   // 14. SCREEN WAKE LOCK API (Prevents phone from auto-sleeping while driving in car)
   let wakeLockObj = null;
   async function requestScreenWakeLock() {
@@ -2610,6 +2700,7 @@ document.addEventListener('DOMContentLoaded', () => {
           audio.ctx.resume().catch(() => {});
         }
         audio.updatePhysics(dt, activeTab);
+    pollTeslaGamepad();
       }
     }, 33); // 30 Hz background physics ticker while screen is off
   }
@@ -2662,6 +2753,62 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   });
 
+  
+  // 16. TESLA STEERING WHEEL GAMEPAD POLLING (Hardware Left/Right Scroll Wheel Tilt)
+  let lastGamepadShift = 0;
+  function pollTeslaGamepad() {
+    if (!navigator.getGamepads) return;
+    try {
+      const gamepads = navigator.getGamepads();
+      if (!gamepads) return;
+      for (let i = 0; i < gamepads.length; i++) {
+        const gp = gamepads[i];
+        if (!gp || !gp.connected) continue;
+        const now = performance.now();
+        if (now - lastGamepadShift < 260) continue; // 260ms debounce
+
+        // Check D-pad buttons: 14 = left, 15 = right
+        if (gp.buttons) {
+          if (gp.buttons[14] && gp.buttons[14].pressed) {
+            lastGamepadShift = now;
+            switchToManualAndShift('down');
+            break;
+          }
+          if (gp.buttons[15] && gp.buttons[15].pressed) {
+            lastGamepadShift = now;
+            switchToManualAndShift('up');
+            break;
+          }
+          // Shoulder bumpers: 4 = L1, 5 = R1
+          if (gp.buttons[4] && gp.buttons[4].pressed) {
+            lastGamepadShift = now;
+            switchToManualAndShift('down');
+            break;
+          }
+          if (gp.buttons[5] && gp.buttons[5].pressed) {
+            lastGamepadShift = now;
+            switchToManualAndShift('up');
+            break;
+          }
+        }
+
+        // Check horizontal axes
+        if (gp.axes && gp.axes.length > 0) {
+          const ax0 = gp.axes[0];
+          if (ax0 < -0.7) {
+            lastGamepadShift = now;
+            switchToManualAndShift('down');
+            break;
+          } else if (ax0 > 0.7) {
+            lastGamepadShift = now;
+            switchToManualAndShift('up');
+            break;
+          }
+        }
+      }
+    } catch (e) {}
+  }
+
   // 13. MAIN ANIMATION LOOP (60 FPS)
   function loop(currentTime) {
     const dt = Math.min(0.1, (currentTime - lastFrameTime) / 1000.0);
@@ -2669,6 +2816,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Run sound physics step
     audio.updatePhysics(dt, activeTab);
+    pollTeslaGamepad();
 
     // Update Digital Displays
     const currentRpm = Math.round(audio.rpm);

@@ -3590,3 +3590,253 @@ kbd {
   border-bottom-color: var(--accent-amber);
   transform: scale(1.08);
 }
+
+/* =========================================================
+   BIG FLOATING GEAR SHIFT BAR (Tesla + Mobile)
+   ========================================================= */
+.big-shift-bar {
+  position: fixed;
+  bottom: 20px;
+  right: 16px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  z-index: 9000;
+  background: rgba(12, 17, 26, 0.92);
+  border: 1px solid rgba(255, 153, 0, 0.4);
+  border-radius: 18px;
+  padding: 8px 10px;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.7), 0 0 20px rgba(255,153,0,0.12);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  touch-action: manipulation;
+  user-select: none;
+}
+
+.big-shift-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  min-width: 68px;
+  height: 60px;
+  border-radius: 14px;
+  border: 1.5px solid rgba(255, 153, 0, 0.5);
+  background: linear-gradient(180deg, rgba(255,153,0,0.18) 0%, rgba(255,153,0,0.07) 100%);
+  color: #ff9900;
+  font-size: 22px;
+  font-weight: 900;
+  cursor: pointer;
+  transition: all 0.12s ease;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.big-shift-btn:active,
+.big-shift-btn.pressed {
+  background: rgba(255,153,0,0.4);
+  border-color: #ff9900;
+  transform: scale(0.93);
+  box-shadow: 0 0 18px rgba(255,153,0,0.5);
+}
+
+.big-shift-down {
+  color: #ff5555;
+  border-color: rgba(255, 80, 80, 0.5);
+  background: linear-gradient(180deg, rgba(255,80,80,0.18) 0%, rgba(255,80,80,0.07) 100%);
+}
+.big-shift-down:active {
+  background: rgba(255,80,80,0.4);
+  border-color: #ff5555;
+  box-shadow: 0 0 18px rgba(255,80,80,0.5);
+}
+
+.big-shift-icon {
+  font-size: 18px;
+  line-height: 1;
+}
+
+.big-shift-label {
+  font-size: 28px;
+  font-weight: 900;
+  line-height: 1;
+}
+
+.big-gear-display {
+  min-width: 52px;
+  text-align: center;
+  font-size: 22px;
+  font-weight: 900;
+  color: #ff9900;
+  font-family: 'Orbitron', monospace;
+  letter-spacing: 0.5px;
+  text-shadow: 0 0 12px rgba(255,153,0,0.5);
+}
+
+/* On mobile: bigger buttons */
+@media (max-width: 768px) {
+  .big-shift-bar {
+    bottom: 12px;
+    right: 8px;
+    padding: 6px 8px;
+    gap: 6px;
+  }
+  .big-shift-btn {
+    min-width: 58px;
+    height: 54px;
+    font-size: 20px;
+    border-radius: 12px;
+  }
+  .big-shift-label {
+    font-size: 26px;
+  }
+  .big-gear-display {
+    font-size: 19px;
+    min-width: 44px;
+  }
+}
+
+/* Hide on very small screens if overlapping */
+@media (max-width: 370px) {
+  .big-shift-bar {
+    bottom: 8px;
+    right: 4px;
+  }
+  .big-shift-btn {
+    min-width: 50px;
+    height: 48px;
+  }
+}
+
+/* =========================================================
+   BIG FLOATING GEAR SHIFT BAR (Tesla & Mobile Touch-Optimized)
+   ========================================================= */
+.big-shift-bar {
+  position: fixed;
+  bottom: 24px;
+  right: 24px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  z-index: 100000 !important;
+  background: rgba(14, 18, 28, 0.96);
+  border: 2px solid rgba(255, 153, 0, 0.55);
+  border-radius: 20px;
+  padding: 10px 14px;
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.85), 0 0 25px rgba(255, 153, 0, 0.22);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  touch-action: manipulation;
+  user-select: none;
+}
+
+.big-shift-btn {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-width: 90px;
+  height: 72px;
+  border-radius: 16px;
+  border: 2px solid rgba(255, 153, 0, 0.6);
+  background: linear-gradient(180deg, rgba(255, 153, 0, 0.22) 0%, rgba(255, 153, 0, 0.08) 100%);
+  color: #ffaa00;
+  cursor: pointer;
+  transition: transform 0.08s ease, background 0.12s ease, box-shadow 0.12s ease;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+  padding: 4px 8px;
+}
+
+.big-shift-btn:active,
+.big-shift-btn.pressed {
+  transform: scale(0.92);
+  box-shadow: 0 0 22px rgba(255, 153, 0, 0.7);
+}
+
+.big-shift-down {
+  color: #ff5555;
+  border-color: rgba(255, 80, 80, 0.65);
+  background: linear-gradient(180deg, rgba(255, 80, 80, 0.22) 0%, rgba(255, 80, 80, 0.08) 100%);
+}
+.big-shift-down:active,
+.big-shift-down.pressed {
+  background: rgba(255, 80, 80, 0.45);
+  border-color: #ff4444;
+  box-shadow: 0 0 22px rgba(255, 80, 80, 0.7);
+}
+
+.big-shift-up {
+  color: #00e676;
+  border-color: rgba(0, 230, 118, 0.65);
+  background: linear-gradient(180deg, rgba(0, 230, 118, 0.22) 0%, rgba(0, 230, 118, 0.08) 100%);
+}
+.big-shift-up:active,
+.big-shift-up.pressed {
+  background: rgba(0, 230, 118, 0.45);
+  border-color: #00e676;
+  box-shadow: 0 0 22px rgba(0, 230, 118, 0.7);
+}
+
+.big-shift-sym {
+  font-size: 26px;
+  font-weight: 900;
+  line-height: 1.1;
+  letter-spacing: -0.5px;
+}
+
+.big-shift-sub {
+  font-size: 11px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  opacity: 0.85;
+  margin-top: 2px;
+}
+
+.big-gear-display {
+  min-width: 64px;
+  text-align: center;
+  font-size: 28px;
+  font-weight: 900;
+  color: #ffaa00;
+  font-family: 'Orbitron', monospace;
+  letter-spacing: 1px;
+  text-shadow: 0 0 16px rgba(255, 170, 0, 0.6);
+  padding: 0 4px;
+}
+
+/* Tablet / Tesla Screen Media Query */
+@media (max-width: 1024px) {
+  .big-shift-bar {
+    bottom: 20px;
+    right: 20px;
+  }
+}
+
+/* Mobile Media Query */
+@media (max-width: 768px) {
+  .big-shift-bar {
+    bottom: 14px;
+    right: 12px;
+    padding: 8px 10px;
+    gap: 8px;
+    border-radius: 16px;
+  }
+  .big-shift-btn {
+    min-width: 68px;
+    height: 58px;
+    border-radius: 12px;
+  }
+  .big-shift-sym {
+    font-size: 20px;
+  }
+  .big-shift-sub {
+    font-size: 9px;
+  }
+  .big-gear-display {
+    font-size: 22px;
+    min-width: 48px;
+  }
+}
+
