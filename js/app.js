@@ -2487,7 +2487,7 @@ document.addEventListener('DOMContentLoaded', () => {
     switchToManualAndShift('down');
   }
 
-  // Live continuous audio stream to keep Tesla Media Player card attached and active
+  // Live continuous audio stream to keep Tesla Media Player card attached and active (SILENT CARRIER - ZERO interference with WebAudio)
   function attachMediaSessionStream() {
     if (!audio || !audio.ctx || !mediaSessionKeeper) return;
     try {
@@ -2496,27 +2496,28 @@ document.addEventListener('DOMContentLoaded', () => {
         ctx.resume().catch(() => {});
       }
 
+      // DO NOT connect engine audio to mediaSessionKeeper! Engine audio plays pristine uncompressed direct to ctx.destination.
+      // mediaSessionKeeper plays only a silent sub-audible carrier so Tesla OS MediaSession remains active with ZERO phase distortion.
       if (!mediaSessionKeeper._hasStreamAttached && ctx.createMediaStreamDestination) {
         try {
           const streamDest = ctx.createMediaStreamDestination();
-          // Connect actual master engine sound through clipper to media stream destination!
-          if (audio.clip) {
-            audio.clip.connect(streamDest);
-          } else if (audio.masterGain) {
-            audio.masterGain.connect(streamDest);
-          }
+          const silentOsc = ctx.createOscillator();
+          const silentGain = ctx.createGain();
+          silentOsc.frequency.value = 32;
+          silentGain.gain.value = 0.0001; // completely inaudible (-80 dBFS)
+          silentOsc.connect(silentGain);
+          silentGain.connect(streamDest);
+          silentOsc.start();
           mediaSessionKeeper.srcObject = streamDest.stream;
           mediaSessionKeeper._hasStreamAttached = true;
         } catch (streamErr) {
           console.warn('createMediaStreamDestination fallback:', streamErr);
         }
       }
-      mediaSessionKeeper.volume = 1.0;
+      mediaSessionKeeper.volume = 0.05;
       const playPromise = mediaSessionKeeper.play();
       if (playPromise !== undefined) {
         playPromise.catch(e => {
-          console.warn('Keeper stream play:', e);
-          // If srcObject play fails, try base64 silent loop
           if (mediaSessionKeeper.srcObject) {
             mediaSessionKeeper.srcObject = null;
             mediaSessionKeeper.play().catch(() => {});
